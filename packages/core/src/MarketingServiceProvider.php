@@ -7,8 +7,11 @@ use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Http\Middleware\AuthenticateApiToken;
 use Gerenuk\Marketing\Http\Middleware\EnsureTokenCan;
 use Gerenuk\Marketing\Http\Middleware\SetCurrentWorkspace;
+use Gerenuk\Marketing\Jobs\DispatchDueCampaigns;
+use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
@@ -25,6 +28,8 @@ class MarketingServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/marketing.php', 'marketing');
 
         $this->app->scoped(CurrentWorkspace::class);
+        // Scoped, so each request or queued job builds transports from the latest saved credentials.
+        $this->app->scoped(ProviderTransports::class);
 
         // Lets Inertia, and its test assertions, find the package's pages under the `marketing/` prefix.
         $this->app->make('config')->push('inertia.pages.paths', __DIR__.'/../resources/js/pages');
@@ -42,6 +47,14 @@ class MarketingServiceProvider extends ServiceProvider
         $this->registerGates();
         $this->registerRateLimiting();
         $this->registerRoutes();
+        $this->registerSchedule();
+    }
+
+    private function registerSchedule(): void
+    {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->call(new DispatchDueCampaigns)->everyMinute()->name('marketing:dispatch-due-campaigns')->withoutOverlapping();
+        });
     }
 
     private function registerMiddleware(): void
@@ -87,6 +100,10 @@ class MarketingServiceProvider extends ServiceProvider
         Route::middleware(config('marketing.web_middleware'))
             ->name('marketing.')
             ->group(__DIR__.'/../routes/web.php');
+
+        Route::name('marketing.')->group(__DIR__.'/../routes/public.php');
+
+        Route::middleware('web')->name('marketing.')->group(__DIR__.'/../routes/public-pages.php');
 
         Route::prefix(config('marketing.api_prefix'))
             ->middleware(['api', 'marketing.api', 'throttle:marketing-api'])

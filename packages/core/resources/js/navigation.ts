@@ -1,18 +1,24 @@
 import type { InertiaLinkProps } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import {
+    Ban,
     FileUp,
     Filter,
     List,
+    Mail,
+    Send,
     Tag,
     TextCursorInput,
     Users,
 } from 'lucide-react';
+import { index as campaignsIndex } from '@/routes/marketing/campaigns';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { index as customFieldsIndex } from '@/routes/marketing/custom-fields';
 import { index as importsIndex } from '@/routes/marketing/imports';
 import { index as listsIndex } from '@/routes/marketing/lists';
+import { index as providersIndex } from '@/routes/marketing/providers';
 import { index as segmentsIndex } from '@/routes/marketing/segments';
+import { index as suppressionsIndex } from '@/routes/marketing/suppressions';
 import { index as tagsIndex } from '@/routes/marketing/tags';
 import type { Permission } from '@marketing/types';
 
@@ -27,6 +33,12 @@ export type MarketingNavItem = {
  * The core's sidebar items. Host apps render these and can add their own, such as billing.
  */
 export const marketingNavItems: MarketingNavItem[] = [
+    {
+        title: 'Campaigns',
+        href: campaignsIndex(),
+        icon: Send,
+        permission: 'campaigns.view',
+    },
     {
         title: 'Contacts',
         href: contactsIndex(),
@@ -62,5 +74,17 @@ export const marketingNavItems: MarketingNavItem[] = [
         href: importsIndex(),
         icon: FileUp,
         permission: 'contacts.import',
+    },
+    {
+        title: 'Suppressions',
+        href: suppressionsIndex(),
+        icon: Ban,
+        permission: 'contacts.view',
+    },
+    {
+        title: 'Providers',
+        href: providersIndex(),
+        icon: Mail,
+        permission: 'providers.manage',
     },
 ];

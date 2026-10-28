@@ -72,8 +72,11 @@ class CreateWorkspace
                 Permission::ContactsManage->value,
                 Permission::ContactsImport->value,
                 Permission::SegmentsManage->value,
+                Permission::CampaignsView->value,
+                Permission::CampaignsManage->value,
+                Permission::CampaignsSend->value,
             ], false],
-            'Viewer' => [[Permission::ContactsView->value], false],
+            'Viewer' => [[Permission::ContactsView->value, Permission::CampaignsView->value], false],
         ];
     }
 }

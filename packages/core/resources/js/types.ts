@@ -3,6 +3,11 @@ export type Permission =
     | 'contacts.manage'
     | 'contacts.import'
     | 'segments.manage'
+    | 'campaigns.view'
+    | 'campaigns.manage'
+    | 'campaigns.send'
+    | 'campaigns.approve'
+    | 'providers.manage'
     | 'members.manage'
     | 'roles.manage'
     | 'api_tokens.manage'
@@ -89,4 +94,68 @@ export type ImportSummary = {
     failed_count: number;
     created_at: string;
     finished_at: string | null;
+};
+
+export type CredentialField = {
+    key: string;
+    label: string;
+    secret: boolean;
+    required: boolean;
+    default: string | null;
+    options: { value: string; label: string }[];
+    help: string | null;
+};
+
+export type WebhookVerification =
+    | 'none'
+    | 'signing_secret'
+    | 'basic_auth'
+    | 'sns';
+
+export type ProviderTypeDefinition = {
+    value: string;
+    label: string;
+    fields: CredentialField[];
+    webhook_verification: WebhookVerification;
+    webhook_secret_label: string | null;
+};
+
+export type CampaignStatus =
+    | 'draft'
+    | 'scheduled'
+    | 'sending'
+    | 'sent'
+    | 'cancelled';
+
+export type CampaignStats = {
+    recipients: number;
+    sent: number;
+    failed: number;
+    delivered: number;
+    bounced: number;
+    complained: number;
+    opened: number;
+    clicked: number;
+    unsubscribed: number;
+};
+
+export type CampaignSummary = {
+    id: number;
+    name: string;
+    subject: string | null;
+    status: CampaignStatus;
+    scheduled_at: string | null;
+    sent_at: string | null;
+    created_at: string | null;
+    stats: CampaignStats;
+    track_opens: boolean;
+    track_clicks: boolean;
+};
+
+export type ChecklistItem = {
+    key: string;
+    label: string;
+    passed: boolean;
+    blocking: boolean;
+    message: string | null;
 };

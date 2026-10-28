@@ -78,7 +78,7 @@ abstract class TestCase extends Orchestra
         return $user;
     }
 
-    protected function useWorkspace(Workspace $workspace): void
+    public function useWorkspace(Workspace $workspace): void
     {
         app(CurrentWorkspace::class)->set($workspace);
     }

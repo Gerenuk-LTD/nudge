@@ -75,7 +75,8 @@ trait HasWorkspaces
      */
     public function resolveCurrentWorkspace(): ?Workspace
     {
-        $current = $this->currentWorkspace;
+        $currentId = $this->currentWorkspaceId();
+        $current = $currentId === null ? null : Workspace::find($currentId);
 
         if ($current !== null && $this->belongsToWorkspace($current)) {
             return $current;

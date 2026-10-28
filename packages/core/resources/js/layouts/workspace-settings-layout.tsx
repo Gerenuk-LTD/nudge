@@ -8,6 +8,7 @@ import { cn, toUrl } from '@/lib/utils';
 import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
 import { index as membersIndex } from '@/routes/marketing/members';
 import { index as rolesIndex } from '@/routes/marketing/roles';
+import { edit as sendingEdit } from '@/routes/marketing/sending';
 import { edit as workspaceEdit } from '@/routes/marketing/workspace';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { Permission } from '@marketing/types';
@@ -18,6 +19,11 @@ const items: {
     permission?: Permission;
 }[] = [
     { title: 'General', href: workspaceEdit() },
+    {
+        title: 'Sending',
+        href: sendingEdit(),
+        permission: 'providers.manage',
+    },
     { title: 'Members', href: membersIndex(), permission: 'members.manage' },
     { title: 'Roles', href: rolesIndex(), permission: 'roles.manage' },
     {

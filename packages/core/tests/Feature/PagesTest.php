@@ -1,8 +1,11 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Imports\CreateImport;
+use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tests\Fixtures\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +16,9 @@ test('every dashboard page renders its component', function () {
     [$owner, $workspace] = $this->createOwner();
     $contact = Contact::factory()->create();
     $segment = Segment::factory()->create();
+    $provider = Provider::create(['name' => 'SMTP', 'type' => ProviderType::Smtp, 'max_per_second' => 1, 'credentials' => ['host' => 'h', 'port' => '25', 'encryption' => 'starttls']]);
+    $draft = Campaign::factory()->create(['provider_id' => $provider->id]);
+    $sent = Campaign::factory()->create(['provider_id' => $provider->id, 'status' => 'sent', 'sent_at' => now()]);
     $import = app(CreateImport::class)->handle($workspace, $owner, UploadedFile::fake()->createWithContent('a.csv', "email\na@example.com\n"));
 
     $pages = [
@@ -30,6 +36,14 @@ test('every dashboard page renders its component', function () {
         'marketing/workspace/members' => route('marketing.members.index'),
         'marketing/workspace/roles' => route('marketing.roles.index'),
         'marketing/workspace/api-tokens' => route('marketing.api-tokens.index'),
+        'marketing/workspace/sending' => route('marketing.sending.edit'),
+        'marketing/suppressions/index' => route('marketing.suppressions.index'),
+        'marketing/providers/index' => route('marketing.providers.index'),
+        'marketing/providers/form' => route('marketing.providers.create'),
+        'marketing/providers/show' => route('marketing.providers.show', $provider),
+        'marketing/campaigns/index' => route('marketing.campaigns.index'),
+        'marketing/campaigns/edit' => route('marketing.campaigns.edit', $draft),
+        'marketing/campaigns/show' => route('marketing.campaigns.show', $sent),
     ];
 
     foreach ($pages as $component => $url) {

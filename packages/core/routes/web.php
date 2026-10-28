@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Http\Controllers\ApiTokenController;
+use Gerenuk\Marketing\Http\Controllers\CampaignController;
 use Gerenuk\Marketing\Http\Controllers\ContactController;
 use Gerenuk\Marketing\Http\Controllers\ContactListController;
 use Gerenuk\Marketing\Http\Controllers\CurrentWorkspaceController;
@@ -8,8 +9,11 @@ use Gerenuk\Marketing\Http\Controllers\CustomFieldController;
 use Gerenuk\Marketing\Http\Controllers\ImportController;
 use Gerenuk\Marketing\Http\Controllers\InvitationController;
 use Gerenuk\Marketing\Http\Controllers\MemberController;
+use Gerenuk\Marketing\Http\Controllers\ProviderController;
 use Gerenuk\Marketing\Http\Controllers\RoleController;
 use Gerenuk\Marketing\Http\Controllers\SegmentController;
+use Gerenuk\Marketing\Http\Controllers\SendingSettingsController;
+use Gerenuk\Marketing\Http\Controllers\SuppressionController;
 use Gerenuk\Marketing\Http\Controllers\TagController;
 use Gerenuk\Marketing\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
@@ -69,7 +73,52 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::get('imports/{import}/errors', [ImportController::class, 'errors'])->name('imports.errors');
     });
 
+    Route::get('suppressions', [SuppressionController::class, 'index'])->middleware('can:contacts.view')->name('suppressions.index');
+    Route::middleware('can:contacts.manage')->group(function () {
+        Route::post('suppressions', [SuppressionController::class, 'store'])->name('suppressions.store');
+        Route::delete('suppressions/{suppression}', [SuppressionController::class, 'destroy'])->name('suppressions.destroy');
+    });
+
+    Route::middleware('can:campaigns.view')->group(function () {
+        Route::get('campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
+        Route::get('campaigns/{campaign}', [CampaignController::class, 'show'])->name('campaigns.show');
+    });
+
+    Route::middleware('can:campaigns.manage')->group(function () {
+        Route::post('campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
+        Route::get('campaigns/{campaign}/edit', [CampaignController::class, 'edit'])->name('campaigns.edit');
+        Route::put('campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');
+        Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
+        Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
+        Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test');
+    });
+
+    Route::post('campaigns/{campaign}/approve', [CampaignController::class, 'approve'])->middleware('can:campaigns.approve')->name('campaigns.approve');
+
+    Route::middleware('can:campaigns.send')->group(function () {
+        Route::post('campaigns/{campaign}/schedule', [CampaignController::class, 'schedule'])->name('campaigns.schedule');
+        Route::post('campaigns/{campaign}/unschedule', [CampaignController::class, 'unschedule'])->name('campaigns.unschedule');
+        Route::post('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
+    });
+
+    Route::middleware('can:providers.manage')->group(function () {
+        Route::get('providers', [ProviderController::class, 'index'])->name('providers.index');
+        Route::get('providers/create', [ProviderController::class, 'create'])->name('providers.create');
+        Route::post('providers', [ProviderController::class, 'store'])->name('providers.store');
+        Route::get('providers/{provider}', [ProviderController::class, 'show'])->name('providers.show');
+        Route::get('providers/{provider}/edit', [ProviderController::class, 'edit'])->name('providers.edit');
+        Route::put('providers/{provider}', [ProviderController::class, 'update'])->name('providers.update');
+        Route::delete('providers/{provider}', [ProviderController::class, 'destroy'])->name('providers.destroy');
+        Route::post('providers/{provider}/test', [ProviderController::class, 'test'])->name('providers.test');
+    });
+
     Route::prefix('workspace')->group(function () {
+        Route::middleware('can:providers.manage')->group(function () {
+            Route::get('sending', [SendingSettingsController::class, 'edit'])->name('sending.edit');
+            Route::put('sending', [SendingSettingsController::class, 'update'])->name('sending.update');
+            Route::post('sending/resume', [SendingSettingsController::class, 'resume'])->name('sending.resume');
+        });
+
         Route::get('settings', [WorkspaceController::class, 'edit'])->name('workspace.edit');
         Route::put('settings', [WorkspaceController::class, 'update'])->middleware('can:workspace.manage')->name('workspace.update');
 
