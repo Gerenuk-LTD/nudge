@@ -40,6 +40,12 @@ class CampaignChecklist
                 $workspace->isSendingPaused() ? 'Sending is paused: '.$workspace->sending_paused_reason : null),
             new ChecklistItem('approval', 'Approved', ! $workspace->requires_campaign_approval || $campaign->approved_at !== null, true,
                 'This workspace requires campaigns to be approved before sending.'),
+            ...($campaign->ab_enabled ? [
+                new ChecklistItem('ab_variant', 'A/B test has a variant B', filled($campaign->ab_subject_b) || filled($campaign->ab_html_b), true,
+                    'Write a different subject or content for variant B, or switch the test off.'),
+                new ChecklistItem('ab_audience', 'Audience is big enough to test', $audienceCount >= 100, false,
+                    'With fewer than 100 contacts the test sample is too small for a reliable winner.'),
+            ] : []),
             new ChecklistItem('unsubscribe', 'Unsubscribe link placed', in_array('unsubscribe_url', $tags, true), false,
                 'No {{ unsubscribe_url }} tag, so an unsubscribe link will be added at the bottom.'),
             new ChecklistItem('links', 'Links use https', ! $this->hasInsecureLinks($html), false,

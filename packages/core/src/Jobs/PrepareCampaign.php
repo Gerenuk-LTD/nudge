@@ -85,20 +85,24 @@ class PrepareCampaign implements ShouldBeUnique, ShouldQueue
             }
 
             $html = (string) $campaign->html;
+            $htmlB = $campaign->ab_enabled && filled($campaign->ab_html_b) ? (string) $campaign->ab_html_b : null;
 
             CampaignSnapshot::create([
                 'campaign_id' => $campaign->id,
                 'subject' => (string) $campaign->subject,
+                'subject_b' => $campaign->ab_enabled && filled($campaign->ab_subject_b) ? $campaign->ab_subject_b : null,
                 'preheader' => $campaign->preheader,
                 'from_name' => (string) $campaign->from_name,
                 'from_email' => (string) $campaign->from_email,
                 'reply_to' => $campaign->reply_to,
                 'html' => $html,
+                'html_b' => $htmlB,
                 'text' => filled($campaign->text) ? (string) $campaign->text : HtmlToText::convert($html),
+                'text_b' => $htmlB === null ? null : HtmlToText::convert($htmlB),
             ]);
 
             if ($campaign->track_clicks) {
-                foreach (LinkExtractor::urls($html) as $url) {
+                foreach (array_unique([...LinkExtractor::urls($html), ...LinkExtractor::urls((string) $htmlB)]) as $url) {
                     CampaignLink::firstOrCreate(
                         ['campaign_id' => $campaign->id, 'url_hash' => LinkExtractor::hash($url)],
                         ['url' => $url],
@@ -128,6 +132,33 @@ class PrepareCampaign implements ShouldBeUnique, ShouldQueue
         });
 
         $campaign->update(['recipients_count' => $campaign->recipients()->count()]);
+
+        if ($campaign->ab_enabled && $campaign->ab_winner === null) {
+            $this->splitForAbTest($campaign);
+        }
+    }
+
+    /**
+     * Send A and B to a random sample, split evenly, and hold everyone else until a winner is picked.
+     * Skipped on a retry that already split the audience.
+     */
+    private function splitForAbTest(Campaign $campaign): void
+    {
+        if ($campaign->recipients()->whereNotNull('variant')->exists()) {
+            return;
+        }
+
+        $sampleSize = max(2, (int) round($campaign->recipients_count * $campaign->ab_sample_percent / 100));
+        $sample = $campaign->recipients()->inRandomOrder()->limit($sampleSize)->pluck('id')->all();
+        $half = intdiv(count($sample), 2);
+
+        DB::transaction(function () use ($campaign, $sample, $half): void {
+            CampaignRecipient::query()->whereKey(array_slice($sample, 0, $half))->update(['variant' => 'a']);
+            CampaignRecipient::query()->whereKey(array_slice($sample, $half))->update(['variant' => 'b']);
+            $campaign->recipients()->whereNull('variant')->update(['status' => RecipientStatus::Held]);
+        });
+
+        PickAbTestWinner::dispatch($campaign->id, $campaign->workspace_id)->delay(now()->addMinutes($campaign->ab_wait_minutes));
     }
 
     private function queueBatches(Campaign $campaign): void

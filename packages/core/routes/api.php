@@ -3,6 +3,7 @@
 use Gerenuk\Marketing\Http\Controllers\Api\ContactController;
 use Gerenuk\Marketing\Http\Controllers\Api\ContactListController;
 use Gerenuk\Marketing\Http\Controllers\Api\CustomFieldController;
+use Gerenuk\Marketing\Http\Controllers\Api\EventController;
 use Gerenuk\Marketing\Http\Controllers\Api\MeController;
 use Gerenuk\Marketing\Http\Controllers\Api\SegmentController;
 use Gerenuk\Marketing\Http\Controllers\Api\TagController;
@@ -13,6 +14,7 @@ Route::get('me', MeController::class)->name('me');
 Route::middleware('marketing.token-can:contacts.view')->group(function () {
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('contacts/{email}', [ContactController::class, 'show'])->name('contacts.show');
+    Route::get('contacts/{email}/events', [EventController::class, 'index'])->name('contacts.events');
     Route::get('lists', [ContactListController::class, 'index'])->name('lists.index');
     Route::get('lists/{list}', [ContactListController::class, 'show'])->name('lists.show');
     Route::get('tags', [TagController::class, 'index'])->name('tags.index');
@@ -33,4 +35,6 @@ Route::middleware('marketing.token-can:contacts.manage')->group(function () {
     Route::delete('lists/{list}/contacts', [ContactListController::class, 'removeContacts'])->name('lists.contacts.destroy');
 
     Route::post('custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');
+
+    Route::post('events', [EventController::class, 'store'])->name('events.store');
 });

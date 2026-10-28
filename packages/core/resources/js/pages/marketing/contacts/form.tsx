@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { show as showCampaign } from '@/routes/marketing/campaigns';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { NativeSelect } from '@marketing/components/native-select';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
@@ -39,12 +40,23 @@ type FormData = {
     lists: number[];
 };
 
+type TimelineEntry = {
+    id: number;
+    type: string;
+    title: string;
+    detail: string | null;
+    campaign_id: number | null;
+    occurred_at: string;
+};
+
 export default function ContactForm({
     contact,
     lists,
     tags,
     customFields,
+    timeline,
 }: {
+    timeline?: TimelineEntry[];
     contact: Contact | null;
     statuses: ContactStatus[];
     lists: Option[];
@@ -142,164 +154,230 @@ export default function ContactForm({
                     }
                 />
 
-                <form onSubmit={submit} className="max-w-2xl space-y-8">
-                    <fieldset disabled={!canEdit} className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email address</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                required
-                                value={form.data.email}
-                                onChange={(event) =>
-                                    form.setData('email', event.target.value)
-                                }
-                            />
-                            <InputError message={errors.email} />
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-8 xl:grid-cols-[minmax(0,42rem)_1fr]">
+                    <form onSubmit={submit} className="max-w-2xl space-y-8">
+                        <fieldset disabled={!canEdit} className="space-y-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="first_name">First name</Label>
+                                <Label htmlFor="email">Email address</Label>
                                 <Input
-                                    id="first_name"
-                                    value={form.data.first_name}
+                                    id="email"
+                                    type="email"
+                                    required
+                                    value={form.data.email}
                                     onChange={(event) =>
                                         form.setData(
-                                            'first_name',
+                                            'email',
                                             event.target.value,
                                         )
                                     }
                                 />
-                                <InputError message={errors.first_name} />
+                                <InputError message={errors.email} />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="last_name">Last name</Label>
-                                <Input
-                                    id="last_name"
-                                    value={form.data.last_name}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'last_name',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                                <InputError message={errors.last_name} />
-                            </div>
-                        </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="status">Subscription status</Label>
-                            <NativeSelect
-                                id="status"
-                                value={form.data.status}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'status',
-                                        event.target.value as ContactStatus,
-                                    )
-                                }
-                            >
-                                <option value="subscribed">Subscribed</option>
-                                <option value="unsubscribed">
-                                    Unsubscribed
-                                </option>
-                            </NativeSelect>
-                            {contact?.unsubscribed_at && (
-                                <p className="text-xs text-muted-foreground">
-                                    Unsubscribed{' '}
-                                    {new Date(
-                                        contact.unsubscribed_at,
-                                    ).toLocaleString()}
-                                </p>
-                            )}
-                            <InputError message={errors.status} />
-                        </div>
-
-                        {customFields.length > 0 && (
-                            <div className="space-y-4">
-                                <h2 className="text-sm font-medium">
-                                    Custom fields
-                                </h2>
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    {customFields.map((field) => (
-                                        <CustomFieldInput
-                                            key={field.key}
-                                            field={field}
-                                            value={
-                                                form.data.custom_fields[
-                                                    field.key
-                                                ] ?? null
-                                            }
-                                            onChange={(value) =>
-                                                setCustomField(field.key, value)
-                                            }
-                                            error={
-                                                errors[
-                                                    `custom_fields.${field.key}`
-                                                ]
-                                            }
-                                        />
-                                    ))}
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="first_name">
+                                        First name
+                                    </Label>
+                                    <Input
+                                        id="first_name"
+                                        value={form.data.first_name}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'first_name',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={errors.first_name} />
                                 </div>
-                                <InputError message={errors.custom_fields} />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="last_name">Last name</Label>
+                                    <Input
+                                        id="last_name"
+                                        value={form.data.last_name}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'last_name',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={errors.last_name} />
+                                </div>
                             </div>
-                        )}
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="tags">Tags</Label>
-                            <TagInput
-                                id="tags"
-                                value={form.data.tags}
-                                onChange={(value) =>
-                                    form.setData('tags', value)
-                                }
-                                suggestions={tags}
-                            />
-                            <InputError message={errors.tags} />
-                        </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="status">
+                                    Subscription status
+                                </Label>
+                                <NativeSelect
+                                    id="status"
+                                    value={form.data.status}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'status',
+                                            event.target.value as ContactStatus,
+                                        )
+                                    }
+                                >
+                                    <option value="subscribed">
+                                        Subscribed
+                                    </option>
+                                    <option value="unsubscribed">
+                                        Unsubscribed
+                                    </option>
+                                </NativeSelect>
+                                {contact?.unsubscribed_at && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Unsubscribed{' '}
+                                        {new Date(
+                                            contact.unsubscribed_at,
+                                        ).toLocaleString()}
+                                    </p>
+                                )}
+                                <InputError message={errors.status} />
+                            </div>
 
-                        {lists.length > 0 && (
-                            <div className="space-y-3">
-                                <h2 className="text-sm font-medium">Lists</h2>
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                    {lists.map((list) => (
-                                        <label
-                                            key={list.id}
-                                            className="flex items-center gap-2 text-sm"
-                                        >
-                                            <Checkbox
-                                                checked={form.data.lists.includes(
-                                                    list.id,
-                                                )}
-                                                onCheckedChange={(checked) =>
-                                                    toggleList(
-                                                        list.id,
-                                                        checked === true,
+                            {customFields.length > 0 && (
+                                <div className="space-y-4">
+                                    <h2 className="text-sm font-medium">
+                                        Custom fields
+                                    </h2>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {customFields.map((field) => (
+                                            <CustomFieldInput
+                                                key={field.key}
+                                                field={field}
+                                                value={
+                                                    form.data.custom_fields[
+                                                        field.key
+                                                    ] ?? null
+                                                }
+                                                onChange={(value) =>
+                                                    setCustomField(
+                                                        field.key,
+                                                        value,
                                                     )
                                                 }
+                                                error={
+                                                    errors[
+                                                        `custom_fields.${field.key}`
+                                                    ]
+                                                }
                                             />
-                                            {list.name}
-                                        </label>
-                                    ))}
+                                        ))}
+                                    </div>
+                                    <InputError
+                                        message={errors.custom_fields}
+                                    />
                                 </div>
+                            )}
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="tags">Tags</Label>
+                                <TagInput
+                                    id="tags"
+                                    value={form.data.tags}
+                                    onChange={(value) =>
+                                        form.setData('tags', value)
+                                    }
+                                    suggestions={tags}
+                                />
+                                <InputError message={errors.tags} />
+                            </div>
+
+                            {lists.length > 0 && (
+                                <div className="space-y-3">
+                                    <h2 className="text-sm font-medium">
+                                        Lists
+                                    </h2>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        {lists.map((list) => (
+                                            <label
+                                                key={list.id}
+                                                className="flex items-center gap-2 text-sm"
+                                            >
+                                                <Checkbox
+                                                    checked={form.data.lists.includes(
+                                                        list.id,
+                                                    )}
+                                                    onCheckedChange={(
+                                                        checked,
+                                                    ) =>
+                                                        toggleList(
+                                                            list.id,
+                                                            checked === true,
+                                                        )
+                                                    }
+                                                />
+                                                {list.name}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </fieldset>
+
+                        {canEdit && (
+                            <div className="flex gap-2">
+                                <Button disabled={form.processing}>
+                                    {form.processing && <Spinner />}
+                                    {contact ? 'Save' : 'Add contact'}
+                                </Button>
+                                <Button variant="ghost" asChild>
+                                    <Link href={contactsIndex()}>Cancel</Link>
+                                </Button>
                             </div>
                         )}
-                    </fieldset>
+                    </form>
 
-                    {canEdit && (
-                        <div className="flex gap-2">
-                            <Button disabled={form.processing}>
-                                {form.processing && <Spinner />}
-                                {contact ? 'Save' : 'Add contact'}
-                            </Button>
-                            <Button variant="ghost" asChild>
-                                <Link href={contactsIndex()}>Cancel</Link>
-                            </Button>
-                        </div>
+                    {contact && (
+                        <section className="space-y-3">
+                            <h2 className="font-medium">Activity</h2>
+                            {timeline === undefined ? (
+                                <Spinner />
+                            ) : timeline.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Nothing yet.
+                                </p>
+                            ) : (
+                                <ol className="space-y-3 border-l pl-4">
+                                    {timeline.map((entry) => (
+                                        <li
+                                            key={entry.id}
+                                            className="relative text-sm"
+                                        >
+                                            <span className="absolute top-1.5 -left-[1.3rem] size-2 rounded-full bg-muted-foreground/50" />
+                                            {entry.campaign_id ? (
+                                                <Link
+                                                    href={showCampaign(
+                                                        entry.campaign_id,
+                                                    )}
+                                                    className="hover:underline"
+                                                >
+                                                    {entry.title}
+                                                </Link>
+                                            ) : (
+                                                <span>{entry.title}</span>
+                                            )}
+                                            {entry.detail && (
+                                                <p className="truncate text-xs text-muted-foreground">
+                                                    {entry.detail}
+                                                </p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                                {new Date(
+                                                    entry.occurred_at,
+                                                ).toLocaleString()}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ol>
+                            )}
+                        </section>
                     )}
-                </form>
+                </div>
             </PageBody>
         </>
     );

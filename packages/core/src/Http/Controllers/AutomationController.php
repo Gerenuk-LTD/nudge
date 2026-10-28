@@ -1,0 +1,206 @@
+<?php
+
+namespace Gerenuk\Marketing\Http\Controllers;
+
+use Gerenuk\Marketing\Actions\Automations\ActivateAutomation;
+use Gerenuk\Marketing\Automations\ActivationChecklist;
+use Gerenuk\Marketing\Automations\AutomationDefinitionValidator;
+use Gerenuk\Marketing\Automations\SyncAutomationEmails;
+use Gerenuk\Marketing\Enums\AutomationRunStatus;
+use Gerenuk\Marketing\Enums\AutomationStatus;
+use Gerenuk\Marketing\Enums\AutomationTrigger;
+use Gerenuk\Marketing\Http\Requests\AutomationRequest;
+use Gerenuk\Marketing\Models\Automation;
+use Gerenuk\Marketing\Models\AutomationRun;
+use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Marketing\Models\ContactList;
+use Gerenuk\Marketing\Models\CustomFieldDefinition;
+use Gerenuk\Marketing\Models\Provider;
+use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Marketing\Models\Tag;
+use Gerenuk\Marketing\Segments\SegmentField;
+use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
+use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class AutomationController extends Controller
+{
+    public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
+
+    public function index(): Response
+    {
+        return Inertia::render('marketing/automations/index', [
+            'automations' => Automation::query()
+                ->withCount(['runs as active_count' => fn ($query) => $query->whereIn('status', [AutomationRunStatus::Active, AutomationRunStatus::Waiting])])
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Automation $automation) => [
+                    'id' => $automation->id,
+                    'name' => $automation->name,
+                    'status' => $automation->status->value,
+                    'trigger' => $automation->trigger_type->label(),
+                    'entered_count' => $automation->entered_count,
+                    'completed_count' => $automation->completed_count,
+                    'active_count' => $automation->getAttribute('active_count'),
+                ]),
+            'triggers' => array_map(fn (AutomationTrigger $trigger) => ['value' => $trigger->value, 'label' => $trigger->label()], AutomationTrigger::cases()),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'trigger_type' => ['required', 'string'],
+        ]);
+
+        $automation = Automation::create([
+            'name' => $validated['name'],
+            'trigger_type' => AutomationTrigger::tryFrom($validated['trigger_type']) ?? AutomationTrigger::ListJoined,
+            'trigger_config' => [],
+            'definition' => ['steps' => []],
+        ]);
+
+        return to_route('marketing.automations.edit', $automation);
+    }
+
+    public function edit(Automation $automation, ActivationChecklist $checklist, SegmentFieldCatalog $catalog): Response
+    {
+        $workspace = $this->currentWorkspace->getOrFail();
+
+        return Inertia::render('marketing/automations/edit', [
+            'automation' => [
+                'id' => $automation->id,
+                'name' => $automation->name,
+                'status' => $automation->status->value,
+                'trigger_type' => $automation->trigger_type->value,
+                'trigger_config' => (object) ($automation->trigger_config ?? []),
+                'allow_reentry' => $automation->allow_reentry,
+                'definition' => $automation->definition,
+                'entered_count' => $automation->entered_count,
+                'completed_count' => $automation->completed_count,
+            ],
+            'problems' => $checklist->problems($automation, $workspace),
+            'stepStats' => $this->stepStats($automation),
+            'triggers' => array_map(fn (AutomationTrigger $trigger) => ['value' => $trigger->value, 'label' => $trigger->label()], AutomationTrigger::cases()),
+            'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
+            'tags' => Tag::query()->orderBy('name')->get(['id', 'name']),
+            'segments' => Segment::query()->orderBy('name')->get(['id', 'name']),
+            'dateFields' => CustomFieldDefinition::query()->where('type', 'date')->orderBy('label')->get(['key', 'label']),
+            'customFields' => CustomFieldDefinition::query()->orderBy('label')->get(['key', 'label', 'type']),
+            'providers' => Provider::query()->orderBy('name')->get(['id', 'name', 'from_name', 'from_email', 'reply_to']),
+            'segmentFields' => array_values(array_map(fn (SegmentField $field) => $field->toArray(), $catalog->all())),
+            'mergeTags' => $this->mergeTags(),
+        ]);
+    }
+
+    public function update(AutomationRequest $request, Automation $automation, AutomationDefinitionValidator $validator, SyncAutomationEmails $emails): RedirectResponse
+    {
+        $validated = $request->validated();
+        $validator->validate($validated['definition']);
+
+        DB::transaction(function () use ($automation, $validated, $emails): void {
+            $automation->update([
+                'name' => $validated['name'],
+                'trigger_type' => $validated['trigger_type'],
+                'trigger_config' => $validated['trigger_config'],
+                'allow_reentry' => $validated['allow_reentry'],
+                'definition' => ['steps' => $validated['definition']['steps'] ?? []],
+            ]);
+
+            $emails->handle($automation);
+        });
+
+        return back();
+    }
+
+    public function activate(Automation $automation, ActivateAutomation $activate): RedirectResponse
+    {
+        $activate->handle($automation, $this->currentWorkspace->getOrFail());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Automation is live.')]);
+
+        return back();
+    }
+
+    /**
+     * Pausing stops new contacts entering and holds everyone where they are until it is resumed.
+     */
+    public function pause(Automation $automation): RedirectResponse
+    {
+        abort_unless($automation->status === AutomationStatus::Active, 409);
+
+        $automation->update(['status' => AutomationStatus::Paused]);
+
+        return back();
+    }
+
+    public function destroy(Automation $automation): RedirectResponse
+    {
+        abort_if($automation->status === AutomationStatus::Active, 409, __('Pause the automation before deleting it.'));
+
+        $automation->delete();
+
+        return to_route('marketing.automations.index');
+    }
+
+    /**
+     * Per step: how many contacts are there now, and how its email performed.
+     *
+     * @return array<string, array<string, int>>
+     */
+    private function stepStats(Automation $automation): array
+    {
+        $stats = [];
+
+        $waiting = AutomationRun::query()
+            ->where('automation_id', $automation->id)
+            ->whereIn('status', [AutomationRunStatus::Active, AutomationRunStatus::Waiting])
+            ->whereNotNull('current_step_id')
+            ->selectRaw('current_step_id, count(*) as total')
+            ->groupBy('current_step_id')
+            ->pluck('total', 'current_step_id');
+
+        foreach ($waiting as $stepId => $total) {
+            $stats[(string) $stepId]['waiting'] = (int) $total;
+        }
+
+        foreach (Campaign::query()->where('automation_id', $automation->id)->get() as $campaign) {
+            $stats[(string) $campaign->automation_step_id] = [
+                ...($stats[(string) $campaign->automation_step_id] ?? []),
+                'campaign_id' => $campaign->id,
+                'sent' => $campaign->sent_count,
+                'opened' => $campaign->opened_count,
+                'clicked' => $campaign->clicked_count,
+                'unsubscribed' => $campaign->unsubscribed_count,
+                'bounced' => $campaign->bounced_count,
+            ];
+        }
+
+        return $stats;
+    }
+
+    /**
+     * @return list<array{tag: string, label: string}>
+     */
+    private function mergeTags(): array
+    {
+        $tags = [
+            ['tag' => '{{ first_name }}', 'label' => 'First name'],
+            ['tag' => '{{ last_name }}', 'label' => 'Last name'],
+            ['tag' => '{{ email }}', 'label' => 'Email'],
+            ['tag' => '{{ unsubscribe_url }}', 'label' => 'Unsubscribe link'],
+            ['tag' => '{{ postal_address }}', 'label' => 'Postal address'],
+        ];
+
+        foreach (CustomFieldDefinition::query()->orderBy('label')->get() as $field) {
+            $tags[] = ['tag' => "{{ custom.{$field->key} }}", 'label' => $field->label];
+        }
+
+        return $tags;
+    }
+}

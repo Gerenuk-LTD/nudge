@@ -32,6 +32,12 @@ type Campaign = {
     segment_id: number | null;
     track_opens: boolean;
     track_clicks: boolean;
+    ab_enabled: boolean;
+    ab_subject_b: string | null;
+    ab_html_b: string | null;
+    ab_sample_percent: number;
+    ab_wait_minutes: number;
+    ab_metric: 'clicks' | 'opens';
     status: string;
     audience_type: 'all' | 'lists' | 'segment';
     list_ids: number[];
@@ -74,6 +80,12 @@ type Draft = {
     segment_id: number | null;
     track_opens: boolean;
     track_clicks: boolean;
+    ab_enabled: boolean;
+    ab_subject_b: string;
+    ab_html_b: string;
+    ab_sample_percent: number;
+    ab_wait_minutes: number;
+    ab_metric: 'clicks' | 'opens';
 };
 
 const steps = ['Content', 'Audience', 'Review and send'] as const;
@@ -98,6 +110,12 @@ export default function EditCampaign(props: Props) {
         segment_id: campaign.segment_id,
         track_opens: campaign.track_opens,
         track_clicks: campaign.track_clicks,
+        ab_enabled: campaign.ab_enabled,
+        ab_subject_b: campaign.ab_subject_b ?? '',
+        ab_html_b: campaign.ab_html_b ?? '',
+        ab_sample_percent: campaign.ab_sample_percent,
+        ab_wait_minutes: campaign.ab_wait_minutes,
+        ab_metric: campaign.ab_metric,
     });
 
     const scheduled = campaign.status === 'scheduled';
@@ -360,6 +378,12 @@ function ContentStep({
                 <InputError message={errors.html} />
             </div>
 
+            <AbTestSettings
+                form={form}
+                errors={errors}
+                mergeTags={props.mergeTags}
+            />
+
             <details className="rounded-xl border p-4">
                 <summary className="cursor-pointer text-sm font-medium">
                     Plain-text version
@@ -377,6 +401,161 @@ function ContentStep({
                 />
             </details>
         </div>
+    );
+}
+
+function AbTestSettings({
+    form,
+    errors,
+    mergeTags,
+}: {
+    form: DraftForm;
+    errors: Record<string, string | undefined>;
+    mergeTags: MergeTag[];
+}) {
+    const Editor = editorFor('html').component;
+    const testsContent = form.data.ab_html_b !== '';
+
+    return (
+        <section className="space-y-4 rounded-xl border p-4">
+            <label className="flex items-start gap-2 text-sm">
+                <Checkbox
+                    className="mt-0.5"
+                    checked={form.data.ab_enabled}
+                    onCheckedChange={(checked) =>
+                        form.setData('ab_enabled', checked === true)
+                    }
+                />
+                <span>
+                    <span className="font-medium">A/B test</span>
+                    <span className="block text-xs text-muted-foreground">
+                        Send two versions to a sample, then send the better one
+                        to everyone else.
+                    </span>
+                </span>
+            </label>
+
+            {form.data.ab_enabled && (
+                <>
+                    <div className="flex gap-4 text-sm">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                checked={!testsContent}
+                                onChange={() => form.setData('ab_html_b', '')}
+                            />
+                            Test the subject
+                        </label>
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                checked={testsContent}
+                                onChange={() =>
+                                    form.setData('ab_html_b', form.data.html)
+                                }
+                            />
+                            Test the content
+                        </label>
+                    </div>
+
+                    <Field
+                        label="Subject B"
+                        error={errors.ab_subject_b}
+                        hint={
+                            testsContent
+                                ? 'Optional when testing content; leave empty to keep the same subject.'
+                                : undefined
+                        }
+                    >
+                        <Input
+                            value={form.data.ab_subject_b}
+                            onChange={(event) =>
+                                form.setData('ab_subject_b', event.target.value)
+                            }
+                        />
+                    </Field>
+
+                    {testsContent && (
+                        <div className="space-y-2">
+                            <Label>Content B</Label>
+                            <Editor
+                                html={form.data.ab_html_b}
+                                state={null}
+                                mergeTags={mergeTags}
+                                onChange={(html) =>
+                                    form.setData('ab_html_b', html)
+                                }
+                            />
+                        </div>
+                    )}
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Field
+                            label="Test sample"
+                            error={errors.ab_sample_percent}
+                        >
+                            <NativeSelect
+                                value={form.data.ab_sample_percent}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'ab_sample_percent',
+                                        Number(event.target.value),
+                                    )
+                                }
+                            >
+                                {[10, 20, 30, 40, 50].map((share) => (
+                                    <option key={share} value={share}>
+                                        {share}% of the audience
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                        </Field>
+                        <Field
+                            label="Pick the winner after"
+                            error={errors.ab_wait_minutes}
+                        >
+                            <NativeSelect
+                                value={form.data.ab_wait_minutes}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'ab_wait_minutes',
+                                        Number(event.target.value),
+                                    )
+                                }
+                            >
+                                {[60, 120, 240, 480, 1440].map((minutes) => (
+                                    <option key={minutes} value={minutes}>
+                                        {minutes < 1440
+                                            ? `${minutes / 60} hours`
+                                            : '1 day'}
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                        </Field>
+                        <Field label="Winner by" error={errors.ab_metric}>
+                            <NativeSelect
+                                value={form.data.ab_metric}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'ab_metric',
+                                        event.target.value as
+                                            | 'clicks'
+                                            | 'opens',
+                                    )
+                                }
+                            >
+                                <option value="clicks">
+                                    Clicks (recommended)
+                                </option>
+                                <option value="opens">
+                                    Opens (approximate)
+                                </option>
+                            </NativeSelect>
+                        </Field>
+                    </div>
+                </>
+            )}
+        </section>
     );
 }
 

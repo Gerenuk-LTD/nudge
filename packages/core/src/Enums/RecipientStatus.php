@@ -5,6 +5,8 @@ namespace Gerenuk\Marketing\Enums;
 enum RecipientStatus: string
 {
     case Queued = 'queued';
+    /** Waiting for an A/B test to pick a winner. */
+    case Held = 'held';
     /** Claimed by a worker. A recipient left here after a crash is not retried, so nobody gets a duplicate. */
     case Sending = 'sending';
     case Sent = 'sent';

@@ -7,10 +7,12 @@ import {
     List,
     Mail,
     Send,
+    Workflow,
     Tag,
     TextCursorInput,
     Users,
 } from 'lucide-react';
+import { index as automationsIndex } from '@/routes/marketing/automations';
 import { index as campaignsIndex } from '@/routes/marketing/campaigns';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { index as customFieldsIndex } from '@/routes/marketing/custom-fields';
@@ -38,6 +40,12 @@ export const marketingNavItems: MarketingNavItem[] = [
         href: campaignsIndex(),
         icon: Send,
         permission: 'campaigns.view',
+    },
+    {
+        title: 'Automations',
+        href: automationsIndex(),
+        icon: Workflow,
+        permission: 'automations.view',
     },
     {
         title: 'Contacts',

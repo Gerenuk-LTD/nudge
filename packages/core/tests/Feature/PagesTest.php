@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Imports\CreateImport;
+use Gerenuk\Marketing\Models\Automation;
 use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Provider;
@@ -19,6 +20,7 @@ test('every dashboard page renders its component', function () {
     $provider = Provider::create(['name' => 'SMTP', 'type' => ProviderType::Smtp, 'max_per_second' => 1, 'credentials' => ['host' => 'h', 'port' => '25', 'encryption' => 'starttls']]);
     $draft = Campaign::factory()->create(['provider_id' => $provider->id]);
     $sent = Campaign::factory()->create(['provider_id' => $provider->id, 'status' => 'sent', 'sent_at' => now()]);
+    $automation = Automation::factory()->create();
     $import = app(CreateImport::class)->handle($workspace, $owner, UploadedFile::fake()->createWithContent('a.csv', "email\na@example.com\n"));
 
     $pages = [
@@ -44,6 +46,8 @@ test('every dashboard page renders its component', function () {
         'marketing/campaigns/index' => route('marketing.campaigns.index'),
         'marketing/campaigns/edit' => route('marketing.campaigns.edit', $draft),
         'marketing/campaigns/show' => route('marketing.campaigns.show', $sent),
+        'marketing/automations/index' => route('marketing.automations.index'),
+        'marketing/automations/edit' => route('marketing.automations.edit', $automation),
     ];
 
     foreach ($pages as $component => $url) {

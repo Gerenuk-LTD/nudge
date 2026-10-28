@@ -5,10 +5,13 @@ namespace Gerenuk\Marketing\Models;
 use Carbon\CarbonInterface;
 use Gerenuk\Marketing\Database\Factories\CampaignFactory;
 use Gerenuk\Marketing\Enums\AudienceType;
+use Gerenuk\Marketing\Enums\CampaignKind;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +21,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * @property int $id
  * @property int $workspace_id
+ * @property CampaignKind $kind
+ * @property int|null $automation_id
+ * @property string|null $automation_step_id
  * @property int|null $provider_id
  * @property int|null $segment_id
  * @property int|null $created_by
@@ -36,6 +42,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property list<int>|null $list_ids
  * @property bool $track_opens
  * @property bool $track_clicks
+ * @property bool $ab_enabled
+ * @property string|null $ab_subject_b
+ * @property string|null $ab_html_b
+ * @property int $ab_sample_percent
+ * @property int $ab_wait_minutes
+ * @property string $ab_metric
+ * @property string|null $ab_winner
+ * @property CarbonInterface|null $ab_decided_at
  * @property CampaignStatus $status
  * @property CarbonInterface|null $approved_at
  * @property CarbonInterface|null $scheduled_at
@@ -54,10 +68,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property CarbonInterface|null $updated_at
  */
 #[Fillable([
-    'workspace_id', 'provider_id', 'segment_id', 'created_by', 'approved_by', 'name', 'subject', 'preheader',
+    'workspace_id', 'kind', 'automation_id', 'automation_step_id', 'provider_id', 'segment_id', 'created_by', 'approved_by', 'name', 'subject', 'preheader',
     'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'audience_type', 'list_ids',
     'track_opens', 'track_clicks', 'status', 'approved_at', 'scheduled_at', 'sending_started_at', 'sent_at',
-    'recipients_count',
+    'recipients_count', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_sample_percent', 'ab_wait_minutes',
+    'ab_metric', 'ab_winner', 'ab_decided_at',
 ])]
 #[UseFactory(CampaignFactory::class)]
 class Campaign extends Model
@@ -72,6 +87,7 @@ class Campaign extends Model
      */
     protected $attributes = [
         'status' => 'draft',
+        'kind' => 'broadcast',
         'audience_type' => 'lists',
         'editor' => 'html',
         'track_opens' => true,
@@ -81,7 +97,10 @@ class Campaign extends Model
     protected function casts(): array
     {
         return [
+            'kind' => CampaignKind::class,
             'editor_state' => 'array',
+            'ab_enabled' => 'boolean',
+            'ab_decided_at' => 'datetime',
             'audience_type' => AudienceType::class,
             'list_ids' => 'array',
             'track_opens' => 'boolean',
@@ -124,6 +143,23 @@ class Campaign extends Model
     public function recipients(): HasMany
     {
         return $this->hasMany(CampaignRecipient::class);
+    }
+
+    /**
+     * @return BelongsTo<Automation, $this>
+     */
+    public function automation(): BelongsTo
+    {
+        return $this->belongsTo(Automation::class);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function broadcasts(Builder $query): void
+    {
+        $query->where('kind', CampaignKind::Broadcast);
     }
 
     /**

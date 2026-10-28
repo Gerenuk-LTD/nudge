@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Actions\Contacts;
 
+use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Support\ContactData;
@@ -10,7 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class UpdateContact
 {
-    public function __construct(private readonly ContactRules $rules) {}
+    public function __construct(
+        private readonly ContactRules $rules,
+        private readonly AutomationTriggers $triggers,
+    ) {}
 
     /**
      * Replace a contact's details from the edit form: custom fields, tags and lists are set to exactly what is given.
@@ -34,8 +38,8 @@ class UpdateContact
 
             $contact->save();
 
-            $contact->tags()->sync(UpsertContact::resolveTagIds($data->tags));
-            $contact->lists()->sync(UpsertContact::listPivot($data->lists));
+            $this->triggers->tagsAdded($contact, $contact->tags()->sync(UpsertContact::resolveTagIds($data->tags))['attached']);
+            $this->triggers->listsJoined($contact, $contact->lists()->sync(UpsertContact::listPivot($data->lists))['attached']);
 
             return $contact;
         });

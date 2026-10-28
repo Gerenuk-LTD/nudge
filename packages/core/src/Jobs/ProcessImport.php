@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Jobs;
 
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
+use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\ImportStatus;
 use Gerenuk\Marketing\Imports\ColumnMapping;
@@ -61,6 +62,7 @@ class ProcessImport implements ShouldQueue
 
         $contactRules = app(ContactRules::class);
         $upsert = app(UpsertContact::class);
+        $triggers = app(AutomationTriggers::class);
         $rules = $contactRules->rules();
         $customFields = $contactRules->definitions()->keyBy('key');
         $tagIds = UpsertContact::resolveTagIds($import->tags ?? []);
@@ -102,7 +104,7 @@ class ProcessImport implements ShouldQueue
                 $created ? $counts['created_count']++ : $counts['updated_count']++;
 
                 if ($tagIds !== []) {
-                    $contact->tags()->syncWithoutDetaching($tagIds);
+                    $triggers->tagsAdded($contact, $contact->tags()->syncWithoutDetaching($tagIds)['attached']);
                 }
             }
 

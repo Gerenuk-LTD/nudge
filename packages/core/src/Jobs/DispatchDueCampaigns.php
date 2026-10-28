@@ -13,6 +13,7 @@ class DispatchDueCampaigns
     public function __invoke(): void
     {
         Campaign::withoutGlobalScopes()
+            ->broadcasts()
             ->where('status', CampaignStatus::Scheduled)
             ->where('scheduled_at', '<=', now())
             ->select(['id', 'workspace_id'])

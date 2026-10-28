@@ -13,6 +13,8 @@ enum Permission: string
     case CampaignsSend = 'campaigns.send';
     case CampaignsApprove = 'campaigns.approve';
     case ProvidersManage = 'providers.manage';
+    case AutomationsView = 'automations.view';
+    case AutomationsManage = 'automations.manage';
     case MembersManage = 'members.manage';
     case RolesManage = 'roles.manage';
     case ApiTokensManage = 'api_tokens.manage';
@@ -30,6 +32,8 @@ enum Permission: string
             self::CampaignsSend => 'Send and schedule campaigns',
             self::CampaignsApprove => 'Approve campaigns when approval is required',
             self::ProvidersManage => 'Connect sending providers and change sending settings',
+            self::AutomationsView => 'View automations and their reports',
+            self::AutomationsManage => 'Create, edit, start and stop automations',
             self::MembersManage => 'Invite and remove members',
             self::RolesManage => 'Create and edit roles',
             self::ApiTokensManage => 'Create and revoke API tokens',

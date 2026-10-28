@@ -14,6 +14,7 @@ use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Support\ContactData;
 use Gerenuk\Marketing\Support\ContactFilter;
+use Gerenuk\Marketing\Support\ContactTimeline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -65,7 +66,7 @@ class ContactController extends Controller
         return to_route('marketing.contacts.show', $contact);
     }
 
-    public function show(Contact $contact): Response
+    public function show(Contact $contact, ContactTimeline $timeline): Response
     {
         $contact->load(['tags:id,name', 'lists:id']);
 
@@ -85,6 +86,7 @@ class ContactController extends Controller
                 'created_at' => $contact->created_at->toIso8601String(),
             ],
             ...$this->formOptions(),
+            'timeline' => Inertia::defer(fn () => $timeline->for($contact)),
         ]);
     }
 

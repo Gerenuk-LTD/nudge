@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Http\Controllers\ApiTokenController;
+use Gerenuk\Marketing\Http\Controllers\AutomationController;
 use Gerenuk\Marketing\Http\Controllers\CampaignController;
 use Gerenuk\Marketing\Http\Controllers\ContactController;
 use Gerenuk\Marketing\Http\Controllers\ContactListController;
@@ -99,6 +100,19 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::post('campaigns/{campaign}/schedule', [CampaignController::class, 'schedule'])->name('campaigns.schedule');
         Route::post('campaigns/{campaign}/unschedule', [CampaignController::class, 'unschedule'])->name('campaigns.unschedule');
         Route::post('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
+        Route::post('campaigns/{campaign}/pick-winner', [CampaignController::class, 'pickWinner'])->name('campaigns.pick-winner');
+    });
+
+    Route::middleware('can:automations.view')->group(function () {
+        Route::get('automations', [AutomationController::class, 'index'])->name('automations.index');
+        Route::get('automations/{automation}/edit', [AutomationController::class, 'edit'])->name('automations.edit');
+    });
+    Route::middleware('can:automations.manage')->group(function () {
+        Route::post('automations', [AutomationController::class, 'store'])->name('automations.store');
+        Route::put('automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
+        Route::delete('automations/{automation}', [AutomationController::class, 'destroy'])->name('automations.destroy');
+        Route::post('automations/{automation}/activate', [AutomationController::class, 'activate'])->name('automations.activate');
+        Route::post('automations/{automation}/pause', [AutomationController::class, 'pause'])->name('automations.pause');
     });
 
     Route::middleware('can:providers.manage')->group(function () {

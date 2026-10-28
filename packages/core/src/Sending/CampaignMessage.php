@@ -38,7 +38,9 @@ class CampaignMessage
             'postal_address' => e((string) $workspace->postal_address),
         ];
 
-        $html = MergeTags::render($snapshot->html, $contact, $extra, escapeHtml: true);
+        $content = $snapshot->variant($recipient->variant);
+
+        $html = MergeTags::render($content['html'], $contact, $extra, escapeHtml: true);
 
         if ($campaign->track_clicks) {
             $html = LinkExtractor::rewrite($html, function (string $url) use ($linksByHash, $recipient): ?string {
@@ -48,23 +50,23 @@ class CampaignMessage
             });
         }
 
-        $html = $this->withFooter($html, $snapshot->html, $unsubscribeUrl, (string) $workspace->postal_address);
+        $html = $this->withFooter($html, $content['html'], $unsubscribeUrl, (string) $workspace->postal_address);
         $html = $this->withPreheader($html, (string) $snapshot->preheader);
 
         if ($campaign->track_opens) {
             $html = $this->withOpenPixel($html, $this->urls->open($recipient));
         }
 
-        $text = MergeTags::render($snapshot->text, $contact, ['unsubscribe_url' => $unsubscribeUrl, 'postal_address' => (string) $workspace->postal_address], escapeHtml: false);
+        $text = MergeTags::render($content['text'], $contact, ['unsubscribe_url' => $unsubscribeUrl, 'postal_address' => (string) $workspace->postal_address], escapeHtml: false);
 
-        if (! str_contains($snapshot->text, 'unsubscribe_url')) {
+        if (! str_contains($content['text'], 'unsubscribe_url')) {
             $text .= "\n\n--\n".trim((string) $workspace->postal_address)."\nUnsubscribe: {$unsubscribeUrl}";
         }
 
         $email = (new Email)
             ->from(new Address($snapshot->from_email, $snapshot->from_name))
             ->to(new Address($recipient->email, trim("{$contact->first_name} {$contact->last_name}")))
-            ->subject(MergeTags::render($snapshot->subject, $contact, [], escapeHtml: false))
+            ->subject(MergeTags::render($content['subject'], $contact, [], escapeHtml: false))
             ->html($html)
             ->text($text);
 

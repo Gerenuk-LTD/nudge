@@ -16,7 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $workspace_id
  * @property int $campaign_id
  * @property int $contact_id
+ * @property int $automation_run_id
  * @property string $email
+ * @property string|null $variant
  * @property RecipientStatus $status
  * @property string|null $provider_message_id
  * @property string|null $error
@@ -29,7 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonInterface|null $unsubscribed_at
  */
 #[Fillable([
-    'workspace_id', 'campaign_id', 'contact_id', 'email', 'status', 'provider_message_id', 'error',
+    'workspace_id', 'campaign_id', 'contact_id', 'automation_run_id', 'email', 'variant', 'status', 'provider_message_id', 'error',
     'sent_at', 'delivered_at', 'opened_at', 'clicked_at', 'bounced_at', 'complained_at', 'unsubscribed_at',
 ])]
 class CampaignRecipient extends Model

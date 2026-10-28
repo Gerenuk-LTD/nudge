@@ -14,8 +14,23 @@ import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDateTime, percent } from '@marketing/lib/format';
 import type { CampaignSummary, Paginated } from '@marketing/types';
 
+type VariantResult = {
+    sent: number;
+    opened: number;
+    clicked: number;
+    rate: number;
+};
+
+type AbTest = {
+    metric: 'clicks' | 'opens';
+    winner: 'a' | 'b' | null;
+    decides_at: string | null;
+    results: { a: VariantResult; b: VariantResult };
+} | null;
+
 type Snapshot = {
     subject: string;
+    subject_b: string | null;
     preheader: string | null;
     from_name: string;
     from_email: string;
@@ -46,7 +61,9 @@ export default function ShowCampaign({
     links,
     recipients,
     recipientStatus,
+    abTest,
 }: {
+    abTest: AbTest;
     campaign: CampaignSummary;
     snapshot: Snapshot;
     links: LinkRow[];
@@ -77,20 +94,21 @@ export default function ShowCampaign({
                     actions={
                         <>
                             <CampaignStatusBadge status={campaign.status} />
-                            {can('campaigns.manage') && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() =>
-                                        router.post(
-                                            CampaignController.duplicate.url(
-                                                campaign.id,
-                                            ),
-                                        )
-                                    }
-                                >
-                                    Duplicate
-                                </Button>
-                            )}
+                            {can('campaigns.manage') &&
+                                campaign.kind === 'broadcast' && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            router.post(
+                                                CampaignController.duplicate.url(
+                                                    campaign.id,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        Duplicate
+                                    </Button>
+                                )}
                             {can('campaigns.send') &&
                                 campaign.status === 'scheduled' && (
                                     <Button
@@ -182,6 +200,81 @@ export default function ShowCampaign({
                         {stats.failed.toLocaleString()} could not be sent.
                         Filter recipients by "Failed" to see why.
                     </p>
+                )}
+
+                {abTest && (
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                            <h2 className="font-medium">A/B test</h2>
+                            {abTest.winner === null &&
+                                campaign.status === 'sending' &&
+                                can('campaigns.send') && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            router.post(
+                                                CampaignController.pickWinner.url(
+                                                    campaign.id,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        Pick the winner now
+                                    </Button>
+                                )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            {abTest.winner
+                                ? `Variant ${abTest.winner.toUpperCase()} won on ${abTest.metric} and went to everyone else.`
+                                : `The winner is picked by ${abTest.metric} at ${formatDateTime(abTest.decides_at) ?? 'the end of the test'}.`}
+                        </p>
+                        <DataTable
+                            headers={[
+                                'Variant',
+                                'Subject',
+                                'Sent',
+                                'Opened',
+                                'Clicked',
+                            ]}
+                        >
+                            {(['a', 'b'] as const).map((variant) => (
+                                <tr key={variant}>
+                                    <Cell className="font-medium">
+                                        {variant.toUpperCase()}{' '}
+                                        {abTest.winner === variant && (
+                                            <Badge variant="secondary">
+                                                Winner
+                                            </Badge>
+                                        )}
+                                    </Cell>
+                                    <Cell className="max-w-sm truncate">
+                                        {variant === 'b'
+                                            ? (snapshot?.subject_b ??
+                                              snapshot?.subject)
+                                            : snapshot?.subject}
+                                    </Cell>
+                                    <Cell>
+                                        {abTest.results[
+                                            variant
+                                        ].sent.toLocaleString()}
+                                    </Cell>
+                                    <Cell>
+                                        {percent(
+                                            abTest.results[variant].opened,
+                                            abTest.results[variant].sent,
+                                        )}
+                                    </Cell>
+                                    <Cell>
+                                        {percent(
+                                            abTest.results[variant].clicked,
+                                            abTest.results[variant].sent,
+                                        )}
+                                    </Cell>
+                                </tr>
+                            ))}
+                        </DataTable>
+                    </section>
                 )}
 
                 {links.length > 0 && (

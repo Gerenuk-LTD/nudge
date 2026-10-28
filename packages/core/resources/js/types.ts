@@ -8,6 +8,8 @@ export type Permission =
     | 'campaigns.send'
     | 'campaigns.approve'
     | 'providers.manage'
+    | 'automations.view'
+    | 'automations.manage'
     | 'members.manage'
     | 'roles.manage'
     | 'api_tokens.manage'
@@ -150,6 +152,8 @@ export type CampaignSummary = {
     stats: CampaignStats;
     track_opens: boolean;
     track_clicks: boolean;
+    kind: 'broadcast' | 'automation';
+    automation_id: number | null;
 };
 
 export type ChecklistItem = {
@@ -158,4 +162,30 @@ export type ChecklistItem = {
     passed: boolean;
     blocking: boolean;
     message: string | null;
+};
+
+export type StepType =
+    | 'send_email'
+    | 'wait'
+    | 'condition'
+    | 'update_contact'
+    | 'webhook'
+    | 'exit';
+
+export type AutomationStep = {
+    id: string;
+    type: StepType;
+    config: Record<string, unknown>;
+    yes?: AutomationStep[];
+    no?: AutomationStep[];
+};
+
+export type StepStats = {
+    waiting?: number;
+    campaign_id?: number;
+    sent?: number;
+    opened?: number;
+    clicked?: number;
+    unsubscribed?: number;
+    bounced?: number;
 };

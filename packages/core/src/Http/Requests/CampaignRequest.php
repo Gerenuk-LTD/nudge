@@ -35,6 +35,12 @@ class CampaignRequest extends FormRequest
             'segment_id' => ['sometimes', 'nullable', 'integer', Rule::exists('segments', 'id')->where('workspace_id', $workspaceId)],
             'track_opens' => ['sometimes', 'boolean'],
             'track_clicks' => ['sometimes', 'boolean'],
+            'ab_enabled' => ['sometimes', 'boolean'],
+            'ab_subject_b' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'ab_html_b' => ['sometimes', 'nullable', 'string', 'max:1000000'],
+            'ab_sample_percent' => ['sometimes', 'integer', 'min:10', 'max:50'],
+            'ab_wait_minutes' => ['sometimes', 'integer', 'min:30', 'max:10080'],
+            'ab_metric' => ['sometimes', 'in:clicks,opens'],
         ];
     }
 }

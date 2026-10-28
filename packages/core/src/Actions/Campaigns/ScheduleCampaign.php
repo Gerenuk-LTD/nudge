@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing\Actions\Campaigns;
 use Carbon\CarbonInterface;
 use Gerenuk\Marketing\Campaigns\CampaignChecklist;
 use Gerenuk\Marketing\Campaigns\ChecklistItem;
+use Gerenuk\Marketing\Enums\CampaignKind;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Jobs\PrepareCampaign;
 use Gerenuk\Marketing\Models\Campaign;
@@ -20,7 +21,7 @@ class ScheduleCampaign
      */
     public function handle(Campaign $campaign, Workspace $workspace, ?CarbonInterface $sendAt = null): void
     {
-        if (! $campaign->status->isEditable()) {
+        if ($campaign->kind !== CampaignKind::Broadcast || ! $campaign->status->isEditable()) {
             throw ValidationException::withMessages(['campaign' => __('This campaign has already been sent.')]);
         }
 

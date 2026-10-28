@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Http\Controllers\Api;
 
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
+use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Http\Controllers\Controller;
 use Gerenuk\Marketing\Http\Resources\ContactListResource;
 use Gerenuk\Marketing\Models\Contact;
@@ -51,11 +52,13 @@ class ContactListController extends Controller
     /**
      * Add existing contacts to the list by email. Unknown emails are reported back, not created.
      */
-    public function addContacts(Request $request, ContactList $list): JsonResponse
+    public function addContacts(Request $request, ContactList $list, AutomationTriggers $triggers): JsonResponse
     {
         ['found' => $found, 'missing' => $missing] = $this->contactsFromRequest($request);
 
-        $list->contacts()->syncWithoutDetaching(UpsertContact::listPivot($found));
+        $attached = $list->contacts()->syncWithoutDetaching(UpsertContact::listPivot($found))['attached'];
+
+        Contact::query()->whereKey($attached)->each(fn (Contact $contact) => $triggers->listsJoined($contact, [$list->id]));
 
         return response()->json(['data' => ['added' => count($found), 'not_found' => $missing]]);
     }

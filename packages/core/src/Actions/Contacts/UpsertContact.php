@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Actions\Contacts;
 
 use Carbon\CarbonInterface;
+use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Tag;
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class UpsertContact
 {
-    public function __construct(private readonly ContactRules $rules) {}
+    public function __construct(
+        private readonly ContactRules $rules,
+        private readonly AutomationTriggers $triggers,
+    ) {}
 
     /**
      * Create or update a contact by email, restoring it if archived. Only provided fields change:
@@ -67,11 +71,11 @@ class UpsertContact
             $contact->save();
 
             if ($data->tags !== []) {
-                $contact->tags()->syncWithoutDetaching(self::resolveTagIds($data->tags));
+                $this->triggers->tagsAdded($contact, $contact->tags()->syncWithoutDetaching(self::resolveTagIds($data->tags))['attached']);
             }
 
             if ($data->lists !== []) {
-                $contact->lists()->syncWithoutDetaching(self::listPivot($data->lists));
+                $this->triggers->listsJoined($contact, $contact->lists()->syncWithoutDetaching(self::listPivot($data->lists))['attached']);
             }
 
             return ['contact' => $contact, 'created' => $created];

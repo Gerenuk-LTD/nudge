@@ -3,11 +3,14 @@
 namespace Gerenuk\Marketing;
 
 use Gerenuk\Marketing\Contracts\MarketingUser;
+use Gerenuk\Marketing\Enums\AutomationTrigger;
 use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Http\Middleware\AuthenticateApiToken;
 use Gerenuk\Marketing\Http\Middleware\EnsureTokenCan;
 use Gerenuk\Marketing\Http\Middleware\SetCurrentWorkspace;
+use Gerenuk\Marketing\Jobs\AdvanceDueAutomationRuns;
 use Gerenuk\Marketing\Jobs\DispatchDueCampaigns;
+use Gerenuk\Marketing\Jobs\EnrollScheduledTriggers;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -54,6 +57,9 @@ class MarketingServiceProvider extends ServiceProvider
     {
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->call(new DispatchDueCampaigns)->everyMinute()->name('marketing:dispatch-due-campaigns')->withoutOverlapping();
+            $schedule->call(new AdvanceDueAutomationRuns)->everyMinute()->name('marketing:advance-automation-runs')->withoutOverlapping();
+            $schedule->job(new EnrollScheduledTriggers([AutomationTrigger::SegmentEntered]))->everyFiveMinutes()->name('marketing:segment-triggers');
+            $schedule->job(new EnrollScheduledTriggers([AutomationTrigger::DateField, AutomationTrigger::Inactivity]))->dailyAt('08:00')->name('marketing:daily-triggers');
         });
     }
 

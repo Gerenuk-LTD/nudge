@@ -4,12 +4,15 @@ namespace Gerenuk\Marketing\Http\Controllers;
 
 use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
 use Gerenuk\Marketing\Actions\Campaigns\SendTestEmail;
+use Gerenuk\Marketing\Campaigns\AbTestResults;
 use Gerenuk\Marketing\Campaigns\CampaignAudience;
 use Gerenuk\Marketing\Campaigns\CampaignChecklist;
 use Gerenuk\Marketing\Campaigns\ChecklistItem;
+use Gerenuk\Marketing\Enums\CampaignKind;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Http\Requests\CampaignRequest;
+use Gerenuk\Marketing\Jobs\PickAbTestWinner;
 use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\CampaignLink;
 use Gerenuk\Marketing\Models\CampaignRecipient;
@@ -28,7 +31,7 @@ use Inertia\Response;
 class CampaignController extends Controller
 {
     /** Fields that change what recipients see; editing them withdraws an approval. */
-    private const CONTENT_FIELDS = ['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'text', 'audience_type', 'list_ids', 'segment_id', 'provider_id'];
+    private const CONTENT_FIELDS = ['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'text', 'audience_type', 'list_ids', 'segment_id', 'provider_id', 'ab_enabled', 'ab_subject_b', 'ab_html_b'];
 
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
@@ -38,6 +41,7 @@ class CampaignController extends Controller
 
         return Inertia::render('marketing/campaigns/index', [
             'campaigns' => Campaign::query()
+                ->broadcasts()
                 ->when(CampaignStatus::tryFrom($status), fn ($query, CampaignStatus $value) => $query->where('status', $value))
                 ->orderByDesc('id')
                 ->paginate(25)
@@ -67,6 +71,10 @@ class CampaignController extends Controller
 
     public function edit(Campaign $campaign, CampaignChecklist $checklist, CampaignAudience $audience): Response|RedirectResponse
     {
+        if ($campaign->kind === CampaignKind::Automation) {
+            return to_route('marketing.automations.edit', (int) $campaign->automation_id);
+        }
+
         if (! $campaign->status->isEditable()) {
             return to_route('marketing.campaigns.show', $campaign);
         }
@@ -118,7 +126,9 @@ class CampaignController extends Controller
 
     public function duplicate(Request $request, Campaign $campaign): RedirectResponse
     {
-        $copy = $campaign->replicate(['status', 'approved_at', 'approved_by', 'scheduled_at', 'sending_started_at', 'sent_at', 'recipients_count']);
+        abort_if($campaign->kind === CampaignKind::Automation, 404);
+
+        $copy = $campaign->replicate(['status', 'approved_at', 'approved_by', 'scheduled_at', 'sending_started_at', 'sent_at', 'recipients_count', 'ab_winner', 'ab_decided_at']);
         $copy->fill([
             'name' => __(':name (copy)', ['name' => $campaign->name]),
             'status' => CampaignStatus::Draft,
@@ -175,6 +185,18 @@ class CampaignController extends Controller
         return to_route('marketing.campaigns.show', $campaign);
     }
 
+    /**
+     * Pick the A/B winner now instead of waiting for the test window to end.
+     */
+    public function pickWinner(Campaign $campaign): RedirectResponse
+    {
+        abort_unless($campaign->ab_enabled && $campaign->ab_winner === null && $campaign->status === CampaignStatus::Sending, 409);
+
+        PickAbTestWinner::dispatch($campaign->id, $campaign->workspace_id);
+
+        return to_route('marketing.campaigns.show', $campaign);
+    }
+
     public function unschedule(Campaign $campaign): RedirectResponse
     {
         $updated = Campaign::query()->whereKey($campaign->id)->where('status', CampaignStatus::Scheduled)
@@ -199,7 +221,7 @@ class CampaignController extends Controller
         return to_route('marketing.campaigns.show', $campaign);
     }
 
-    public function show(Request $request, Campaign $campaign): Response|RedirectResponse
+    public function show(Request $request, Campaign $campaign, AbTestResults $abResults): Response|RedirectResponse
     {
         if ($campaign->status === CampaignStatus::Draft) {
             return to_route('marketing.campaigns.edit', $campaign);
@@ -209,7 +231,13 @@ class CampaignController extends Controller
 
         return Inertia::render('marketing/campaigns/show', [
             'campaign' => $this->summary($campaign),
-            'snapshot' => $campaign->snapshot?->only(['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'html']),
+            'snapshot' => $campaign->snapshot?->only(['subject', 'subject_b', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'html_b']),
+            'abTest' => $campaign->ab_enabled ? [
+                'metric' => $campaign->ab_metric,
+                'winner' => $campaign->ab_winner,
+                'decides_at' => $campaign->sending_started_at?->addMinutes($campaign->ab_wait_minutes)->toIso8601String(),
+                'results' => $abResults->for($campaign),
+            ] : null,
             'links' => $campaign->links()->orderByDesc('unique_clicks_count')->orderBy('id')->get()
                 ->map(fn (CampaignLink $link) => $link->only(['id', 'url', 'clicks_count', 'unique_clicks_count'])),
             'recipients' => Inertia::defer(fn () => $campaign->recipients()
@@ -229,6 +257,8 @@ class CampaignController extends Controller
 
     private function ensureEditable(Campaign $campaign): void
     {
+        abort_if($campaign->kind === CampaignKind::Automation, 404);
+
         if (! $campaign->status->isEditable()) {
             throw ValidationException::withMessages(['campaign' => __('Sent campaigns cannot be changed.')]);
         }
@@ -264,6 +294,8 @@ class CampaignController extends Controller
             ],
             'track_opens' => $campaign->track_opens,
             'track_clicks' => $campaign->track_clicks,
+            'kind' => $campaign->kind->value,
+            'automation_id' => $campaign->automation_id,
         ];
     }
 
@@ -273,7 +305,10 @@ class CampaignController extends Controller
     private function details(Campaign $campaign): array
     {
         return [
-            ...$campaign->only(['id', 'name', 'subject', 'preheader', 'provider_id', 'from_name', 'from_email', 'reply_to', 'html', 'text', 'segment_id', 'track_opens', 'track_clicks']),
+            ...$campaign->only([
+                'id', 'name', 'subject', 'preheader', 'provider_id', 'from_name', 'from_email', 'reply_to', 'html', 'text', 'segment_id',
+                'track_opens', 'track_clicks', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_sample_percent', 'ab_wait_minutes', 'ab_metric',
+            ]),
             'status' => $campaign->status->value,
             'audience_type' => $campaign->audience_type->value,
             'list_ids' => $campaign->list_ids ?? [],
