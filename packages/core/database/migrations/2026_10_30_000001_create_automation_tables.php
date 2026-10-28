@@ -72,7 +72,8 @@ return new class extends Migration
             $table->char('variant', 1)->nullable()->after('email');
             // 0 for broadcasts, so (campaign, contact, run) stays unique for both broadcasts and automations.
             $table->unsignedBigInteger('automation_run_id')->default(0)->after('contact_id');
-            $table->unique(['campaign_id', 'contact_id', 'automation_run_id']);
+            // Named explicitly: the generated name is longer than MySQL's 64-character limit.
+            $table->unique(['campaign_id', 'contact_id', 'automation_run_id'], 'campaign_recipients_campaign_contact_run_unique');
         });
 
         Schema::table('campaign_recipients', function (Blueprint $table) {
@@ -90,7 +91,7 @@ return new class extends Migration
         });
 
         Schema::table('campaign_recipients', function (Blueprint $table) {
-            $table->dropUnique(['campaign_id', 'contact_id', 'automation_run_id']);
+            $table->dropUnique('campaign_recipients_campaign_contact_run_unique');
             $table->dropColumn(['variant', 'automation_run_id']);
         });
 
