@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { realpathSync } from 'node:fs';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
 export default defineConfig({
@@ -28,6 +29,15 @@ export default defineConfig({
             formVariants: true,
         }),
     ]),
+    resolve: {
+        alias: {
+            // The core package's frontend: pages, layouts and components. Resolved through
+            // vendor so it works with both the local path repository and a Packagist install.
+            '@marketing': realpathSync(
+                'vendor/gerenuk/marketing-core/resources/js',
+            ),
+        },
+    },
     server: {
         watch: {
             ignored: [
@@ -42,6 +52,7 @@ export default defineConfig({
     lint: {
         ignorePatterns: [
             'vendor/**',
+            'packages/*/vendor/**',
             'node_modules/**',
             'public/**',
             'bootstrap/ssr/**',

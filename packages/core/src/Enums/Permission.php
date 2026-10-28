@@ -1,0 +1,37 @@
+<?php
+
+namespace Gerenuk\Marketing\Enums;
+
+enum Permission: string
+{
+    case ContactsView = 'contacts.view';
+    case ContactsManage = 'contacts.manage';
+    case ContactsImport = 'contacts.import';
+    case SegmentsManage = 'segments.manage';
+    case MembersManage = 'members.manage';
+    case RolesManage = 'roles.manage';
+    case ApiTokensManage = 'api_tokens.manage';
+    case WorkspaceManage = 'workspace.manage';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::ContactsView => 'View contacts, lists, tags and segments',
+            self::ContactsManage => 'Create, edit and archive contacts, lists, tags and custom fields',
+            self::ContactsImport => 'Import contacts from CSV',
+            self::SegmentsManage => 'Create and edit segments',
+            self::MembersManage => 'Invite and remove members',
+            self::RolesManage => 'Create and edit roles',
+            self::ApiTokensManage => 'Create and revoke API tokens',
+            self::WorkspaceManage => 'Rename the workspace',
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
+}

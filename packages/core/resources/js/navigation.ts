@@ -1,0 +1,66 @@
+import type { InertiaLinkProps } from '@inertiajs/react';
+import type { LucideIcon } from 'lucide-react';
+import {
+    FileUp,
+    Filter,
+    List,
+    Tag,
+    TextCursorInput,
+    Users,
+} from 'lucide-react';
+import { index as contactsIndex } from '@/routes/marketing/contacts';
+import { index as customFieldsIndex } from '@/routes/marketing/custom-fields';
+import { index as importsIndex } from '@/routes/marketing/imports';
+import { index as listsIndex } from '@/routes/marketing/lists';
+import { index as segmentsIndex } from '@/routes/marketing/segments';
+import { index as tagsIndex } from '@/routes/marketing/tags';
+import type { Permission } from '@marketing/types';
+
+export type MarketingNavItem = {
+    title: string;
+    href: NonNullable<InertiaLinkProps['href']>;
+    icon: LucideIcon;
+    permission: Permission;
+};
+
+/**
+ * The core's sidebar items. Host apps render these and can add their own, such as billing.
+ */
+export const marketingNavItems: MarketingNavItem[] = [
+    {
+        title: 'Contacts',
+        href: contactsIndex(),
+        icon: Users,
+        permission: 'contacts.view',
+    },
+    {
+        title: 'Segments',
+        href: segmentsIndex(),
+        icon: Filter,
+        permission: 'contacts.view',
+    },
+    {
+        title: 'Lists',
+        href: listsIndex(),
+        icon: List,
+        permission: 'contacts.view',
+    },
+    {
+        title: 'Tags',
+        href: tagsIndex(),
+        icon: Tag,
+        permission: 'contacts.view',
+    },
+    {
+        title: 'Custom fields',
+        href: customFieldsIndex(),
+        icon: TextCursorInput,
+        permission: 'contacts.view',
+    },
+    {
+        title: 'Imports',
+        href: importsIndex(),
+        icon: FileUp,
+        permission: 'contacts.import',
+    },
+];

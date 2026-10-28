@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9bf224739eeeb99ffea425f52d58af83",
+    "content-hash": "d214e841852383c2b002076aaf7db30d",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -734,6 +734,52 @@
                 }
             ],
             "time": "2025-12-03T09:33:47+00:00"
+        },
+        {
+            "name": "gerenuk/marketing-core",
+            "version": "dev-dev",
+            "dist": {
+                "type": "path",
+                "url": "packages/core",
+                "reference": "af31f6da36ce787964e802839e0f57092c8d4b15"
+            },
+            "require": {
+                "inertiajs/inertia-laravel": "^3.0",
+                "laravel/framework": "^13.17",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^11.3",
+                "pestphp/pest": "^5.3",
+                "pestphp/pest-plugin-laravel": "^5.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Gerenuk\\Marketing\\MarketingServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Gerenuk\\Marketing\\": "src/",
+                    "Gerenuk\\Marketing\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Gerenuk\\Marketing\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "FSL-1.1-Apache-2.0"
+            ],
+            "description": "Core of the Gerenuk marketing platform: contacts, lists, segments, imports and the API.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "graham-campbell/result-type",
@@ -11699,12 +11745,14 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "gerenuk/marketing-core": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.3"
     },
-    "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
 }
