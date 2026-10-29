@@ -4,6 +4,7 @@ namespace Gerenuk\Marketing\Sending\Webhooks;
 
 use Carbon\CarbonImmutable;
 use Gerenuk\Marketing\Enums\EventType;
+use Gerenuk\Marketing\Models\Provider;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -23,7 +24,7 @@ class SnsParser
     /**
      * @return list<DeliveryEvent>
      */
-    public function parse(Request $request): array
+    public function parse(Request $request, Provider $provider): array
     {
         $message = json_decode($request->getContent(), true);
 
@@ -32,6 +33,7 @@ class SnsParser
         }
 
         $this->verify($message);
+        $this->ensureTopic($provider, $message);
 
         if ($message['Type'] === 'SubscriptionConfirmation') {
             $this->confirmSubscription((string) $message['SubscribeURL']);
@@ -46,6 +48,31 @@ class SnsParser
         $notification = json_decode((string) $message['Message'], true);
 
         return is_array($notification) ? $this->eventsFrom($notification) : [];
+    }
+
+    /**
+     * Only the SNS topic the provider first confirmed may send events. Any AWS account can sign messages
+     * from its own topic, so a valid signature alone does not prove they come from this customer.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    private function ensureTopic(Provider $provider, array $message): void
+    {
+        $topic = (string) ($message['TopicArn'] ?? '');
+
+        if ($topic === '') {
+            throw new RejectWebhookException(406, 'The SNS message has no topic.');
+        }
+
+        if ($provider->webhook_topic_arn === null) {
+            $provider->forceFill(['webhook_topic_arn' => $topic])->saveQuietly();
+
+            return;
+        }
+
+        if (! hash_equals($provider->webhook_topic_arn, $topic)) {
+            throw new RejectWebhookException(403, 'This SNS topic is not the one connected to this provider.');
+        }
     }
 
     /**

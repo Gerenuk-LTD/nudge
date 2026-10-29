@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
  * @property array<string, string|null> $credentials
  * @property string|null $webhook_secret
  * @property string $webhook_token
+ * @property string|null $webhook_topic_arn
  * @property string|null $from_name
  * @property string|null $from_email
  * @property string|null $reply_to
@@ -29,8 +30,8 @@ use Illuminate\Support\Str;
  * @property CarbonInterface|null $last_webhook_at
  * @property CarbonInterface|null $created_at
  */
-#[Fillable(['workspace_id', 'name', 'type', 'credentials', 'webhook_secret', 'webhook_token', 'from_name', 'from_email', 'reply_to', 'max_per_second', 'daily_limit', 'last_sent_at', 'last_webhook_at'])]
-#[Hidden(['credentials', 'webhook_secret', 'webhook_token'])]
+#[Fillable(['workspace_id', 'name', 'type', 'credentials', 'webhook_secret', 'webhook_token', 'webhook_topic_arn', 'from_name', 'from_email', 'reply_to', 'max_per_second', 'daily_limit', 'last_sent_at', 'last_webhook_at'])]
+#[Hidden(['credentials', 'webhook_secret', 'webhook_token', 'webhook_topic_arn'])]
 class Provider extends Model
 {
     use BelongsToWorkspace;

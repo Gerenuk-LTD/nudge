@@ -5,6 +5,7 @@ use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Enums\SuppressionReason;
+use Gerenuk\Marketing\Jobs\ProcessDeliveryEvents;
 use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\CampaignRecipient;
@@ -15,9 +16,11 @@ use Gerenuk\Marketing\Sending\MessageHeaders;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Sending\Webhooks\BounceClassifier;
+use Gerenuk\Marketing\Sending\WebhookVerification;
 use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -243,7 +246,7 @@ describe('Amazon SES through SNS', function () {
 
     function snsMessage(array $fields, $key, string $certUrl): array
     {
-        $message = [...$fields, 'SignatureVersion' => '2', 'SigningCertURL' => $certUrl, 'Timestamp' => now()->toIso8601String(), 'TopicArn' => 'arn:aws:sns:eu-west-1:1:ses', 'MessageId' => uniqid()];
+        $message = ['TopicArn' => 'arn:aws:sns:eu-west-1:1:ses', ...$fields, 'SignatureVersion' => '2', 'SigningCertURL' => $certUrl, 'Timestamp' => now()->toIso8601String(), 'MessageId' => uniqid()];
         $keys = $message['Type'] === 'Notification'
             ? ['Message', 'MessageId', 'Subject', 'Timestamp', 'TopicArn', 'Type']
             : ['Message', 'MessageId', 'SubscribeURL', 'Timestamp', 'Token', 'TopicArn', 'Type'];
@@ -305,6 +308,34 @@ describe('Amazon SES through SNS', function () {
 
         Http::assertSent(fn ($request) => $request->url() === $subscribeUrl);
     });
+
+    test('the first signed message pins the SNS topic', function () {
+        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+            json_encode(snsMessage(['Type' => 'Notification', 'Message' => '{}'], $this->snsKey, $this->certUrl)))
+            ->assertNoContent();
+
+        expect($this->provider->fresh()->webhook_topic_arn)->toBe('arn:aws:sns:eu-west-1:1:ses');
+    });
+
+    test('messages from another SNS topic are refused', function () {
+        sentCampaignThrough($this->provider, $this);
+        $recipient = CampaignRecipient::first();
+        $this->provider->forceFill(['webhook_topic_arn' => 'arn:aws:sns:eu-west-1:1:ses'])->save();
+
+        $notification = json_encode([
+            'eventType' => 'Bounce',
+            'mail' => ['messageId' => 'ses-1', 'tags' => [MessageHeaders::RECIPIENT_KEY => [(string) $recipient->id]]],
+            'bounce' => ['bounceType' => 'Permanent', 'bounceSubType' => 'General', 'timestamp' => now()->toIso8601String(), 'bouncedRecipients' => [['emailAddress' => $recipient->email]]],
+        ]);
+
+        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+            json_encode(snsMessage(['Type' => 'Notification', 'Message' => $notification, 'TopicArn' => 'arn:aws:sns:eu-west-1:999:attacker'], $this->snsKey, $this->certUrl)))
+            ->assertStatus(403);
+
+        $this->useWorkspace($this->workspace);
+        expect(Suppression::count())->toBe(0)
+            ->and($recipient->fresh()->status)->not->toBe(RecipientStatus::Bounced);
+    });
 });
 
 test('too many bounces pause the workspace', function () {
@@ -333,3 +364,38 @@ test('a payload the parser cannot read is rejected rather than erroring', functi
 
     $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), $payload)->assertStatus(400);
 });
+
+test('a signing-secret provider without a key refuses webhooks', function (ProviderType $type) {
+    Queue::fake([ProcessDeliveryEvents::class]);
+    $credentials = [];
+
+    foreach ($type->fields() as $field) {
+        $credentials[$field->key] = 'x';
+    }
+
+    $provider = Provider::create(['name' => 'No key', 'type' => $type, 'max_per_second' => 1, 'credentials' => $credentials, 'webhook_secret' => null]);
+
+    $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), ['any' => 'payload'])->assertStatus(403);
+
+    Queue::assertNotPushed(ProcessDeliveryEvents::class);
+})->with([ProviderType::Mailgun, ProviderType::SendGrid, ProviderType::Resend, ProviderType::MailerSend, ProviderType::Mandrill]);
+
+test('every webhook provider rejects requests with the wrong credentials', function (ProviderType $type) {
+    Queue::fake([ProcessDeliveryEvents::class]);
+    $credentials = [];
+
+    foreach ($type->fields() as $field) {
+        $credentials[$field->key] = 'x';
+    }
+
+    $basic = $type->webhookVerification() === WebhookVerification::BasicAuth;
+    $provider = Provider::create(['name' => 'Wrong', 'type' => $type, 'max_per_second' => 1, 'credentials' => $credentials, 'webhook_secret' => $basic ? 'gmk:wrong' : 'wrong']);
+
+    $response = $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), ['any' => 'payload'], ['Authorization' => 'Basic '.base64_encode('gmk:other')]);
+
+    expect($response->status())->toBeGreaterThanOrEqual(400)->toBeLessThan(500);
+    Queue::assertNotPushed(ProcessDeliveryEvents::class);
+})->with(fn () => array_values(array_filter(
+    ProviderType::cases(),
+    fn (ProviderType $type) => in_array($type->webhookVerification(), [WebhookVerification::SigningSecret, WebhookVerification::BasicAuth], true),
+)));

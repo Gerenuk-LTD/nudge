@@ -34,6 +34,7 @@ class SaveProvider
         $provider ??= new Provider(['type' => $type]);
 
         $provider->fill([
+            ...($type->webhookVerification() === WebhookVerification::Sns ? ['webhook_topic_arn' => null] : []),
             'name' => $data->name,
             'credentials' => $credentials,
             'webhook_secret' => $webhookSecret,

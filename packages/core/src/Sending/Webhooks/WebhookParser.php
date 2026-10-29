@@ -30,11 +30,15 @@ class WebhookParser
     public function parse(Provider $provider, Request $request): array
     {
         if ($provider->type->webhookVerification() === WebhookVerification::Sns) {
-            return $this->sns->parse($request);
+            return $this->sns->parse($request, $provider);
         }
 
         $parser = $provider->type->requestParser()
             ?? throw new RejectWebhookException(404, 'This provider does not send webhooks.');
+
+        if ($provider->type->webhookVerification() === WebhookVerification::SigningSecret && blank($provider->webhook_secret)) {
+            throw new RejectWebhookException(403, 'Add the webhook signing key to this provider to accept its webhooks.');
+        }
 
         $result = $parser->parse($request, (string) $provider->webhook_secret);
         $events = is_array($result) ? $result : ($result === null ? [] : [$result]);
