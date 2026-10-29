@@ -132,7 +132,7 @@ export function TemplatePicker({
 }) {
     if (failed) {
         return (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-8 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed bg-muted/40 px-6 py-8 text-center">
                 <p className="text-sm text-muted-foreground">
                     Templates could not be loaded.
                 </p>

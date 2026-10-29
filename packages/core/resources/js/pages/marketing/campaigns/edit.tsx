@@ -1255,7 +1255,7 @@ function EmptyChoice({
     action: string;
 }) {
     return (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-10 text-center">
             <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
             <Button variant="outline" size="sm" asChild>
                 <Link href={href}>{action}</Link>

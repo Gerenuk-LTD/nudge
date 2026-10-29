@@ -290,7 +290,7 @@ function NewCampaign({ variant = 'button' }: { variant?: 'button' | 'card' }) {
                 {variant === 'card' ? (
                     <button
                         type="button"
-                        className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                        className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/40 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
                     >
                         <Plus className="size-4" />
                         New campaign

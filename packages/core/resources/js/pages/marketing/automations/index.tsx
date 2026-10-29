@@ -60,7 +60,7 @@ export default function AutomationsIndex({
                 />
 
                 {automations.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-14 text-center">
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center">
                         <Workflow className="size-5 text-muted-foreground" />
                         <p className="text-sm font-medium">
                             No automations yet

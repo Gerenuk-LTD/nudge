@@ -26,6 +26,16 @@ class ContactRequest extends FormRequest
         return $rules;
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.unique' => __('Someone with this email is already a contact.'),
+        ];
+    }
+
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('email'))) {

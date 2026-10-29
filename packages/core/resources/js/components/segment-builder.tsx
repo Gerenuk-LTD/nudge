@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react';
+import { Filter, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -62,6 +62,129 @@ function defaultValue(field: SegmentField, operator: string) {
     return field.options[0]?.value ?? '';
 }
 
+/** One condition in words, such as "Tag has customer" or "Date added is within the last 30 days". */
+export function describeCondition(
+    condition: SegmentCondition,
+    fields: SegmentField[],
+): string {
+    const field = fields.find((candidate) => candidate.key === condition.field);
+    const operator = operatorLabels[condition.operator] ?? condition.operator;
+    const label = field?.label ?? condition.field;
+
+    if (valuelessOperators.includes(condition.operator)) {
+        return `${label} ${operator}`;
+    }
+
+    if (condition.operator === 'within_last_days') {
+        return `${label} ${operator} ${condition.value} days`;
+    }
+
+    if (condition.operator === 'more_than_days_ago') {
+        return `${label} ${operator} ${condition.value} days ago`;
+    }
+
+    const option = field?.options.find(
+        (candidate) => String(candidate.value) === String(condition.value),
+    );
+
+    const value = option
+        ? option.label
+        : field?.type === 'number' || field?.type === 'date'
+          ? String(condition.value ?? '')
+          : `“${condition.value ?? ''}”`;
+
+    return `${label} ${operator} ${value}`;
+}
+
+/** Each top-level rule in words, with nested groups in brackets, for summing up a segment in a line or two. */
+export function describeGroup(
+    group: SegmentGroup,
+    fields: SegmentField[],
+): string[] {
+    return group.conditions.map((item) =>
+        item.type === 'group'
+            ? `(${describeGroup(item, fields).join(item.match === 'all' ? ' and ' : ' or ')})`
+            : describeCondition(item, fields),
+    );
+}
+
+export type SegmentStarter = {
+    key: string;
+    name: string;
+    description: string;
+    definition: SegmentGroup;
+};
+
+/**
+ * Common segments to start from, using this workspace's own tags and lists when it has some.
+ */
+export function segmentStarters(fields: SegmentField[]): SegmentStarter[] {
+    const option = (key: string) =>
+        fields.find((field) => field.key === key)?.options[0];
+    const tag = option('tag');
+    const list = option('list');
+    const starter = (
+        key: string,
+        name: string,
+        description: string,
+        condition: Omit<SegmentCondition, 'type'>,
+    ): SegmentStarter => ({
+        key,
+        name,
+        description,
+        definition: {
+            match: 'all',
+            conditions: [{ type: 'condition', ...condition }],
+        },
+    });
+
+    return [
+        starter('new', 'New contacts', 'Added in the last 30 days', {
+            field: 'created_at',
+            operator: 'within_last_days',
+            value: 30,
+        }),
+        ...(tag
+            ? [
+                  starter(
+                      'tag',
+                      `Tagged ${tag.label}`,
+                      `Has the ${tag.label} tag`,
+                      {
+                          field: 'tag',
+                          operator: 'has',
+                          value: tag.value,
+                      },
+                  ),
+              ]
+            : []),
+        ...(list
+            ? [
+                  starter(
+                      'list',
+                      `On ${list.label}`,
+                      `Members of the ${list.label} list`,
+                      {
+                          field: 'list',
+                          operator: 'in',
+                          value: list.value,
+                      },
+                  ),
+              ]
+            : []),
+        starter(
+            'imported',
+            'Imported contacts',
+            'Came in through a CSV import',
+            {
+                field: 'source',
+                operator: 'is',
+                value: 'import',
+            },
+        ),
+    ];
+}
+
 export function SegmentGroupEditor({
     group,
     fields,
@@ -93,15 +216,56 @@ export function SegmentGroupEditor({
             conditions: group.conditions.filter((_, i) => i !== index),
         });
 
+    const join = group.match === 'all' ? 'and' : 'or';
+    const add = (item: SegmentNode) =>
+        onChange({ ...group, conditions: [...group.conditions, item] });
+    const addGroup = () =>
+        add({
+            type: 'group',
+            match: group.match === 'all' ? 'any' : 'all',
+            conditions: [emptyCondition(fields)],
+        });
+
+    if (depth === 1 && group.conditions.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center">
+                <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
+                    <Filter className="size-5" />
+                </span>
+                <div className="space-y-1">
+                    <p className="font-medium">No conditions yet</p>
+                    <p className="max-w-sm text-sm text-muted-foreground">
+                        Without conditions, the segment includes every active
+                        contact. Add one to narrow it down.
+                    </p>
+                </div>
+                <Button
+                    type="button"
+                    size="sm"
+                    className="mt-1"
+                    onClick={() => add(emptyCondition(fields))}
+                >
+                    <Plus />
+                    Add a condition
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <div
             className={cn(
-                'space-y-3 rounded-xl border p-4',
-                depth > 1 && 'bg-muted/30',
+                'rounded-xl border',
+                depth > 1 ? 'bg-muted/30' : 'bg-card shadow-xs',
             )}
         >
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span>Match</span>
+            <div
+                className={cn(
+                    'flex flex-wrap items-center gap-2 border-b text-sm',
+                    depth > 1 ? 'px-3 py-2' : 'px-5 py-3',
+                )}
+            >
+                <span>{depth > 1 ? 'Match' : 'Contacts who match'}</span>
                 <NativeSelect
                     aria-label="Match type"
                     value={group.match}
@@ -122,7 +286,7 @@ export function SegmentGroupEditor({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="ml-auto"
+                        className="ml-auto text-muted-foreground"
                         onClick={onRemove}
                     >
                         Remove group
@@ -130,84 +294,80 @@ export function SegmentGroupEditor({
                 )}
             </div>
 
-            {group.conditions.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                    No conditions: every active contact matches.
-                </p>
-            )}
+            <div className={cn('space-y-3', depth > 1 ? 'p-3' : 'p-5')}>
+                {group.conditions.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                        No conditions in this group yet.
+                    </p>
+                )}
 
-            {group.conditions.map((item, index) => {
-                const itemPath = `${path}.conditions.${index}`;
+                {group.conditions.map((item, index) => {
+                    const itemPath = `${path}.conditions.${index}`;
 
-                return item.type === 'group' ? (
-                    <SegmentGroupEditor
-                        key={index}
-                        group={item}
-                        fields={fields}
-                        depth={depth + 1}
-                        path={itemPath}
-                        errorPaths={errorPaths}
-                        onChange={(next) =>
-                            update(index, { ...next, type: 'group' })
-                        }
-                        onRemove={() => remove(index)}
-                    />
-                ) : (
-                    <ConditionEditor
-                        key={index}
-                        condition={item}
-                        fields={fields}
-                        invalid={errorPaths.includes(itemPath)}
-                        onChange={(next) => update(index, next)}
-                        onRemove={() => remove(index)}
-                    />
-                );
-            })}
+                    return (
+                        <div key={index} className="flex items-start gap-3">
+                            <span
+                                className={cn(
+                                    'mt-2 w-12 shrink-0 text-right text-xs font-medium',
+                                    index === 0
+                                        ? 'text-muted-foreground'
+                                        : 'text-foreground',
+                                )}
+                            >
+                                {index === 0 ? 'Where' : join}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                {item.type === 'group' ? (
+                                    <SegmentGroupEditor
+                                        group={item}
+                                        fields={fields}
+                                        depth={depth + 1}
+                                        path={itemPath}
+                                        errorPaths={errorPaths}
+                                        onChange={(next) =>
+                                            update(index, {
+                                                ...next,
+                                                type: 'group',
+                                            })
+                                        }
+                                        onRemove={() => remove(index)}
+                                    />
+                                ) : (
+                                    <ConditionEditor
+                                        condition={item}
+                                        fields={fields}
+                                        invalid={errorPaths.includes(itemPath)}
+                                        onChange={(next) => update(index, next)}
+                                        onRemove={() => remove(index)}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
 
-            <div className="flex flex-wrap gap-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                        onChange({
-                            ...group,
-                            conditions: [
-                                ...group.conditions,
-                                emptyCondition(fields),
-                            ],
-                        })
-                    }
-                >
-                    <Plus />
-                    Condition
-                </Button>
-                {depth < MAX_DEPTH && (
+                <div className="flex flex-wrap gap-2 pl-15">
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                            onChange({
-                                ...group,
-                                conditions: [
-                                    ...group.conditions,
-                                    {
-                                        type: 'group',
-                                        match:
-                                            group.match === 'all'
-                                                ? 'any'
-                                                : 'all',
-                                        conditions: [emptyCondition(fields)],
-                                    },
-                                ],
-                            })
-                        }
+                        onClick={() => add(emptyCondition(fields))}
                     >
                         <Plus />
-                        Group
+                        Condition
                     </Button>
-                )}
+                    {depth < MAX_DEPTH && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={addGroup}
+                        >
+                            <Plus />
+                            Group
+                        </Button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -254,46 +414,50 @@ function ConditionEditor({
     return (
         <div
             className={cn(
-                'flex flex-wrap items-center gap-2 rounded-lg',
+                'flex items-start gap-1 rounded-lg',
                 invalid && 'ring-2 ring-red-500/60 ring-offset-2',
             )}
         >
-            <NativeSelect
-                aria-label="Field"
-                value={field.key}
-                onChange={(event) => changeField(event.target.value)}
-            >
-                {fields.map((candidate) => (
-                    <option key={candidate.key} value={candidate.key}>
-                        {candidate.label}
-                    </option>
-                ))}
-            </NativeSelect>
+            {/* Three even columns, so the parts of every condition line up and the remove button never wraps. */}
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3">
+                <NativeSelect
+                    aria-label="Field"
+                    value={field.key}
+                    onChange={(event) => changeField(event.target.value)}
+                >
+                    {fields.map((candidate) => (
+                        <option key={candidate.key} value={candidate.key}>
+                            {candidate.label}
+                        </option>
+                    ))}
+                </NativeSelect>
 
-            <NativeSelect
-                aria-label="Comparison"
-                value={condition.operator}
-                onChange={(event) => changeOperator(event.target.value)}
-            >
-                {field.operators.map((operator) => (
-                    <option key={operator} value={operator}>
-                        {operatorLabels[operator] ?? operator}
-                    </option>
-                ))}
-            </NativeSelect>
+                <NativeSelect
+                    aria-label="Comparison"
+                    value={condition.operator}
+                    onChange={(event) => changeOperator(event.target.value)}
+                >
+                    {field.operators.map((operator) => (
+                        <option key={operator} value={operator}>
+                            {operatorLabels[operator] ?? operator}
+                        </option>
+                    ))}
+                </NativeSelect>
 
-            <ValueInput
-                field={field}
-                operator={condition.operator}
-                value={condition.value ?? null}
-                onChange={(value) => onChange({ ...condition, value })}
-            />
+                <ValueInput
+                    field={field}
+                    operator={condition.operator}
+                    value={condition.value ?? null}
+                    onChange={(value) => onChange({ ...condition, value })}
+                />
+            </div>
 
             <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 aria-label="Remove condition"
+                className="shrink-0 text-muted-foreground"
                 onClick={onRemove}
             >
                 <X />
@@ -324,7 +488,7 @@ function ValueInput({
                     aria-label="Days"
                     type="number"
                     min={1}
-                    className="w-24"
+                    className="min-w-0 flex-1"
                     value={value ?? ''}
                     onChange={(event) => onChange(Number(event.target.value))}
                 />
@@ -352,7 +516,6 @@ function ValueInput({
     return (
         <Input
             aria-label="Value"
-            className="w-56"
             type={
                 field.type === 'number'
                     ? 'number'

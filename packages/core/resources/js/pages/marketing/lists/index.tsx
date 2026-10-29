@@ -64,7 +64,7 @@ export default function ListsIndex({
                 )}
 
                 {lists.length === 0 ? (
-                    <div className="rounded-xl border border-dashed px-6 py-14 text-center text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center text-sm text-muted-foreground">
                         No lists yet. Add one above, then import or add contacts
                         to it.
                     </div>

@@ -76,7 +76,7 @@ export default function TemplatesIndex({
                         </p>
                     </div>
                     {templates.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-12 text-center">
                             <LayoutTemplate className="size-5 text-muted-foreground" />
                             <p className="max-w-md text-sm text-muted-foreground">
                                 No templates yet. Customise a starter below, or

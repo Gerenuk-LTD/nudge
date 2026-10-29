@@ -1,20 +1,24 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { ArrowRight, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import SegmentController from '@/actions/Gerenuk/Marketing/Http/Controllers/SegmentController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import {
     index as contactsIndex,
     show as showContact,
 } from '@/routes/marketing/contacts';
 import { index as segmentsIndex } from '@/routes/marketing/segments';
+import { ContactAvatar } from '@marketing/components/contact-fields';
 import { EditorBar } from '@marketing/components/editor-bar';
 import { PageBody } from '@marketing/components/page-header';
-import { SegmentGroupEditor } from '@marketing/components/segment-builder';
+import {
+    SegmentGroupEditor,
+    segmentStarters,
+} from '@marketing/components/segment-builder';
 import {
     useSaveShortcut,
     useUnsavedChangesGuard,
@@ -24,6 +28,7 @@ import type { SegmentField, SegmentGroup } from '@marketing/types';
 
 type Preview = {
     count: number;
+    total: number;
     sample: { id: number; email: string; name: string | null }[];
 };
 
@@ -34,16 +39,32 @@ export default function SegmentForm({
     segment: { id: number; name: string; definition: SegmentGroup } | null;
     fields: SegmentField[];
 }) {
+    const { url } = usePage();
+    // A new segment can start from one of the suggestions on the empty segments page.
+    const [starter] = useState(() =>
+        segment
+            ? undefined
+            : segmentStarters(fields).find(
+                  (candidate) =>
+                      candidate.key ===
+                      new URLSearchParams(url.split('?')[1]).get('starter'),
+              ),
+    );
+
     // The definition is kept outside useForm, whose types cannot describe a recursive structure.
     const [definition, setDefinition] = useState<SegmentGroup>(
-        segment?.definition ?? { match: 'all', conditions: [] },
+        segment?.definition ??
+            starter?.definition ?? { match: 'all', conditions: [] },
     );
-    const form = useForm({ name: segment?.name ?? '' });
+    const form = useForm({ name: segment?.name ?? starter?.name ?? '' });
     const [preview, setPreview] = useState<Preview | null>(null);
     const [previewErrors, setPreviewErrors] = useState<
         Record<string, string[]>
     >({});
     const [previewing, setPreviewing] = useState(false);
+    // A condition just added has no value yet, so the preview's complaints wait until saving is tried.
+    const [triedSaving, setTriedSaving] = useState(false);
+    const unfinished = Object.keys(previewErrors).length > 0;
 
     // Refresh the live count shortly after the definition stops changing.
     useEffect(() => {
@@ -84,6 +105,8 @@ export default function SegmentForm({
         form.isDirty || JSON.stringify(definition) !== savedDefinition;
 
     const save = () => {
+        setTriedSaving(true);
+
         if (segment && !dirty) {
             return;
         }
@@ -112,9 +135,13 @@ export default function SegmentForm({
     useUnsavedChangesGuard(dirty && !form.processing);
 
     const errors = form.errors as Record<string, string | undefined>;
-    const errorPaths = [...Object.keys(previewErrors), ...Object.keys(errors)];
+    const shownPreviewErrors = triedSaving ? previewErrors : {};
+    const errorPaths = [
+        ...Object.keys(shownPreviewErrors),
+        ...Object.keys(errors),
+    ];
     const definitionErrors = [
-        ...Object.values(previewErrors).flat(),
+        ...Object.values(shownPreviewErrors).flat(),
         ...Object.entries(errors)
             .filter(([key]) => key.startsWith('definition'))
             .map(([, message]) => message),
@@ -127,7 +154,10 @@ export default function SegmentForm({
             <PageBody>
                 <EditorBar
                     back={{ href: segmentsIndex(), label: 'segments' }}
-                    title={form.data.name || segment?.name || 'New segment'}
+                    title={form.data.name}
+                    titlePlaceholder="Name this segment"
+                    titleError={errors.name}
+                    onTitleChange={(name) => form.setData('name', name)}
                     saveState={
                         form.processing
                             ? 'saving'
@@ -156,19 +186,6 @@ export default function SegmentForm({
                     className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
                 >
                     <div className="space-y-6">
-                        <div className="grid max-w-md gap-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                required
-                                value={form.data.name}
-                                onChange={(event) =>
-                                    form.setData('name', event.target.value)
-                                }
-                            />
-                            <InputError message={errors.name} />
-                        </div>
-
                         <SegmentGroupEditor
                             group={definition}
                             fields={fields}
@@ -190,38 +207,99 @@ export default function SegmentForm({
                         )}
                     </div>
 
-                    <aside className="h-fit space-y-4 rounded-xl border bg-card p-4 shadow-xs lg:sticky lg:top-[calc(var(--marketing-header-height,4rem)+5.5rem)]">
-                        <div>
+                    <aside className="h-fit overflow-hidden rounded-xl border bg-card shadow-xs lg:sticky lg:top-[calc(var(--marketing-header-height,4rem)+5.5rem)]">
+                        <div className="space-y-3 p-5">
                             <p className="text-sm text-muted-foreground">
                                 Matching contacts
                             </p>
-                            <p className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
-                                {preview ? preview.count.toLocaleString() : '—'}
-                                {previewing && <Spinner />}
-                            </p>
+                            <div className="flex items-baseline gap-2">
+                                {preview ? (
+                                    <span className="text-3xl font-semibold tabular-nums">
+                                        {preview.count.toLocaleString()}
+                                    </span>
+                                ) : (
+                                    <Skeleton className="h-9 w-16" />
+                                )}
+                                {preview && (
+                                    <span className="text-sm text-muted-foreground">
+                                        of {preview.total.toLocaleString()} ·{' '}
+                                        {share(preview)}%
+                                    </span>
+                                )}
+                                {previewing && (
+                                    <Spinner className="ml-auto text-muted-foreground" />
+                                )}
+                            </div>
+                            {unfinished && (
+                                <p className="text-xs text-muted-foreground">
+                                    Fill in every condition to update the count.
+                                </p>
+                            )}
+                            <div
+                                className="h-1.5 overflow-hidden rounded-full bg-muted"
+                                role="presentation"
+                            >
+                                <div
+                                    className="h-full rounded-full bg-foreground/70 transition-[width] duration-300"
+                                    style={{
+                                        width: `${preview ? share(preview) : 0}%`,
+                                    }}
+                                />
+                            </div>
                         </div>
-                        {preview && preview.sample.length > 0 && (
-                            <ul className="space-y-1 text-sm">
-                                {preview.sample.map((contact) => (
-                                    <li key={contact.id} className="truncate">
-                                        <Link
-                                            href={showContact(contact.id)}
-                                            className="hover:underline"
-                                        >
-                                            {contact.email}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
+
+                        {preview && preview.count === 0 && (
+                            <div className="flex flex-col items-center gap-2 border-t bg-muted/40 px-5 py-8 text-center">
+                                <span className="flex size-9 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
+                                    <Users className="size-4" />
+                                </span>
+                                <p className="text-sm font-medium">
+                                    No one matches yet
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Loosen a condition, or switch to matching
+                                    any of them.
+                                </p>
+                            </div>
                         )}
+
+                        {preview && preview.sample.length > 0 && (
+                            <div className="border-t">
+                                <p className="px-5 pt-3 text-xs font-medium text-muted-foreground">
+                                    Newest matches
+                                </p>
+                                <ul className="p-2">
+                                    {preview.sample.map((contact) => (
+                                        <li key={contact.id}>
+                                            <Link
+                                                href={showContact(contact.id)}
+                                                className="flex items-center gap-2.5 rounded-md px-3 py-1.5 hover:bg-muted/60"
+                                            >
+                                                <ContactAvatar
+                                                    name={contact.name}
+                                                    email={contact.email}
+                                                    className="size-6 text-[10px]"
+                                                />
+                                                <span className="min-w-0 flex-1 truncate text-sm">
+                                                    {contact.name ??
+                                                        contact.email}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {segment && (
                             <Link
                                 href={contactsIndex({
                                     query: { segment: segment.id },
                                 })}
-                                className="text-sm underline underline-offset-4"
+                                className="flex items-center justify-between gap-2 border-t bg-muted/40 px-5 py-3 text-sm font-medium hover:bg-muted/70"
                             >
                                 View all saved matches
+                                <ArrowRight className="size-4 text-muted-foreground" />
                             </Link>
                         )}
                     </aside>
@@ -229,6 +307,13 @@ export default function SegmentForm({
             </PageBody>
         </>
     );
+}
+
+/** The share of active contacts that match, as a whole percentage. */
+function share(preview: Preview): number {
+    return preview.total > 0
+        ? Math.round((preview.count / preview.total) * 100)
+        : 0;
 }
 
 SegmentForm.layout = {

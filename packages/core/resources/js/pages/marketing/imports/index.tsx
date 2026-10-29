@@ -57,7 +57,7 @@ export default function ImportsIndex({
                 />
 
                 {imports.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-14 text-center">
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center">
                         <FileSpreadsheet className="size-5 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
                             No imports yet. Upload a CSV with an email column to

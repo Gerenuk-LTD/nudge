@@ -49,6 +49,8 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::put('contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
         Route::post('contacts/{contact}/archive', [ContactController::class, 'archive'])->name('contacts.archive');
         Route::post('contacts/{contact}/restore', [ContactController::class, 'restore'])->name('contacts.restore');
+        Route::post('contacts/{contact}/unsubscribe', [ContactController::class, 'unsubscribe'])->name('contacts.unsubscribe');
+        Route::post('contacts/{contact}/resubscribe', [ContactController::class, 'resubscribe'])->name('contacts.resubscribe');
 
         Route::post('lists', [ContactListController::class, 'store'])->name('lists.store');
         Route::put('lists/{list}', [ContactListController::class, 'update'])->name('lists.update');

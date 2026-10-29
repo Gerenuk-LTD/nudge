@@ -35,7 +35,11 @@ class ContactTimeline
                 EventType::Complained => [__('Marked :campaign as spam', ['campaign' => $campaign]), null],
                 EventType::Opened => [__('Opened :campaign', ['campaign' => $campaign]), null],
                 EventType::Clicked => [__('Clicked a link in :campaign', ['campaign' => $campaign]), ($data['url'] ?? null).(isset($data['suspected_bot']) ? ' '.__('(likely a security scanner)') : '')],
-                EventType::Unsubscribed => [__('Unsubscribed'), $campaign === null ? null : __('From :campaign', ['campaign' => $campaign])],
+                EventType::Unsubscribed => [__('Unsubscribed'), match (true) {
+                    $campaign !== null => __('From :campaign', ['campaign' => $campaign]),
+                    isset($data['by']) => __('By :name', ['name' => $data['by']]),
+                    default => null,
+                }],
                 EventType::Custom => [__('Event: :name', ['name' => $data['name'] ?? '']), empty($data['properties']) ? null : json_encode($data['properties'], JSON_UNESCAPED_SLASHES)],
                 EventType::AutomationEntered => [__('Started automation :name', ['name' => $data['automation'] ?? '']), null],
                 EventType::AutomationCompleted => [__('Finished automation :name', ['name' => $data['automation'] ?? '']), null],

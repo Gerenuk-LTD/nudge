@@ -129,11 +129,12 @@ test('invalid definitions are rejected with a reason', function (array $definiti
     'too deep' => [['match' => 'all', 'conditions' => [['type' => 'group', 'match' => 'all', 'conditions' => [['type' => 'group', 'match' => 'all', 'conditions' => [['type' => 'group', 'match' => 'all', 'conditions' => []]]]]]]]],
 ]);
 
-test('the preview endpoint returns a count and sample', function () {
+test('the preview endpoint returns a count out of all active contacts, and a sample', function () {
     $this->actingAs($this->owner)
         ->postJson(route('marketing.segments.preview'), ['definition' => ['match' => 'all', 'conditions' => [condition('status', 'is', 'subscribed')]]])
         ->assertOk()
         ->assertJsonPath('count', 2)
+        ->assertJsonPath('total', 3)
         ->assertJsonCount(2, 'sample');
 });
 
@@ -149,14 +150,14 @@ test('segments can be saved and used to filter contacts', function () {
         ->assertInertia(fn ($page) => $page->has('contacts.data', 1));
 });
 
-test('the segment list summarises which fields each segment filters on', function () {
-    Segment::create(['name' => 'Pro customers', 'definition' => ['match' => 'any', 'conditions' => [
-        condition('custom:plan', 'equals', 'pro'),
-        ['type' => 'group', 'match' => 'all', 'conditions' => [condition('custom:plan', 'equals', 'team'), condition('status', 'is', 'subscribed')]],
-    ]]]);
+test('the segment list shows each segment\'s rules and its share of active contacts', function () {
+    $definition = ['match' => 'any', 'conditions' => [condition('custom:plan', 'equals', 'pro')]];
+    Segment::create(['name' => 'Pro customers', 'definition' => $definition]);
 
     $this->actingAs($this->owner)->get(route('marketing.segments.index'))
         ->assertInertia(fn ($page) => $page
-            ->where('segments.0.match', 'any')
-            ->where('segments.0.fields', ['Plan', 'Subscription status']));
+            ->where('segments.0.definition', $definition)
+            ->where('segments.0.contacts_count', 1)
+            ->where('activeContacts', 3)
+            ->has('fields'));
 });

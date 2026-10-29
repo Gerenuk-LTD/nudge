@@ -30,11 +30,12 @@ class SegmentController extends Controller
             'segments' => Segment::query()->orderBy('name')->get()->map(fn (Segment $segment) => [
                 'id' => $segment->id,
                 'name' => $segment->name,
+                'definition' => $segment->definition,
                 'contacts_count' => $this->segmentQuery->contacts($segment->definition)->count(),
-                'match' => $segment->definition['match'] ?? 'all',
-                'fields' => $this->fieldLabels($segment->definition),
                 'updated_at' => $segment->updated_at?->toIso8601String(),
             ]),
+            'activeContacts' => Contact::query()->active()->count(),
+            'fields' => $this->fields(),
         ]);
     }
 
@@ -84,6 +85,7 @@ class SegmentController extends Controller
 
         return response()->json([
             'count' => (clone $query)->count(),
+            'total' => Contact::query()->active()->count(),
             'sample' => $query->orderByDesc('id')->limit(10)->get(['id', 'email', 'first_name', 'last_name'])
                 ->map(fn (Contact $contact) => [
                     'id' => $contact->id,
@@ -101,8 +103,18 @@ class SegmentController extends Controller
                 'name' => $segment->name,
                 'definition' => $segment->definition,
             ],
-            'fields' => array_values(array_map(fn (SegmentField $field) => $field->toArray(), $this->catalog->all())),
+            'fields' => $this->fields(),
         ]);
+    }
+
+    /**
+     * Every field a segment can filter on, with its comparisons and choices.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function fields(): array
+    {
+        return array_values(array_map(fn (SegmentField $field) => $field->toArray(), $this->catalog->all()));
     }
 
     /**
@@ -121,23 +133,5 @@ class SegmentController extends Controller
         $this->validator->validate($validated['definition']);
 
         return $validated;
-    }
-
-    /**
-     * The fields a definition filters on, by label and without repeats, for a one-line summary of the segment.
-     *
-     * @param  array<string, mixed>  $group
-     * @return list<string>
-     */
-    private function fieldLabels(array $group): array
-    {
-        return collect($group['conditions'] ?? [])
-            ->flatMap(fn (array $item) => ($item['type'] ?? null) === 'group'
-                ? $this->fieldLabels($item)
-                : [$this->catalog->find($item['field'] ?? '')?->label])
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
     }
 }

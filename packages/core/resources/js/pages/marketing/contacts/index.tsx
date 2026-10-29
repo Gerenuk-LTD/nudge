@@ -1,20 +1,40 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import {
+    Archive,
+    Ellipsis,
+    Plus,
+    Upload,
+    UserCheck,
+    UserMinus,
+    Users,
+} from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { useState } from 'react';
+import ContactController from '@/actions/Gerenuk/Marketing/Http/Controllers/ContactController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    create as createContact,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
     index as contactsIndex,
     show as showContact,
 } from '@/routes/marketing/contacts';
+import { create as createImport } from '@/routes/marketing/imports';
+import { AddContactDialog } from '@marketing/components/add-contact-dialog';
+import { ContactAvatar } from '@marketing/components/contact-fields';
 import type { ContactPreviewData } from '@marketing/components/contact-preview';
 import { ContactPreview } from '@marketing/components/contact-preview';
 import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { StatusBadge } from '@marketing/components/status-badge';
+import { SubscriptionDialog } from '@marketing/components/subscription-dialog';
+import type { SubscriptionTarget } from '@marketing/components/subscription-dialog';
 import { Pagination } from '@marketing/components/pagination';
 import {
     ChoiceFilter,
@@ -24,7 +44,12 @@ import {
 } from '@marketing/components/table-toolbar';
 import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { useCan } from '@marketing/hooks/use-workspace';
-import type { ContactStatus, Option, Paginated } from '@marketing/types';
+import type {
+    ContactStatus,
+    CustomField,
+    Option,
+    Paginated,
+} from '@marketing/types';
 import { formatDate } from '@marketing/lib/format';
 
 type ContactRow = {
@@ -35,6 +60,9 @@ type ContactRow = {
     tags: string[];
     created_at: string;
 };
+
+/** Tags shown in a row before the rest are summed up as "+n". */
+const VISIBLE_TAGS = 3;
 
 /** The filters the toolbar sets, cleared together by Reset. */
 const FILTERS = ['segment', 'list', 'tag', 'status', 'archived'];
@@ -47,18 +75,33 @@ export default function ContactsIndex({
     lists,
     tags,
     segments,
+    customFields,
     preview,
 }: {
     contacts: Paginated<ContactRow>;
     lists: Option[];
     tags: Option[];
     segments: Option[];
+    customFields: CustomField[];
     preview?: ContactPreviewData | null;
 }) {
     const can = useCan();
     const table = useTableQuery();
     const filtered = FILTERS.some((key) => table.get(key) !== '');
     const [previewId, setPreviewId] = useState<number | null>(null);
+    const [changing, setChanging] = useState<SubscriptionTarget | null>(null);
+    const [adding, setAdding] = useState(table.get('add') !== '');
+    const empty =
+        contacts.total === 0 && !filtered && table.get('search') === '';
+
+    /** Closing the dialog also drops `?add=1`, which links such as the command palette open it with. */
+    const setAddingOpen = (open: boolean) => {
+        setAdding(open);
+
+        if (!open && table.get('add') !== '') {
+            table.update({ add: null });
+        }
+    };
 
     /** A plain click previews the contact in the side panel; modified clicks still open the full profile. */
     const openPreview = (event: MouseEvent, id: number) => {
@@ -78,23 +121,30 @@ export default function ContactsIndex({
     const columns: ColumnDef<ContactRow>[] = [
         {
             id: 'email',
-            header: 'Email',
+            header: 'Contact',
             meta: { sortable: true },
             cell: ({ row }) => (
                 <Link
                     href={showContact(row.original.id)}
                     onClick={(event) => openPreview(event, row.original.id)}
-                    className="font-medium hover:underline"
+                    className="group flex min-w-0 items-center gap-3"
                 >
-                    {row.original.email}
+                    <ContactAvatar
+                        name={row.original.name}
+                        email={row.original.email}
+                    />
+                    <span className="grid min-w-0 leading-tight">
+                        <span className="truncate font-medium group-hover:underline">
+                            {row.original.name ?? row.original.email}
+                        </span>
+                        {row.original.name && (
+                            <span className="truncate text-xs text-muted-foreground">
+                                {row.original.email}
+                            </span>
+                        )}
+                    </span>
                 </Link>
             ),
-        },
-        {
-            id: 'name',
-            header: 'Name',
-            meta: { className: 'text-muted-foreground', sortable: true },
-            cell: ({ row }) => row.original.name ?? '—',
         },
         {
             id: 'status',
@@ -109,11 +159,22 @@ export default function ContactsIndex({
             header: 'Tags',
             cell: ({ row }) => (
                 <div className="flex flex-wrap gap-1">
-                    {row.original.tags.map((tag) => (
+                    {row.original.tags.slice(0, VISIBLE_TAGS).map((tag) => (
                         <Badge key={tag} variant="outline">
                             {tag}
                         </Badge>
                     ))}
+                    {row.original.tags.length > VISIBLE_TAGS && (
+                        <Badge
+                            variant="outline"
+                            title={row.original.tags
+                                .slice(VISIBLE_TAGS)
+                                .join(', ')}
+                            className="text-muted-foreground"
+                        >
+                            +{row.original.tags.length - VISIBLE_TAGS}
+                        </Badge>
+                    )}
                 </div>
             ),
         },
@@ -126,6 +187,21 @@ export default function ContactsIndex({
             },
             cell: ({ row }) => formatDate(row.original.created_at),
         },
+        ...(can('contacts.manage')
+            ? [
+                  {
+                      id: 'actions',
+                      header: () => <span className="sr-only">Actions</span>,
+                      meta: { className: 'w-px' },
+                      cell: ({ row }) => (
+                          <ContactActions
+                              contact={row.original}
+                              onChangeSubscription={setChanging}
+                          />
+                      ),
+                  } satisfies ColumnDef<ContactRow>,
+              ]
+            : []),
     ];
 
     return (
@@ -137,85 +213,220 @@ export default function ContactsIndex({
                     title="Contacts"
                     description={`${contacts.total.toLocaleString()} ${table.get('archived') ? 'archived ' : ''}contacts`}
                     actions={
-                        can('contacts.manage') && (
-                            <Button asChild>
-                                <Link href={createContact()}>
+                        <>
+                            {can('contacts.import') && (
+                                <Button variant="outline" asChild>
+                                    <Link href={createImport()}>
+                                        <Upload />
+                                        Import
+                                    </Link>
+                                </Button>
+                            )}
+                            {can('contacts.manage') && (
+                                <Button onClick={() => setAddingOpen(true)}>
                                     <Plus />
                                     Add contact
-                                </Link>
-                            </Button>
-                        )
+                                </Button>
+                            )}
+                        </>
                     }
                 />
 
-                <div className="flex flex-wrap items-center gap-2">
-                    <TableSearch
-                        value={table.get('search')}
-                        onSearch={(search) => table.update({ search })}
-                        placeholder="Search email or name"
-                    />
-                    <ChoiceFilter
-                        title="Segment"
-                        options={options(segments)}
-                        value={table.get('segment')}
-                        onChange={(segment) => table.update({ segment })}
-                    />
-                    <FacetedFilter
-                        title="List"
-                        options={options(lists)}
-                        selected={table.values('list')}
-                        onChange={(list) => table.update({ list })}
-                    />
-                    <FacetedFilter
-                        title="Tag"
-                        options={options(tags)}
-                        selected={table.values('tag')}
-                        onChange={(tag) => table.update({ tag })}
-                    />
-                    <FacetedFilter
-                        title="Status"
-                        options={[
-                            { value: 'subscribed', label: 'Subscribed' },
-                            { value: 'unsubscribed', label: 'Unsubscribed' },
-                        ]}
-                        selected={table.values('status')}
-                        onChange={(status) => table.update({ status })}
-                    />
-                    <ChoiceFilter
-                        title="Archived"
-                        options={[{ value: '1', label: 'Archived only' }]}
-                        value={table.get('archived')}
-                        onChange={(archived) => table.update({ archived })}
-                    />
-                    <ResetFilters
-                        active={filtered}
-                        onReset={() =>
-                            table.update(
-                                Object.fromEntries(
-                                    FILTERS.map((key) => [key, null]),
-                                ),
-                            )
-                        }
-                    />
-                </div>
+                {empty ? (
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
+                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
+                            <Users className="size-5" />
+                        </span>
+                        <div className="space-y-1">
+                            <p className="font-medium">No contacts yet</p>
+                            <p className="max-w-sm text-sm text-muted-foreground">
+                                Import a CSV from another tool, or add people
+                                one at a time.
+                            </p>
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                            {can('contacts.import') && (
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={createImport()}>
+                                        <Upload />
+                                        Import a CSV
+                                    </Link>
+                                </Button>
+                            )}
+                            {can('contacts.manage') && (
+                                <Button
+                                    size="sm"
+                                    onClick={() => setAddingOpen(true)}
+                                >
+                                    <Plus />
+                                    Add contact
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <TableSearch
+                                value={table.get('search')}
+                                onSearch={(search) => table.update({ search })}
+                                placeholder="Search email or name"
+                            />
+                            <ChoiceFilter
+                                title="Segment"
+                                options={options(segments)}
+                                value={table.get('segment')}
+                                onChange={(segment) =>
+                                    table.update({ segment })
+                                }
+                            />
+                            <FacetedFilter
+                                title="List"
+                                options={options(lists)}
+                                selected={table.values('list')}
+                                onChange={(list) => table.update({ list })}
+                            />
+                            <FacetedFilter
+                                title="Tag"
+                                options={options(tags)}
+                                selected={table.values('tag')}
+                                onChange={(tag) => table.update({ tag })}
+                            />
+                            <FacetedFilter
+                                title="Status"
+                                options={[
+                                    {
+                                        value: 'subscribed',
+                                        label: 'Subscribed',
+                                    },
+                                    {
+                                        value: 'unsubscribed',
+                                        label: 'Unsubscribed',
+                                    },
+                                ]}
+                                selected={table.values('status')}
+                                onChange={(status) => table.update({ status })}
+                            />
+                            <ChoiceFilter
+                                title="Archived"
+                                options={[
+                                    { value: '1', label: 'Archived only' },
+                                ]}
+                                value={table.get('archived')}
+                                onChange={(archived) =>
+                                    table.update({ archived })
+                                }
+                            />
+                            <ResetFilters
+                                active={filtered}
+                                onReset={() =>
+                                    table.update(
+                                        Object.fromEntries(
+                                            FILTERS.map((key) => [key, null]),
+                                        ),
+                                    )
+                                }
+                            />
+                        </div>
 
-                <DataTable
-                    columns={columns}
-                    data={contacts.data}
-                    getRowId={byId}
-                    emptyMessage="No contacts match these filters."
-                    sort={table.sort}
-                />
+                        <DataTable
+                            columns={columns}
+                            data={contacts.data}
+                            getRowId={byId}
+                            emptyMessage="No contacts match these filters."
+                            sort={table.sort}
+                        />
 
-                <Pagination page={contacts} query={table} />
+                        <Pagination page={contacts} query={table} />
+                    </>
+                )}
             </PageBody>
+
+            {can('contacts.manage') && (
+                <AddContactDialog
+                    open={adding}
+                    onOpenChange={setAddingOpen}
+                    lists={lists}
+                    tags={tags.map((tag) => tag.name)}
+                    customFields={customFields}
+                />
+            )}
 
             <ContactPreview
                 open={previewId !== null}
                 contact={preview?.id === previewId ? preview : null}
                 onClose={() => setPreviewId(null)}
+                onChangeSubscription={
+                    can('contacts.manage') ? setChanging : undefined
+                }
+            />
+
+            <SubscriptionDialog
+                contact={changing}
+                onClose={() => setChanging(null)}
+                onDone={(contact) =>
+                    contact.id === previewId &&
+                    router.reload({
+                        only: ['preview'],
+                        data: { preview: contact.id },
+                        preserveUrl: true,
+                    })
+                }
             />
         </>
+    );
+}
+
+function ContactActions({
+    contact,
+    onChangeSubscription,
+}: {
+    contact: ContactRow;
+    onChangeSubscription: (contact: SubscriptionTarget) => void;
+}) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground"
+                    aria-label={`Actions for ${contact.email}`}
+                >
+                    <Ellipsis />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                    onSelect={() => onChangeSubscription(contact)}
+                >
+                    {contact.status === 'subscribed' ? (
+                        <>
+                            <UserMinus />
+                            Unsubscribe
+                        </>
+                    ) : (
+                        <>
+                            <UserCheck />
+                            Subscribe again
+                        </>
+                    )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                    onSelect={() =>
+                        router.post(
+                            ContactController.archive.url(contact.id),
+                            {},
+                            { preserveScroll: true },
+                        )
+                    }
+                >
+                    <Archive />
+                    Archive
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 

@@ -28,7 +28,6 @@ test('every dashboard page renders its component', function () {
     $pages = [
         'marketing/home' => route('marketing.home'),
         'marketing/contacts/index' => route('marketing.contacts.index'),
-        'marketing/contacts/form' => route('marketing.contacts.create'),
         'marketing/lists/index' => route('marketing.lists.index'),
         'marketing/tags/index' => route('marketing.tags.index'),
         'marketing/custom-fields/index' => route('marketing.custom-fields.index'),
@@ -64,7 +63,7 @@ test('every dashboard page renders its component', function () {
     }
 
     $this->actingAs($owner)->get(route('marketing.contacts.show', $contact))
-        ->assertInertia(fn (AssertableInertia $page) => $page->component('marketing/contacts/form')->where('contact.id', $contact->id));
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('marketing/contacts/show')->where('contact.id', $contact->id));
 });
 
 test('pages outside a workspace render', function () {

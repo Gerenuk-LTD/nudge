@@ -52,7 +52,7 @@ export default function ProvidersIndex({
                     ))}
                     <Link
                         href={create()}
-                        className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                        className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/40 p-6 text-center text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
                     >
                         <Plus className="size-4" />
                         {providers.length === 0

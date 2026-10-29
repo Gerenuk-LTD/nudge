@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, UserCheck, UserMinus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { show as showCampaign } from '@/routes/marketing/campaigns';
 import { show as showContact } from '@/routes/marketing/contacts';
 import { StatusBadge } from '@marketing/components/status-badge';
+import type { SubscriptionTarget } from '@marketing/components/subscription-dialog';
 import { formatDate, formatDateTime } from '@marketing/lib/format';
 import type { ContactStatus, CustomFieldType } from '@marketing/types';
 
@@ -57,10 +58,13 @@ export function ContactPreview({
     open,
     contact,
     onClose,
+    onChangeSubscription,
 }: {
     open: boolean;
     contact: ContactPreviewData | null;
     onClose: () => void;
+    /** Shows an unsubscribe, or subscribe again, button for people who may change it. */
+    onChangeSubscription?: (contact: SubscriptionTarget) => void;
 }) {
     return (
         <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
@@ -181,7 +185,32 @@ export function ContactPreview({
                             </section>
                         </div>
 
-                        <SheetFooter className="border-t p-4">
+                        <SheetFooter className="flex-row border-t p-4 [&>*]:flex-1">
+                            {onChangeSubscription && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                        onChangeSubscription({
+                                            id: contact.id,
+                                            email: contact.email,
+                                            name: contact.name,
+                                            status: contact.status,
+                                        })
+                                    }
+                                >
+                                    {contact.status === 'subscribed' ? (
+                                        <>
+                                            <UserMinus />
+                                            Unsubscribe
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UserCheck />
+                                            Subscribe again
+                                        </>
+                                    )}
+                                </Button>
+                            )}
                             <Button asChild>
                                 <Link href={showContact(contact.id)}>
                                     Open full profile

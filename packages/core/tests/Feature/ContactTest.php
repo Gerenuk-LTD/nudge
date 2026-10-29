@@ -3,10 +3,16 @@
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Marketing\Enums\EventType;
+use Gerenuk\Marketing\Enums\RecipientStatus;
+use Gerenuk\Marketing\Models\ActivityEvent;
+use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Support\ContactData;
+use Gerenuk\Marketing\Support\ContactTimeline;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -25,6 +31,87 @@ test('contacts are unique per workspace by lowercased email', function () {
     ])->assertSessionHasErrors('email');
 
     expect(Contact::pluck('email')->all())->toBe(['jane@example.com']);
+});
+
+test('adding a contact opens its profile, or stays on the list to add another', function () {
+    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+        'email' => 'jane@example.com',
+        'status' => 'subscribed',
+    ])->assertRedirect(route('marketing.contacts.show', Contact::firstWhere('email', 'jane@example.com')));
+
+    $this->actingAs($this->owner)
+        ->from(route('marketing.contacts.index', ['add' => 1]))
+        ->post(route('marketing.contacts.store'), [
+            'email' => 'bob@example.com',
+            'status' => 'subscribed',
+            'add_another' => true,
+        ])->assertRedirect(route('marketing.contacts.index', ['add' => 1]));
+
+    expect(Contact::pluck('email')->sort()->values()->all())->toBe(['bob@example.com', 'jane@example.com']);
+});
+
+test('the add contact page opens the dialog on the list', function () {
+    $this->actingAs($this->owner)->get(route('marketing.contacts.create'))
+        ->assertRedirect(route('marketing.contacts.index', ['add' => 1]));
+});
+
+test('a duplicate email says the person is already a contact', function () {
+    Contact::factory()->create(['email' => 'jane@example.com']);
+
+    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+        'email' => 'jane@example.com',
+        'status' => 'subscribed',
+    ])->assertSessionHasErrors(['email' => 'Someone with this email is already a contact.']);
+});
+
+test('a contact profile counts each email received, opened and clicked once', function () {
+    $contact = Contact::factory()->create();
+    [$first, $second] = Campaign::factory()->count(2)->create()->map(fn (Campaign $campaign) => CampaignRecipient::create([
+        'campaign_id' => $campaign->id,
+        'contact_id' => $contact->id,
+        'email' => $contact->email,
+        'status' => RecipientStatus::Delivered,
+    ]))->all();
+    ActivityEvent::recordFor($first, EventType::Sent);
+    ActivityEvent::recordFor($second, EventType::Sent);
+    ActivityEvent::recordFor($first, EventType::Opened);
+    ActivityEvent::recordFor($first, EventType::Opened);
+    ActivityEvent::recordFor($first, EventType::Clicked);
+    ActivityEvent::create(['contact_id' => $contact->id, 'type' => EventType::Sent, 'occurred_at' => now()]);
+
+    $this->actingAs($this->owner)->get(route('marketing.contacts.show', $contact))
+        ->assertInertia(fn (AssertableInertia $page) => $page->loadDeferredProps(fn ($reload) => $reload
+            ->where('engagement', ['received' => 3, 'opened' => 1, 'clicked' => 1])));
+});
+
+test('unsubscribing a contact takes effect at once and notes who did it', function () {
+    $this->travelTo('2026-10-29 10:00:00');
+    $contact = Contact::factory()->create();
+
+    $this->actingAs($this->owner)->post(route('marketing.contacts.unsubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('marketing.contacts.unsubscribe', $contact))->assertRedirect();
+
+    expect($contact->refresh()->status)->toBe(ContactStatus::Unsubscribed)
+        ->and($contact->unsubscribed_at->toDateTimeString())->toBe('2026-10-29 10:00:00')
+        ->and(app(ContactTimeline::class)->for($contact))->toHaveCount(1)
+        ->and(app(ContactTimeline::class)->for($contact)[0])->toMatchArray(['title' => 'Unsubscribed', 'detail' => "By {$this->owner->name}"]);
+});
+
+test('an unsubscribed contact can be subscribed again', function () {
+    $contact = Contact::factory()->unsubscribed()->create();
+
+    $this->actingAs($this->owner)->post(route('marketing.contacts.resubscribe', $contact))->assertRedirect();
+
+    expect($contact->refresh())->status->toBe(ContactStatus::Subscribed)->unsubscribed_at->toBeNull();
+});
+
+test('viewers cannot change a contact subscription', function () {
+    $contact = Contact::factory()->create();
+    $viewer = $this->addMember($this->workspace, 'Viewer');
+
+    $this->actingAs($viewer)->post(route('marketing.contacts.unsubscribe', $contact))->assertForbidden();
+
+    expect($contact->refresh()->status)->toBe(ContactStatus::Subscribed);
 });
 
 test('the same email can exist in two workspaces', function () {

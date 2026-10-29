@@ -2,10 +2,12 @@
 
 namespace Gerenuk\Marketing\Http\Controllers;
 
+use Gerenuk\Marketing\Actions\Contacts\ChangeContactStatus;
 use Gerenuk\Marketing\Actions\Contacts\UpdateContact;
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Http\Requests\ContactRequest;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
@@ -18,6 +20,7 @@ use Gerenuk\Marketing\Support\ContactTimeline;
 use Gerenuk\Marketing\Support\TableQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,21 +56,28 @@ class ContactController extends Controller
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'tags' => Tag::query()->orderBy('name')->get(['id', 'name']),
             'segments' => Segment::query()->orderBy('name')->get(['id', 'name']),
+            'customFields' => CustomFieldDefinition::query()->orderBy('label')->get(['key', 'label', 'type']),
             'preview' => Inertia::optional(fn () => $this->preview($request->integer('preview'), $timeline)),
         ]);
     }
 
-    public function create(): Response
+    /**
+     * Contacts are added from a dialog on the list, which this opens.
+     */
+    public function create(): RedirectResponse
     {
-        return Inertia::render('marketing/contacts/form', [
-            'contact' => null,
-            ...$this->formOptions(),
-        ]);
+        return to_route('marketing.contacts.index', ['add' => 1]);
     }
 
     public function store(ContactRequest $request, UpsertContact $upsertContact): RedirectResponse
     {
         ['contact' => $contact] = $upsertContact->handle(ContactData::fromValidated($request->validated()), ContactSource::Manual);
+
+        if ($request->boolean('add_another')) {
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Added :email.', ['email' => $contact->email])]);
+
+            return back();
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact added.')]);
 
@@ -78,7 +88,7 @@ class ContactController extends Controller
     {
         $contact->load(['tags:id,name', 'lists:id']);
 
-        return Inertia::render('marketing/contacts/form', [
+        return Inertia::render('marketing/contacts/show', [
             'contact' => [
                 'id' => $contact->id,
                 'email' => $contact->email,
@@ -95,6 +105,7 @@ class ContactController extends Controller
             ],
             ...$this->formOptions(),
             'timeline' => Inertia::defer(fn () => $timeline->for($contact)),
+            'engagement' => Inertia::defer(fn () => $this->engagement($contact)),
         ]);
     }
 
@@ -124,8 +135,59 @@ class ContactController extends Controller
     }
 
     /**
-     * @return array<string, mixed>
+     * Stops all marketing email to the contact straight away, and notes on their timeline who did it.
      */
+    public function unsubscribe(Request $request, Contact $contact): RedirectResponse
+    {
+        if ($contact->status !== ContactStatus::Unsubscribed) {
+            DB::transaction(function () use ($request, $contact): void {
+                (new ChangeContactStatus)->apply($contact, ContactStatus::Unsubscribed);
+                $contact->save();
+
+                $contact->events()->create([
+                    'type' => EventType::Unsubscribed,
+                    'data' => ['by' => $request->user()->name],
+                    'occurred_at' => now(),
+                ]);
+            });
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unsubscribed :email.', ['email' => $contact->email])]);
+
+        return back();
+    }
+
+    public function resubscribe(Contact $contact): RedirectResponse
+    {
+        (new ChangeContactStatus)->apply($contact, ContactStatus::Subscribed);
+        $contact->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Subscribed :email again.', ['email' => $contact->email])]);
+
+        return back();
+    }
+
+    /**
+     * How many emails a contact has been sent, and how many of those they opened and clicked. Repeat opens of one email
+     * count once; events with no campaign recipient count individually.
+     *
+     * @return array{received: int, opened: int, clicked: int}
+     */
+    private function engagement(Contact $contact): array
+    {
+        $counts = $contact->events()
+            ->whereIn('type', [EventType::Sent, EventType::Opened, EventType::Clicked])
+            ->selectRaw('type, count(distinct coalesce(campaign_recipient_id, -id)) as total')
+            ->groupBy('type')
+            ->pluck('total', 'type');
+
+        return [
+            'received' => (int) ($counts[EventType::Sent->value] ?? 0),
+            'opened' => (int) ($counts[EventType::Opened->value] ?? 0),
+            'clicked' => (int) ($counts[EventType::Clicked->value] ?? 0),
+        ];
+    }
+
     /**
      * One contact's details and latest activity for the side panel on the contacts list, or null when it is not in this workspace.
      *
@@ -160,6 +222,9 @@ class ContactController extends Controller
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function formOptions(): array
     {
         return [
