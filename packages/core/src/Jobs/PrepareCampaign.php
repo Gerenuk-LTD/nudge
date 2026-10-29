@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Jobs;
 
 use Gerenuk\Marketing\Campaigns\CampaignAudience;
+use Gerenuk\Marketing\Campaigns\QueueCampaignBatches;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Models\Campaign;
@@ -163,12 +164,7 @@ class PrepareCampaign implements ShouldBeUnique, ShouldQueue
 
     private function queueBatches(Campaign $campaign): void
     {
-        $campaign->recipients()
-            ->where('status', RecipientStatus::Queued)
-            ->select('id')
-            ->chunkById(self::BATCH_SIZE, function (Collection $recipients) use ($campaign): void {
-                SendCampaignBatch::dispatch($campaign->id, $campaign->workspace_id, array_values($recipients->map(fn (CampaignRecipient $recipient) => $recipient->id)->all()));
-            });
+        app(QueueCampaignBatches::class)->handle($campaign);
 
         if ($campaign->recipients_count === 0) {
             $campaign->update(['status' => CampaignStatus::Sent, 'sent_at' => now()]);

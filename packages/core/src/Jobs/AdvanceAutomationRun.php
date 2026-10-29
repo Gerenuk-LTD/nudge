@@ -13,6 +13,7 @@ use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 /**
  * Moves a contact through an automation until it has to wait, or reaches the end.
@@ -26,6 +27,8 @@ class AdvanceAutomationRun implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 3;
 
+    public int $uniqueFor = 3600;
+
     public function __construct(public int $runId, public int $workspaceId)
     {
         $this->onQueue(config('marketing.sending.queue'));
@@ -34,6 +37,27 @@ class AdvanceAutomationRun implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return (string) $this->runId;
+    }
+
+    /**
+     * After the last attempt fails, take the contact out of the automation, so the run is not stuck "active"
+     * and the contact can enter again if the automation allows re-entry.
+     */
+    public function failed(?Throwable $exception): void
+    {
+        $workspace = Workspace::find($this->workspaceId);
+
+        if ($workspace === null) {
+            return;
+        }
+
+        app(CurrentWorkspace::class)->runAs($workspace, function (): void {
+            $run = AutomationRun::with('automation')->find($this->runId);
+
+            if ($run !== null && $run->status === AutomationRunStatus::Active) {
+                $this->exit($run, __('Stopped after an error'));
+            }
+        });
     }
 
     public function handle(CurrentWorkspace $currentWorkspace, StepRunner $runner): void

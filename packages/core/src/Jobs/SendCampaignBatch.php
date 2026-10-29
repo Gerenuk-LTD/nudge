@@ -47,8 +47,7 @@ class SendCampaignBatch implements ShouldQueue
             }
 
             if ($workspace->isSendingPaused()) {
-                $this->release(300);
-
+                // Recipients stay queued; resuming sending (or the stalled-send sweep) queues them again.
                 return;
             }
 

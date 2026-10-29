@@ -7,7 +7,7 @@ enum RecipientStatus: string
     case Queued = 'queued';
     /** Waiting for an A/B test to pick a winner. */
     case Held = 'held';
-    /** Claimed by a worker. A recipient left here after a crash is not retried, so nobody gets a duplicate. */
+    /** Claimed by a worker. A recipient left here after a crash is marked failed by the stalled-send sweep, never retried, so nobody gets a duplicate. */
     case Sending = 'sending';
     case Sent = 'sent';
     case Failed = 'failed';

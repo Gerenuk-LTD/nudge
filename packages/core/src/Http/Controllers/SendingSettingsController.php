@@ -2,6 +2,9 @@
 
 namespace Gerenuk\Marketing\Http\Controllers;
 
+use Gerenuk\Marketing\Campaigns\QueueCampaignBatches;
+use Gerenuk\Marketing\Enums\CampaignStatus;
+use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,9 +43,12 @@ class SendingSettingsController extends Controller
     /**
      * Resume sending after an automatic pause, once the cause has been dealt with.
      */
-    public function resume(): RedirectResponse
+    public function resume(QueueCampaignBatches $queueBatches): RedirectResponse
     {
         $this->currentWorkspace->getOrFail()->update(['sending_paused_at' => null, 'sending_paused_reason' => null]);
+
+        Campaign::query()->broadcasts()->where('status', CampaignStatus::Sending)
+            ->each(fn (Campaign $campaign) => $queueBatches->handle($campaign));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sending resumed.')]);
 

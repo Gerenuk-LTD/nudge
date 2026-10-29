@@ -6,7 +6,7 @@ test('marketing schedule entries hold their overlap lock for minutes, not a day'
     $events = collect(app(Schedule::class)->events())
         ->filter(fn ($event) => str_starts_with((string) $event->description, 'marketing:'));
 
-    expect($events)->toHaveCount(4);
+    expect($events)->toHaveCount(5);
 
     foreach ($events as $event) {
         expect($event->withoutOverlapping)->toBeTrue()
