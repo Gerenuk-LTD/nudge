@@ -91,6 +91,43 @@ test('invalid rows are skipped and reported with their line number', function ()
     $download->assertOk();
 
     expect($download->streamedContent())->toContain('3,not-an-email');
+
+    $this->actingAs($this->owner)->get(route('marketing.imports.show', $import))
+        ->assertInertia(fn ($page) => $page
+            ->has('failedRows', 1)
+            ->where('failedRows.0.row_number', 3)
+            ->where('failedRows.0.email', 'not-an-email'));
+});
+
+test('an import whose file has gone shows the page instead of failing', function () {
+    $this->actingAs($this->owner)->post(route('marketing.imports.store'), ['file' => csvUpload("email\na@example.com\n")]);
+    $import = Import::first();
+    Storage::disk(config('marketing.imports.disk'))->delete($import->file_path);
+
+    $this->actingAs($this->owner)->get(route('marketing.imports.show', $import))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('fileMissing', true));
+});
+
+test('a finished or pending import can be removed with its file, but a running one cannot', function () {
+    $this->actingAs($this->owner)->post(route('marketing.imports.store'), ['file' => csvUpload("email\na@example.com\n")]);
+    $pending = Import::first();
+    $running = Import::create(['file_path' => 'imports/running.csv', 'original_filename' => 'running.csv', 'headers' => ['email'], 'status' => ImportStatus::Processing]);
+
+    $this->actingAs($this->owner)->delete(route('marketing.imports.destroy', $running))->assertConflict();
+    $this->actingAs($this->owner)->delete(route('marketing.imports.destroy', $pending))->assertRedirect(route('marketing.imports.index'));
+
+    expect(Import::pluck('id')->all())->toBe([$running->id])
+        ->and(Storage::disk(config('marketing.imports.disk'))->exists($pending->file_path))->toBeFalse();
+});
+
+test('the upload page knows the list an import was started from', function () {
+    $list = ContactList::factory()->create(['name' => 'Newsletter']);
+
+    $this->actingAs($this->owner)->get(route('marketing.imports.create', ['list' => $list->id]))
+        ->assertInertia(fn ($page) => $page
+            ->where('list.name', 'Newsletter')
+            ->where('columns', ['email', 'first_name', 'last_name', 'status', 'tags']));
 });
 
 test('an import can unsubscribe contacts but never re-subscribes them', function () {

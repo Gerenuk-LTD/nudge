@@ -82,6 +82,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::get('imports/{import}', [ImportController::class, 'show'])->name('imports.show');
         Route::post('imports/{import}/start', [ImportController::class, 'start'])->name('imports.start');
         Route::get('imports/{import}/errors', [ImportController::class, 'errors'])->name('imports.errors');
+        Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('imports.destroy');
     });
 
     Route::get('suppressions', [SuppressionController::class, 'index'])->middleware('can:contacts.view')->name('suppressions.index');

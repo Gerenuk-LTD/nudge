@@ -1,6 +1,22 @@
-import { Head, Link, usePoll } from '@inertiajs/react';
-import { FileSpreadsheet, Upload } from 'lucide-react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
+import { Ellipsis, FileSpreadsheet, Trash2, Upload } from 'lucide-react';
+import { useState } from 'react';
+import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import {
     create,
@@ -47,22 +63,36 @@ export default function ImportsIndex({
                     title="Imports"
                     description="Bring contacts in from a CSV file. Existing contacts are updated, never duplicated."
                     actions={
-                        <Button asChild>
+                        imports.length > 0 && (
+                            <Button asChild>
+                                <Link href={create()}>
+                                    <Upload />
+                                    Import CSV
+                                </Link>
+                            </Button>
+                        )
+                    }
+                />
+
+                {imports.length === 0 ? (
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
+                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
+                            <FileSpreadsheet className="size-5" />
+                        </span>
+                        <div className="space-y-1">
+                            <p className="font-medium">No imports yet</p>
+                            <p className="max-w-md text-sm text-muted-foreground">
+                                Moving from another tool? Export your contacts
+                                as a CSV and bring them in here. All you need is
+                                an email column.
+                            </p>
+                        </div>
+                        <Button size="sm" className="mt-1" asChild>
                             <Link href={create()}>
                                 <Upload />
                                 Import CSV
                             </Link>
                         </Button>
-                    }
-                />
-
-                {imports.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center">
-                        <FileSpreadsheet className="size-5 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                            No imports yet. Upload a CSV with an email column to
-                            get started.
-                        </p>
                     </div>
                 ) : (
                     <div className="max-w-3xl space-y-8">
@@ -155,9 +185,73 @@ function ImportEntry({ item }: { item: ImportSummary }) {
                             <Link href={show(item.id)}>View</Link>
                         </Button>
                     )}
+                    {!['queued', 'processing'].includes(item.status) && (
+                        <RemoveImport item={item} />
+                    )}
                 </div>
             </div>
         </li>
+    );
+}
+
+function RemoveImport({ item }: { item: ImportSummary }) {
+    const [confirming, setConfirming] = useState(false);
+    const pending = item.status === 'pending';
+
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="-mr-2 size-8 text-muted-foreground"
+                        aria-label={`Actions for ${item.original_filename}`}
+                    >
+                        <Ellipsis />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={() => setConfirming(true)}
+                    >
+                        <Trash2 />
+                        {pending ? 'Discard upload' : 'Remove from history'}
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Dialog open={confirming} onOpenChange={setConfirming}>
+                <DialogContent>
+                    <DialogTitle>
+                        {pending ? 'Discard' : 'Remove'}{' '}
+                        {item.original_filename}?
+                    </DialogTitle>
+                    <DialogDescription>
+                        {pending
+                            ? 'The uploaded file is deleted without importing anything.'
+                            : 'The import and its file are removed from your history. Contacts it brought in are kept.'}
+                    </DialogDescription>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="ghost">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            onClick={() =>
+                                router.delete(
+                                    ImportController.destroy.url(item.id),
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            {pending ? 'Discard upload' : 'Remove import'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 

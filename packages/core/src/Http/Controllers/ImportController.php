@@ -15,6 +15,7 @@ use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -24,6 +25,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ImportController extends Controller
 {
+    /** Failed rows shown on an import's page; the rest are in the download. */
+    private const ERRORS_SHOWN = 10;
+
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
     public function index(): Response
@@ -33,10 +37,16 @@ class ImportController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $customFields = CustomFieldDefinition::query()->orderBy('label')->get();
+
         return Inertia::render('marketing/imports/create', [
             'maxFileKilobytes' => config('marketing.imports.max_file_kilobytes'),
+            'columns' => collect(ColumnMapping::targets($customFields))
+                ->map(fn (string $target) => str_starts_with($target, 'custom:') ? substr($target, 7) : $target)
+                ->values(),
+            'list' => ContactList::query()->whereKey($request->integer('list'))->first(['id', 'name']),
         ]);
     }
 
@@ -57,14 +67,20 @@ class ImportController extends Controller
     {
         $customFields = CustomFieldDefinition::query()->orderBy('label')->get();
         $sample = [];
+        $fileMissing = false;
 
         if ($import->status === ImportStatus::Pending) {
-            foreach ((new CsvReader(config('marketing.imports.disk'), $import->file_path))->rows() as $row) {
-                $sample[] = $row;
+            try {
+                foreach ((new CsvReader(config('marketing.imports.disk'), $import->file_path))->rows() as $row) {
+                    $sample[] = $row;
 
-                if (count($sample) === 5) {
-                    break;
+                    if (count($sample) === 5) {
+                        break;
+                    }
                 }
+            } catch (RuntimeException) {
+                // The upload was cleaned up or its disk changed; the page offers to upload it again.
+                $fileMissing = true;
             }
         }
 
@@ -82,6 +98,12 @@ class ImportController extends Controller
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'tags' => Tag::query()->orderBy('name')->pluck('name'),
             'defaultList' => ContactList::query()->whereKey($request->integer('list'))->value('id'),
+            'fileMissing' => $fileMissing,
+            'destination' => [
+                'list' => $import->contact_list_id === null ? null : ContactList::query()->find($import->contact_list_id, ['id', 'name']),
+                'tags' => $import->tags ?? [],
+            ],
+            'failedRows' => $import->errors()->orderBy('row_number')->limit(self::ERRORS_SHOWN)->get(['id', 'row_number', 'email', 'message']),
         ]);
     }
 
@@ -112,6 +134,21 @@ class ImportController extends Controller
         $startImport->handle($import, array_values($validated['mapping']), $validated['contact_list_id'] ?? null, $validated['tags'] ?? []);
 
         return to_route('marketing.imports.show', $import);
+    }
+
+    /**
+     * Remove an import from the history, with its uploaded file. Contacts it brought in are kept.
+     */
+    public function destroy(Import $import): RedirectResponse
+    {
+        abort_if(in_array($import->status, [ImportStatus::Queued, ImportStatus::Processing], true), 409, __('This import is still running.'));
+
+        Storage::disk(config('marketing.imports.disk'))->delete($import->file_path);
+        $import->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Import removed. Its contacts were kept.')]);
+
+        return to_route('marketing.imports.index');
     }
 
     /**
