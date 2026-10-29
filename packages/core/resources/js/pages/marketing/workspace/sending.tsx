@@ -5,10 +5,10 @@ import InputError from '@/components/input-error';
 import { SettingsSection } from '@marketing/components/settings-section';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { edit } from '@/routes/marketing/sending';
+import { ToggleSwitch } from '@marketing/components/toggle-switch';
 import { formatDateTime } from '@marketing/lib/format';
 
 export default function SendingSettings({
@@ -101,7 +101,7 @@ function SettingsForm({
                     </Button>
                 }
             >
-                <div className="grid content-start gap-2">
+                <div className="grid max-w-xl content-start gap-2">
                     <Label htmlFor="postal_address">Postal address</Label>
                     <Textarea
                         id="postal_address"
@@ -119,28 +119,30 @@ function SettingsForm({
                     <InputError message={form.errors.postal_address} />
                 </div>
 
-                <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
-                    <Checkbox
-                        checked={form.data.requires_campaign_approval}
-                        onCheckedChange={(checked) =>
-                            form.setData(
-                                'requires_campaign_approval',
-                                checked === true,
-                            )
-                        }
-                        className="mt-0.5"
-                    />
-                    <span className="space-y-0.5">
-                        <span className="block font-medium">
+                <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/30 px-3.5 py-3">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="requires_approval" className="text-sm">
                             Require approval before a campaign is sent
-                        </span>
-                        <span className="block text-muted-foreground">
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
                             Someone with the approve permission must sign off
                             each campaign. Editing a campaign withdraws its
                             approval.
-                        </span>
+                        </p>
+                    </div>
+                    <span className="pt-0.5">
+                        <ToggleSwitch
+                            id="requires_approval"
+                            checked={form.data.requires_campaign_approval}
+                            onCheckedChange={(checked) =>
+                                form.setData(
+                                    'requires_campaign_approval',
+                                    checked,
+                                )
+                            }
+                        />
                     </span>
-                </label>
+                </div>
             </SettingsSection>
         </form>
     );

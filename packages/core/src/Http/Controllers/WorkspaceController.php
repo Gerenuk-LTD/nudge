@@ -34,8 +34,9 @@ class WorkspaceController extends Controller
 
     public function edit(CurrentWorkspace $currentWorkspace): Response
     {
+        // Not "name": that prop is shared by every page as the app's name.
         return Inertia::render('marketing/workspace/settings', [
-            'name' => $currentWorkspace->getOrFail()->name,
+            'workspaceName' => $currentWorkspace->getOrFail()->name,
         ]);
     }
 

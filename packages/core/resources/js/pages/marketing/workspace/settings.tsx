@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import WorkspaceController from '@/actions/Gerenuk/Marketing/Http/Controllers/WorkspaceController';
 import InputError from '@/components/input-error';
 import { SettingsSection } from '@marketing/components/settings-section';
@@ -6,10 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/marketing/workspace';
+import { WorkspaceAvatar } from '@marketing/components/workspace-avatar';
 import { useCan } from '@marketing/hooks/use-workspace';
 
-export default function WorkspaceSettings({ name }: { name: string }) {
+export default function WorkspaceSettings({
+    workspaceName,
+}: {
+    workspaceName: string;
+}) {
     const canEdit = useCan()('workspace.manage');
+    // The avatar follows the name as it is typed, so the new colour and initials show before saving.
+    const [name, setName] = useState(workspaceName);
 
     return (
         <>
@@ -39,16 +47,25 @@ export default function WorkspaceSettings({ name }: { name: string }) {
                     >
                         <fieldset
                             disabled={!canEdit}
-                            className="grid gap-2 sm:max-w-sm"
+                            className="flex items-start gap-4"
                         >
-                            <Label htmlFor="name">Workspace name</Label>
-                            <Input
-                                id="name"
-                                name="name"
-                                defaultValue={name}
-                                required
+                            <WorkspaceAvatar
+                                workspace={{ name: name || '?' }}
+                                className="mt-6 size-10 rounded-lg text-sm"
                             />
-                            <InputError message={errors.name} />
+                            <div className="grid flex-1 gap-2 sm:max-w-sm">
+                                <Label htmlFor="name">Workspace name</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    value={name}
+                                    onChange={(event) =>
+                                        setName(event.target.value)
+                                    }
+                                    required
+                                />
+                                <InputError message={errors.name} />
+                            </div>
                         </fieldset>
                     </SettingsSection>
                 )}

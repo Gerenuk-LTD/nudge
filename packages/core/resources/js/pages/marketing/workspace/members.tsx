@@ -1,22 +1,50 @@
-import { Form, Head, router, usePage } from '@inertiajs/react';
-import { Mail } from 'lucide-react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Ellipsis, Mail, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import MemberController from '@/actions/Gerenuk/Marketing/Http/Controllers/MemberController';
 import InputError from '@/components/input-error';
-import { SettingsSection } from '@marketing/components/settings-section';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import { index as membersIndex } from '@/routes/marketing/members';
-import { ConfirmDelete } from '@marketing/components/confirm-delete';
+import { ContactAvatar } from '@marketing/components/contact-fields';
 import {
     SettingsList,
     SettingsListItem,
 } from '@marketing/components/settings-list';
 import { StatusBadge } from '@marketing/components/status-badge';
-import { NativeSelect } from '@/components/ui/native-select';
 import type { Option } from '@marketing/types';
 
-type Member = { id: number; name: string; email: string; role_id: number };
+type Member = {
+    id: number;
+    name: string;
+    email: string;
+    role_id: number;
+    is_you: boolean;
+};
 type Invitation = { id: number; email: string; role: string; expired: boolean };
+
+/** Something to confirm before it happens: removing a member or revoking an invitation. */
+type Confirming =
+    | { kind: 'member'; member: Member }
+    | { kind: 'invitation'; invitation: Invitation };
 
 export default function Members({
     members,
@@ -28,73 +56,51 @@ export default function Members({
     roles: Option[];
 }) {
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
+    const [inviting, setInviting] = useState(false);
+    const [confirming, setConfirming] = useState<Confirming | null>(null);
 
     return (
         <>
             <Head title="Members" />
 
-            <Form
-                {...MemberController.invite.form()}
-                resetOnSuccess={['email']}
-                options={{ preserveScroll: true }}
-            >
-                {({ processing, recentlySuccessful, errors: formErrors }) => (
-                    <SettingsSection
-                        title="Invite someone"
-                        description="They get an email with a link to join this workspace."
-                        hint={recentlySuccessful && 'Invitation sent.'}
-                        actions={
-                            <Button size="sm" disabled={processing}>
-                                Send invite
-                            </Button>
-                        }
-                    >
-                        <div className="flex flex-wrap items-start gap-2">
-                            <div className="min-w-56 flex-1 space-y-1">
-                                <Input
-                                    name="email"
-                                    type="email"
-                                    placeholder="name@company.com"
-                                    aria-label="Email address"
-                                    required
-                                />
-                                <InputError message={formErrors.email} />
-                            </div>
-                            <NativeSelect
-                                name="role_id"
-                                aria-label="Role"
-                                defaultValue={
-                                    roles.find((role) => role.name === 'Editor')
-                                        ?.id
-                                }
-                            >
-                                {roles.map((role) => (
-                                    <option key={role.id} value={role.id}>
-                                        {role.name}
-                                    </option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-                    </SettingsSection>
-                )}
-            </Form>
-
             <InputError message={errors.member} />
 
             <SettingsList
                 title="Members"
-                description={`${members.length} ${members.length === 1 ? 'person has' : 'people have'} access to this workspace.`}
+                description={`${members.length} ${members.length === 1 ? 'person has' : 'people have'} access to this workspace${invitations.length > 0 ? `, and ${invitations.length} ${invitations.length === 1 ? 'invitation is' : 'invitations are'} waiting` : ''}.`}
+                actions={
+                    <Button size="sm" onClick={() => setInviting(true)}>
+                        <UserPlus />
+                        Invite people
+                    </Button>
+                }
             >
                 {members.map((member) => (
                     <SettingsListItem
                         key={member.id}
-                        leading={<Initials name={member.name} />}
-                        title={member.name}
+                        leading={
+                            <ContactAvatar
+                                name={member.name}
+                                email={member.email}
+                            />
+                        }
+                        title={
+                            <>
+                                {member.name}
+                                {member.is_you && (
+                                    <StatusBadge tone="neutral">
+                                        You
+                                    </StatusBadge>
+                                )}
+                            </>
+                        }
                         detail={member.email}
                     >
                         <NativeSelect
                             aria-label={`Role for ${member.name}`}
                             value={member.role_id}
+                            size="sm"
+                            className="w-36"
                             onChange={(event) =>
                                 router.put(
                                     MemberController.update.url(member.id),
@@ -109,72 +115,242 @@ export default function Members({
                                 </option>
                             ))}
                         </NativeSelect>
-                        <ConfirmDelete
-                            url={MemberController.destroy.url(member.id)}
-                            trigger="Remove"
-                            title={`Remove ${member.name}?`}
-                            description="They lose access to this workspace straight away."
+                        <RowMenu
+                            label={`Actions for ${member.name}`}
+                            disabled={member.is_you}
+                            action={
+                                member.is_you
+                                    ? 'You can’t remove yourself'
+                                    : 'Remove from workspace'
+                            }
+                            icon={<UserMinus />}
+                            onSelect={() =>
+                                setConfirming({ kind: 'member', member })
+                            }
+                        />
+                    </SettingsListItem>
+                ))}
+                {invitations.map((invitation) => (
+                    <SettingsListItem
+                        key={`invitation-${invitation.id}`}
+                        leading={
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground">
+                                <Mail className="size-3.5" />
+                            </span>
+                        }
+                        title={
+                            <>
+                                <span className="text-muted-foreground">
+                                    {invitation.email}
+                                </span>
+                                <StatusBadge
+                                    tone={
+                                        invitation.expired
+                                            ? 'neutral'
+                                            : 'warning'
+                                    }
+                                >
+                                    {invitation.expired
+                                        ? 'Invitation expired'
+                                        : 'Invited'}
+                                </StatusBadge>
+                            </>
+                        }
+                        detail={`Will join as ${invitation.role}`}
+                    >
+                        <RowMenu
+                            label={`Actions for ${invitation.email}`}
+                            action="Revoke invitation"
+                            icon={<Trash2 />}
+                            onSelect={() =>
+                                setConfirming({
+                                    kind: 'invitation',
+                                    invitation,
+                                })
+                            }
                         />
                     </SettingsListItem>
                 ))}
             </SettingsList>
 
-            {invitations.length > 0 && (
-                <SettingsList
-                    title="Pending invitations"
-                    description="Waiting for these people to accept."
-                >
-                    {invitations.map((invitation) => (
-                        <SettingsListItem
-                            key={invitation.id}
-                            leading={
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dashed text-muted-foreground">
-                                    <Mail className="size-4" />
-                                </span>
+            <Dialog open={inviting} onOpenChange={setInviting}>
+                <DialogContent>
+                    {inviting && (
+                        <InviteForm
+                            roles={roles}
+                            onDone={() => setInviting(false)}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={confirming !== null}
+                onOpenChange={(open) => !open && setConfirming(null)}
+            >
+                <DialogContent>
+                    <DialogTitle>
+                        {confirming?.kind === 'member'
+                            ? `Remove ${confirming.member.name}?`
+                            : 'Revoke this invitation?'}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {confirming?.kind === 'member'
+                            ? 'They lose access to this workspace straight away. Their campaigns and other work stay.'
+                            : `The link sent to ${confirming?.invitation.email} stops working.`}
+                    </DialogDescription>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="ghost">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            onClick={() =>
+                                confirming &&
+                                router.delete(
+                                    confirming.kind === 'member'
+                                        ? MemberController.destroy.url(
+                                              confirming.member.id,
+                                          )
+                                        : MemberController.revokeInvitation.url(
+                                              confirming.invitation.id,
+                                          ),
+                                    {
+                                        preserveScroll: true,
+                                        onFinish: () => setConfirming(null),
+                                    },
+                                )
                             }
-                            title={
-                                <>
-                                    {invitation.email}
-                                    {invitation.expired && (
-                                        <StatusBadge tone="neutral">
-                                            Expired
-                                        </StatusBadge>
-                                    )}
-                                </>
-                            }
-                            detail={`Invited as ${invitation.role}`}
                         >
-                            <ConfirmDelete
-                                url={MemberController.revokeInvitation.url(
-                                    invitation.id,
-                                )}
-                                trigger="Revoke"
-                                title="Revoke this invitation?"
-                                description="The link in their email stops working."
-                            />
-                        </SettingsListItem>
-                    ))}
-                </SettingsList>
-            )}
+                            {confirming?.kind === 'member'
+                                ? 'Remove member'
+                                : 'Revoke invitation'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
 
-function Initials({ name }: { name: string }) {
-    const initials = name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join('');
+function InviteForm({
+    roles,
+    onDone,
+}: {
+    roles: Option[];
+    onDone: () => void;
+}) {
+    const form = useForm({
+        email: '',
+        role_id: String(
+            roles.find((role) => role.name === 'Editor')?.id ??
+                roles[0]?.id ??
+                '',
+        ),
+    });
+
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.transform((data) => ({ ...data, role_id: Number(data.role_id) }));
+        form.submit(MemberController.invite(), {
+            preserveScroll: true,
+            onSuccess: onDone,
+        });
+    };
 
     return (
-        <span
-            aria-hidden
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground"
-        >
-            {initials}
-        </span>
+        <form onSubmit={submit} className="grid gap-4">
+            <div className="space-y-1.5">
+                <DialogTitle>Invite people</DialogTitle>
+                <DialogDescription>
+                    They get an email with a link to join this workspace.
+                </DialogDescription>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+                <div className="grid content-start gap-2">
+                    <Label htmlFor="invite-email">Email address</Label>
+                    <Input
+                        id="invite-email"
+                        type="email"
+                        required
+                        autoFocus
+                        placeholder="name@company.com"
+                        value={form.data.email}
+                        onChange={(event) =>
+                            form.setData('email', event.target.value)
+                        }
+                    />
+                    <InputError message={form.errors.email} />
+                </div>
+                <div className="grid content-start gap-2">
+                    <Label htmlFor="invite-role">Role</Label>
+                    <NativeSelect
+                        id="invite-role"
+                        value={form.data.role_id}
+                        onChange={(event) =>
+                            form.setData('role_id', event.target.value)
+                        }
+                    >
+                        {roles.map((role) => (
+                            <option key={role.id} value={role.id}>
+                                {role.name}
+                            </option>
+                        ))}
+                    </NativeSelect>
+                    <InputError message={form.errors.role_id} />
+                </div>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="ghost">
+                        Cancel
+                    </Button>
+                </DialogClose>
+                <Button disabled={form.processing}>
+                    {form.processing && <Spinner />}
+                    Send invitation
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+}
+
+function RowMenu({
+    label,
+    action,
+    icon,
+    disabled = false,
+    onSelect,
+}: {
+    label: string;
+    action: string;
+    icon: ReactNode;
+    disabled?: boolean;
+    onSelect: () => void;
+}) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground"
+                    aria-label={label}
+                >
+                    <Ellipsis />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                    variant="destructive"
+                    disabled={disabled}
+                    onSelect={onSelect}
+                >
+                    {icon}
+                    {action}
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 

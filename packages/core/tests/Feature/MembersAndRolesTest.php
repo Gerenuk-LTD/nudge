@@ -142,3 +142,23 @@ test('memberships from another workspace cannot be changed', function () {
 
     $this->actingAs($owner)->delete(route('marketing.members.destroy', $foreignMembership))->assertNotFound();
 });
+
+test('the members page marks which member is you', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $editor = $this->addMember($workspace, 'Editor');
+
+    $this->actingAs($owner)->get(route('marketing.members.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('members.0.is_you', true)
+            ->where('members.1.is_you', false)
+            ->where('members.1.email', $editor->email));
+});
+
+test('the workspace settings page leaves the app name shared by every page alone', function () {
+    [$owner] = $this->createOwner('Acme Marketing');
+
+    $this->actingAs($owner)->get(route('marketing.workspace.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('workspaceName', 'Acme Marketing')
+            ->missing('name'));
+});

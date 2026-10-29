@@ -62,7 +62,7 @@ export function SettingsShell({
                 </nav>
             </div>
 
-            <div className="flex max-w-3xl flex-col gap-6">{children}</div>
+            <div className="flex flex-col gap-6">{children}</div>
         </PageBody>
     );
 }

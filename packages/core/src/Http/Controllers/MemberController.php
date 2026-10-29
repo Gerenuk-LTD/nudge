@@ -19,9 +19,10 @@ class MemberController extends Controller
 {
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $workspace = $this->currentWorkspace->getOrFail();
+        $userId = $this->user($request)->getAuthIdentifier();
 
         return Inertia::render('marketing/workspace/members', [
             'members' => $workspace->memberships()->with(['user', 'role'])->orderBy('id')->get()
@@ -30,6 +31,7 @@ class MemberController extends Controller
                     'name' => $membership->user->displayName(),
                     'email' => $membership->user->emailAddress(),
                     'role_id' => $membership->role_id,
+                    'is_you' => $membership->user_id === (int) $userId,
                 ]),
             'invitations' => Invitation::query()->with('role')->orderBy('email')->get()
                 ->map(fn (Invitation $invitation) => [
