@@ -1,5 +1,11 @@
 <?php
 
+use Gerenuk\Marketing\Enums\EventType;
+use Gerenuk\Marketing\Enums\RecipientStatus;
+use Gerenuk\Marketing\Models\ActivityEvent;
+use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Marketing\Models\CampaignRecipient;
+use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
@@ -88,4 +94,31 @@ test('only people who can manage providers see them', function () {
     $editor = $this->addMember($this->workspace, 'Editor');
 
     $this->actingAs($editor)->get(route('marketing.providers.index'))->assertForbidden();
+});
+
+test('the provider list shows each provider\'s sends and bounces from the last week', function () {
+    $mailgun = Provider::create(['name' => 'Mailgun', 'type' => ProviderType::Mailgun, 'max_per_second' => 10, 'credentials' => ['api_key' => 'k', 'domain' => 'd', 'region' => 'us']]);
+    $quiet = Provider::create(['name' => 'Quiet', 'type' => ProviderType::Smtp, 'max_per_second' => 1, 'credentials' => ['host' => 'h', 'port' => '25', 'encryption' => 'starttls']]);
+    $campaign = Campaign::factory()->create(['provider_id' => $mailgun->id]);
+    $old = Campaign::factory()->create(['provider_id' => $mailgun->id]);
+
+    foreach (Contact::factory()->count(3)->create() as $index => $contact) {
+        $recipient = CampaignRecipient::create(['campaign_id' => $campaign->id, 'contact_id' => $contact->id, 'email' => $contact->email, 'status' => RecipientStatus::Delivered]);
+        ActivityEvent::recordFor($recipient, EventType::Sent);
+
+        if ($index === 0) {
+            ActivityEvent::recordFor($recipient, EventType::Bounced);
+        }
+    }
+
+    $stale = CampaignRecipient::create(['campaign_id' => $old->id, 'contact_id' => Contact::first()->id, 'email' => 'x@example.com', 'status' => RecipientStatus::Delivered]);
+    ActivityEvent::recordFor($stale, EventType::Sent, occurredAt: now()->subDays(8));
+
+    $this->actingAs($this->owner)->get(route('marketing.providers.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('providers.0.id', $mailgun->id)
+            ->where('providers.0.sent_7d', 3)
+            ->where('providers.0.bounced_7d', 1)
+            ->where('providers.1.id', $quiet->id)
+            ->where('providers.1.sent_7d', 0));
 });

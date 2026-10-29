@@ -26,8 +26,24 @@ class ProviderController extends Controller
 {
     public function index(): Response
     {
+        // Sends and bounces over the last week, per provider, for the cards.
+        $recent = ActivityEvent::query()
+            ->join('campaign_recipients', 'campaign_recipients.id', '=', 'events.campaign_recipient_id')
+            ->join('campaigns', 'campaigns.id', '=', 'campaign_recipients.campaign_id')
+            ->where('events.occurred_at', '>=', now()->subDays(7))
+            ->whereIn('events.type', [EventType::Sent, EventType::Bounced])
+            ->toBase()
+            ->selectRaw('campaigns.provider_id, events.type, count(*) as total')
+            ->groupBy('campaigns.provider_id', 'events.type')
+            ->get()
+            ->mapWithKeys(fn (object $row) => ["{$row->provider_id}:{$row->type}" => (int) $row->total]);
+
+        $count = fn (int $providerId, EventType $type): int => $recent["{$providerId}:{$type->value}"] ?? 0;
+
         return Inertia::render('marketing/providers/index', [
             'providers' => Provider::query()->orderBy('name')->get()->map(fn (Provider $provider) => [
+                'sent_7d' => $count($provider->id, EventType::Sent),
+                'bounced_7d' => $count($provider->id, EventType::Bounced),
                 'id' => $provider->id,
                 'name' => $provider->name,
                 'type' => $provider->type->label(),

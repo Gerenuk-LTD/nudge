@@ -1,4 +1,6 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
+import { CircleCheck, CircleMinus } from 'lucide-react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import ProviderController from '@/actions/Gerenuk/Marketing/Http/Controllers/ProviderController';
 import InputError from '@/components/input-error';
@@ -7,9 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { index as providersIndex } from '@/routes/marketing/providers';
+import {
+    index as providersIndex,
+    show as showProvider,
+} from '@/routes/marketing/providers';
 import { NativeSelect } from '@/components/ui/native-select';
-import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { EditorBar, Stepper } from '@marketing/components/editor-bar';
+import type { SaveState } from '@marketing/components/editor-bar';
+import { PageBody } from '@marketing/components/page-header';
+import { ProviderMark } from '@marketing/components/provider-mark';
+import { SettingsSection } from '@marketing/components/settings-section';
+import {
+    useSaveShortcut,
+    useUnsavedChangesGuard,
+} from '@marketing/hooks/use-editor';
 import type { ProviderTypeDefinition } from '@marketing/types';
 
 type ExistingProvider = {
@@ -63,6 +76,10 @@ export default function ProviderForm({
         max_per_second: String(provider?.max_per_second ?? 10),
         daily_limit: provider?.daily_limit ? String(provider.daily_limit) : '',
     });
+    // A new connection starts by picking the service; going back to it keeps what was typed for another type.
+    const [step, setStep] = useState<'choose' | 'details'>(
+        provider ? 'details' : 'choose',
+    );
 
     const type = types.find((candidate) => candidate.value === form.data.type);
     const errors = form.errors as Record<string, string | undefined>;
@@ -73,13 +90,23 @@ export default function ProviderForm({
         form.setData((data) => ({
             ...data,
             type: value,
-            name: data.name || (chosen?.label ?? ''),
-            credentials: defaultCredentials(chosen),
+            name:
+                data.name === '' ||
+                types.some((candidate) => candidate.label === data.name)
+                    ? (chosen?.label ?? '')
+                    : data.name,
+            credentials:
+                data.type === value
+                    ? data.credentials
+                    : defaultCredentials(chosen),
         }));
+        setStep('details');
     };
 
-    const submit = (event: FormEvent) => {
-        event.preventDefault();
+    const save = () => {
+        if (!type) {
+            return;
+        }
 
         form.transform((data) => {
             const { type: chosenType, ...rest } = data;
@@ -99,6 +126,22 @@ export default function ProviderForm({
         );
     };
 
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        save();
+    };
+
+    useSaveShortcut(save, type !== undefined);
+    useUnsavedChangesGuard(form.isDirty && !form.processing);
+
+    const saveState: SaveState = form.processing
+        ? 'saving'
+        : form.hasErrors
+          ? 'error'
+          : form.isDirty || !provider
+            ? 'unsaved'
+            : 'saved';
+
     return (
         <>
             <Head
@@ -108,21 +151,74 @@ export default function ProviderForm({
             />
 
             <PageBody>
-                <PageHeader
-                    title={
+                <EditorBar
+                    back={
                         provider
-                            ? `Edit ${provider.name}`
-                            : 'Connect a provider'
+                            ? {
+                                  href: showProvider(provider.id),
+                                  label: provider.name,
+                              }
+                            : { href: providersIndex(), label: 'providers' }
                     }
-                    description="Credentials are encrypted and only used to send this workspace's email."
+                    title={type ? form.data.name : 'Connect a provider'}
+                    titlePlaceholder="Name this connection"
+                    titleError={errors.name}
+                    onTitleChange={
+                        type ? (name) => form.setData('name', name) : undefined
+                    }
+                    saveState={type ? saveState : undefined}
+                    meta={
+                        type
+                            ? type.label
+                            : 'Pick the service you send email with'
+                    }
+                    stepper={
+                        !provider && (
+                            <Stepper
+                                current={step}
+                                onSelect={(key) =>
+                                    (key === 'choose' || type) &&
+                                    setStep(key as 'choose' | 'details')
+                                }
+                                steps={[
+                                    {
+                                        key: 'choose',
+                                        label: 'Choose provider',
+                                        state: type ? 'complete' : undefined,
+                                    },
+                                    { key: 'details', label: 'Connect' },
+                                ]}
+                            />
+                        )
+                    }
+                    actions={
+                        type &&
+                        step === 'details' && (
+                            <Button
+                                type="submit"
+                                form="provider-form"
+                                disabled={form.processing}
+                            >
+                                {form.processing && <Spinner />}
+                                {provider ? 'Save changes' : 'Connect'}
+                            </Button>
+                        )
+                    }
                 />
 
-                <form onSubmit={submit} className="max-w-3xl space-y-8">
-                    {!provider && (
-                        <div className="space-y-3">
-                            <Label>Provider</Label>
-                            <div className="grid gap-2 sm:grid-cols-3">
-                                {types.map((candidate) => (
+                {step === 'choose' ? (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Use the account you already have. Credentials are
+                            encrypted and only used to send this workspace's
+                            email.
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {types.map((candidate) => {
+                                const tracked =
+                                    candidate.webhook_verification !== 'none';
+
+                                return (
                                     <button
                                         key={candidate.value}
                                         type="button"
@@ -130,187 +226,129 @@ export default function ProviderForm({
                                             chooseType(candidate.value)
                                         }
                                         className={cn(
-                                            'rounded-lg border px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50',
+                                            'flex items-center gap-3 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors outline-none hover:border-foreground/30 focus-visible:ring-[3px] focus-visible:ring-ring/50',
                                             form.data.type ===
                                                 candidate.value &&
-                                                'border-primary bg-muted',
+                                                'border-foreground ring-1 ring-foreground',
                                         )}
                                     >
-                                        <span className="font-medium">
-                                            {candidate.label}
-                                        </span>
-                                        {candidate.webhook_verification ===
-                                            'none' && (
-                                            <span className="block text-xs text-muted-foreground">
-                                                No bounce webhooks
+                                        <ProviderMark label={candidate.label} />
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm font-medium">
+                                                {candidate.label}
                                             </span>
-                                        )}
+                                            <span
+                                                className={cn(
+                                                    'flex items-center gap-1 text-xs',
+                                                    tracked
+                                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                                        : 'text-muted-foreground',
+                                                )}
+                                            >
+                                                {tracked ? (
+                                                    <CircleCheck className="size-3" />
+                                                ) : (
+                                                    <CircleMinus className="size-3" />
+                                                )}
+                                                {tracked
+                                                    ? 'Tracks bounces and complaints'
+                                                    : 'No bounce tracking'}
+                                            </span>
+                                        </span>
                                     </button>
-                                ))}
-                            </div>
-                            <InputError message={errors.type} />
+                                );
+                            })}
                         </div>
-                    )}
-
-                    {type && (
-                        <>
-                            <div className="grid content-start gap-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    required
-                                    value={form.data.name}
-                                    onChange={(event) =>
-                                        form.setData('name', event.target.value)
-                                    }
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <fieldset className="space-y-4">
-                                <legend className="mb-2 text-sm font-medium">
-                                    {type.label} credentials
-                                </legend>
+                        <InputError message={errors.type} />
+                    </div>
+                ) : (
+                    type && (
+                        <form
+                            id="provider-form"
+                            onSubmit={submit}
+                            className="max-w-3xl space-y-6"
+                        >
+                            <SettingsSection
+                                title={`${type.label} credentials`}
+                                description={
+                                    provider
+                                        ? 'Secrets are never shown again. Leave them blank to keep the saved ones.'
+                                        : "Encrypted, and only used to send this workspace's email."
+                                }
+                            >
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     {type.fields.map((field) => (
-                                        <div
+                                        <CredentialInput
                                             key={field.key}
-                                            className="grid content-start gap-2"
-                                        >
-                                            <Label
-                                                htmlFor={`credential-${field.key}`}
-                                            >
-                                                {field.label}
-                                                {!field.required && (
-                                                    <span className="font-normal text-muted-foreground">
-                                                        {' '}
-                                                        (optional)
-                                                    </span>
-                                                )}
-                                            </Label>
-                                            {field.options.length > 0 ? (
-                                                <NativeSelect
-                                                    id={`credential-${field.key}`}
-                                                    value={
-                                                        form.data.credentials[
-                                                            field.key
-                                                        ] ?? ''
-                                                    }
-                                                    onChange={(event) =>
-                                                        form.setData(
-                                                            'credentials',
-                                                            {
-                                                                ...form.data
-                                                                    .credentials,
-                                                                [field.key]:
-                                                                    event.target
-                                                                        .value,
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    {field.options.map(
-                                                        (option) => (
-                                                            <option
-                                                                key={
-                                                                    option.value
-                                                                }
-                                                                value={
-                                                                    option.value
-                                                                }
-                                                            >
-                                                                {option.label}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </NativeSelect>
-                                            ) : (
-                                                <Input
-                                                    id={`credential-${field.key}`}
-                                                    type={
-                                                        field.secret
-                                                            ? 'password'
-                                                            : 'text'
-                                                    }
-                                                    autoComplete="off"
-                                                    placeholder={
-                                                        provider && field.secret
-                                                            ? 'Saved. Leave blank to keep.'
-                                                            : undefined
-                                                    }
-                                                    value={
-                                                        form.data.credentials[
-                                                            field.key
-                                                        ] ?? ''
-                                                    }
-                                                    onChange={(event) =>
-                                                        form.setData(
-                                                            'credentials',
-                                                            {
-                                                                ...form.data
-                                                                    .credentials,
-                                                                [field.key]:
-                                                                    event.target
-                                                                        .value,
-                                                            },
-                                                        )
-                                                    }
-                                                />
-                                            )}
-                                            {field.help && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {field.help}
-                                                </p>
-                                            )}
-                                            <InputError
-                                                message={
-                                                    errors[
-                                                        `credentials.${field.key}`
-                                                    ]
-                                                }
-                                            />
-                                        </div>
+                                            field={field}
+                                            saved={provider !== null}
+                                            value={
+                                                form.data.credentials[
+                                                    field.key
+                                                ] ?? ''
+                                            }
+                                            onChange={(value) =>
+                                                form.setData('credentials', {
+                                                    ...form.data.credentials,
+                                                    [field.key]: value,
+                                                })
+                                            }
+                                            error={
+                                                errors[
+                                                    `credentials.${field.key}`
+                                                ]
+                                            }
+                                        />
                                     ))}
                                 </div>
-                            </fieldset>
+                            </SettingsSection>
 
                             {type.webhook_verification === 'signing_secret' && (
-                                <div className="grid content-start gap-2">
-                                    <Label htmlFor="webhook_secret">
-                                        {type.webhook_secret_label}
-                                    </Label>
-                                    <Input
-                                        id="webhook_secret"
-                                        type="password"
-                                        autoComplete="off"
-                                        placeholder={
-                                            provider?.has_webhook_secret
-                                                ? 'Saved. Leave blank to keep.'
-                                                : 'You can add this after creating the webhook'
-                                        }
-                                        value={form.data.webhook_secret}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'webhook_secret',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Found in {type.label}'s webhook
-                                        settings. Without it, delivery events
-                                        are rejected.
-                                    </p>
-                                    <InputError
-                                        message={errors.webhook_secret}
-                                    />
-                                </div>
+                                <SettingsSection
+                                    title="Delivery webhooks"
+                                    description={
+                                        provider
+                                            ? undefined
+                                            : 'You get the webhook URL after connecting. You can add the secret then.'
+                                    }
+                                >
+                                    <div className="grid max-w-md content-start gap-2">
+                                        <Label htmlFor="webhook_secret">
+                                            {type.webhook_secret_label}
+                                        </Label>
+                                        <Input
+                                            id="webhook_secret"
+                                            type="password"
+                                            autoComplete="off"
+                                            placeholder={
+                                                provider?.has_webhook_secret
+                                                    ? 'Saved. Leave blank to keep.'
+                                                    : 'Optional for now'
+                                            }
+                                            value={form.data.webhook_secret}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'webhook_secret',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Found in {type.label}'s webhook
+                                            settings. Without it, delivery
+                                            events are rejected.
+                                        </p>
+                                        <InputError
+                                            message={errors.webhook_secret}
+                                        />
+                                    </div>
+                                </SettingsSection>
                             )}
 
-                            <fieldset className="space-y-4">
-                                <legend className="mb-2 text-sm font-medium">
-                                    Default sender
-                                </legend>
+                            <SettingsSection
+                                title="Default sender"
+                                description="New campaigns start with these. Each campaign can change them."
+                            >
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <TextField
                                         id="from_name"
@@ -342,12 +380,12 @@ export default function ProviderForm({
                                         error={errors.reply_to}
                                     />
                                 </div>
-                            </fieldset>
+                            </SettingsSection>
 
-                            <fieldset className="space-y-4">
-                                <legend className="mb-2 text-sm font-medium">
-                                    Limits
-                                </legend>
+                            <SettingsSection
+                                title="Sending limits"
+                                description="Match these to your plan with the provider. Sending pauses at the daily limit and carries on the next day."
+                            >
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <TextField
                                         id="max_per_second"
@@ -373,27 +411,73 @@ export default function ProviderForm({
                                         error={errors.daily_limit}
                                     />
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Match these to your provider plan. Sending
-                                    pauses at the daily limit and resumes the
-                                    next day.
-                                </p>
-                            </fieldset>
-
-                            <div className="flex gap-2">
-                                <Button disabled={form.processing}>
-                                    {form.processing && <Spinner />}
-                                    {provider ? 'Save' : 'Connect'}
-                                </Button>
-                                <Button variant="ghost" asChild>
-                                    <Link href={providersIndex()}>Cancel</Link>
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </form>
+                            </SettingsSection>
+                        </form>
+                    )
+                )}
             </PageBody>
         </>
+    );
+}
+
+function CredentialInput({
+    field,
+    saved,
+    value,
+    onChange,
+    error,
+}: {
+    field: ProviderTypeDefinition['fields'][number];
+    saved: boolean;
+    value: string;
+    onChange: (value: string) => void;
+    error?: string;
+}) {
+    const id = `credential-${field.key}`;
+
+    return (
+        <div className="grid content-start gap-2">
+            <Label htmlFor={id}>
+                {field.label}
+                {!field.required && (
+                    <span className="font-normal text-muted-foreground">
+                        {' '}
+                        (optional)
+                    </span>
+                )}
+            </Label>
+            {field.options.length > 0 ? (
+                <NativeSelect
+                    id={id}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                >
+                    {field.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </NativeSelect>
+            ) : (
+                <Input
+                    id={id}
+                    type={field.secret ? 'password' : 'text'}
+                    autoComplete="off"
+                    placeholder={
+                        saved && field.secret
+                            ? 'Saved. Leave blank to keep.'
+                            : undefined
+                    }
+                    className={cn(field.secret && 'font-mono')}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                />
+            )}
+            {field.help && (
+                <p className="text-xs text-muted-foreground">{field.help}</p>
+            )}
+            <InputError message={error} />
+        </div>
     );
 }
 

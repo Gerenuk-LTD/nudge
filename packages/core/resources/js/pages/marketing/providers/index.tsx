@@ -1,14 +1,20 @@
 import { Head, Link } from '@inertiajs/react';
-import { Mail, Plus } from 'lucide-react';
+import { Plus, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
     create,
     index as providersIndex,
     show,
 } from '@/routes/marketing/providers';
-import { StatusBadge } from '@marketing/components/status-badge';
-import type { StatusTone } from '@marketing/components/status-badge';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import {
+    BOUNCE_DANGER,
+    BOUNCE_WARNING,
+    ProviderMark,
+    providerHealth,
+} from '@marketing/components/provider-mark';
+import { StatusBadge } from '@marketing/components/status-badge';
 import { formatDateTime } from '@marketing/lib/format';
 
 type ProviderRow = {
@@ -21,6 +27,8 @@ type ProviderRow = {
     receives_webhooks: boolean;
     max_per_second: number;
     daily_limit: number | null;
+    sent_7d: number;
+    bounced_7d: number;
 };
 
 export default function ProvidersIndex({
@@ -35,60 +43,71 @@ export default function ProvidersIndex({
             <PageBody>
                 <PageHeader
                     title="Sending providers"
-                    description="Campaigns send through your own provider account. Connect one or more."
+                    description="Emails go out through your own account with a sending service. Connect one or more."
                     actions={
-                        <Button asChild>
+                        providers.length > 0 && (
+                            <Button asChild>
+                                <Link href={create()}>
+                                    <Plus />
+                                    Connect provider
+                                </Link>
+                            </Button>
+                        )
+                    }
+                />
+
+                {providers.length === 0 ? (
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
+                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
+                            <Send className="size-5" />
+                        </span>
+                        <div className="space-y-1">
+                            <p className="font-medium">No provider connected</p>
+                            <p className="max-w-md text-sm text-muted-foreground">
+                                Campaigns and automations need a sending service
+                                to go out. Connect the account you already use,
+                                such as Amazon SES, Postmark, Mailgun or plain
+                                SMTP.
+                            </p>
+                        </div>
+                        <Button size="sm" className="mt-1" asChild>
                             <Link href={create()}>
                                 <Plus />
                                 Connect provider
                             </Link>
                         </Button>
-                    }
-                />
-
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {providers.map((provider) => (
-                        <ProviderCard key={provider.id} provider={provider} />
-                    ))}
-                    <Link
-                        href={create()}
-                        className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/40 p-6 text-center text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-                    >
-                        <Plus className="size-4" />
-                        {providers.length === 0
-                            ? 'Connect your first provider to start sending'
-                            : 'Connect another provider'}
-                    </Link>
-                </div>
+                    </div>
+                ) : (
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {providers.map((provider) => (
+                            <ProviderCard
+                                key={provider.id}
+                                provider={provider}
+                            />
+                        ))}
+                    </div>
+                )}
             </PageBody>
         </>
     );
 }
 
 /**
- * A provider connection at a glance: whether it has sent, whether its webhooks report deliveries back, and its limits.
+ * A provider connection at a glance: whether it is working, how the last week's sending went, and its limits.
  */
 function ProviderCard({ provider }: { provider: ProviderRow }) {
-    const awaitingWebhooks =
-        provider.receives_webhooks &&
-        provider.last_sent_at !== null &&
-        provider.last_webhook_at === null;
-    const health: { tone: StatusTone; label: string } = awaitingWebhooks
-        ? { tone: 'warning', label: 'Waiting for webhooks' }
-        : provider.last_sent_at
-          ? { tone: 'success', label: 'In use' }
-          : { tone: 'neutral', label: 'Not used yet' };
+    const health = providerHealth(provider);
+    const bounceRate =
+        provider.sent_7d > 0 ? provider.bounced_7d / provider.sent_7d : null;
 
     return (
         <Link
             href={show(provider.id)}
-            className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm"
+            className="flex flex-col rounded-xl border bg-card shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm"
         >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-3 p-5 pb-4">
                 <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40">
-                        <Mail className="size-4 text-muted-foreground" />
-                    </span>
+                    <ProviderMark label={provider.type} />
                     <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">
                             {provider.name}
@@ -102,33 +121,53 @@ function ProviderCard({ provider }: { provider: ProviderRow }) {
                 <StatusBadge tone={health.tone}>{health.label}</StatusBadge>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4 text-xs">
-                <div>
-                    <dt className="text-muted-foreground">Last send</dt>
-                    <dd className="mt-0.5 text-13">
-                        {formatDateTime(provider.last_sent_at) ?? 'Never'}
+            <dl className="grid grid-cols-2 divide-x border-t">
+                <div className="px-5 py-3">
+                    <dt className="text-xs text-muted-foreground">
+                        Sent, last 7 days
+                    </dt>
+                    <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                        {provider.sent_7d.toLocaleString()}
                     </dd>
                 </div>
-                <div>
-                    <dt className="text-muted-foreground">Last webhook</dt>
-                    <dd className="mt-0.5 text-13">
-                        {provider.receives_webhooks
-                            ? (formatDateTime(provider.last_webhook_at) ??
-                              'None yet')
-                            : 'Not supported'}
-                    </dd>
-                </div>
-                <div className="col-span-2">
-                    <dt className="text-muted-foreground">Limits</dt>
-                    <dd className="mt-0.5 text-13 tabular-nums">
-                        Up to {provider.max_per_second.toLocaleString()} a
-                        second
-                        {provider.daily_limit
-                            ? `, ${provider.daily_limit.toLocaleString()} a day`
-                            : ', no daily cap'}
+                <div className="px-5 py-3">
+                    <dt className="text-xs text-muted-foreground">
+                        Bounce rate
+                    </dt>
+                    <dd
+                        className={cn(
+                            'mt-0.5 text-lg font-semibold tabular-nums',
+                            !provider.receives_webhooks &&
+                                'text-sm font-normal text-muted-foreground',
+                            provider.receives_webhooks &&
+                                bounceRate !== null &&
+                                bounceRate > BOUNCE_DANGER &&
+                                'text-red-600 dark:text-red-400',
+                            provider.receives_webhooks &&
+                                bounceRate !== null &&
+                                bounceRate > BOUNCE_WARNING &&
+                                bounceRate <= BOUNCE_DANGER &&
+                                'text-amber-600 dark:text-amber-400',
+                        )}
+                    >
+                        {!provider.receives_webhooks
+                            ? 'Not tracked'
+                            : bounceRate === null
+                              ? '—'
+                              : `${(bounceRate * 100).toFixed(1)}%`}
                     </dd>
                 </div>
             </dl>
+
+            <p className="mt-auto border-t bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground tabular-nums">
+                {provider.last_sent_at
+                    ? `Last sent ${formatDateTime(provider.last_sent_at)}`
+                    : 'Nothing sent yet'}{' '}
+                · up to {provider.max_per_second.toLocaleString()}/s
+                {provider.daily_limit
+                    ? `, ${provider.daily_limit.toLocaleString()}/day`
+                    : ''}
+            </p>
         </Link>
     );
 }
