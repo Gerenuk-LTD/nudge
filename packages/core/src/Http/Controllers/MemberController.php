@@ -109,13 +109,13 @@ class MemberController extends Controller
     }
 
     /**
-     * Only owners can give out, take away or change the owner role.
+     * People can only give out, take away or change roles whose permissions they hold themselves; only owners can touch the owner role.
      */
     private function ensureCanAssign(Request $request, Role $role): void
     {
-        if ($role->is_owner) {
-            abort_unless($this->user($request)->membershipFor($this->currentWorkspace->getOrFail())?->role->is_owner, 403);
-        }
+        $actor = $this->user($request)->membershipFor($this->currentWorkspace->getOrFail())?->role;
+
+        abort_unless($actor !== null && $role->isWithin($actor), 403);
     }
 
     /**

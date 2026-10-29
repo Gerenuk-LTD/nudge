@@ -38,6 +38,19 @@ class Role extends Model
         return $this->hasMany(Membership::class);
     }
 
+    /**
+     * Whether someone holding $actor could hand out this role: owners can hand out anything, everyone else
+     * only roles whose permissions they hold themselves, and never the owner role.
+     */
+    public function isWithin(Role $actor): bool
+    {
+        if ($actor->is_owner) {
+            return true;
+        }
+
+        return ! $this->is_owner && array_diff($this->permissions, $actor->permissions) === [];
+    }
+
     public function grants(Permission $permission): bool
     {
         return $this->is_owner || in_array($permission->value, $this->permissions, true);

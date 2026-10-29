@@ -34,7 +34,9 @@ class RoleController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Role::create($this->validated($request));
+        $actor = $this->actingRole($request);
+
+        Role::create($this->validated($request, $actor));
 
         return to_route('marketing.roles.index');
     }
@@ -43,14 +45,19 @@ class RoleController extends Controller
     {
         abort_if($role->is_owner, 403, __('The owner role always has every permission.'));
 
-        $role->update($this->validated($request, $role));
+        $actor = $this->actingRole($request);
+
+        abort_unless($role->isWithin($actor), 403);
+
+        $role->update($this->validated($request, $actor, $role));
 
         return to_route('marketing.roles.index');
     }
 
-    public function destroy(Role $role): RedirectResponse
+    public function destroy(Request $request, Role $role): RedirectResponse
     {
         abort_if($role->is_owner, 403);
+        abort_unless($role->isWithin($this->actingRole($request)), 403);
 
         if ($role->memberships()->exists()) {
             throw ValidationException::withMessages(['role' => __('Move members to another role before deleting this one.')]);
@@ -61,10 +68,19 @@ class RoleController extends Controller
         return to_route('marketing.roles.index');
     }
 
+    private function actingRole(Request $request): Role
+    {
+        $actor = $this->user($request)->membershipFor($this->currentWorkspace->getOrFail())?->role;
+
+        abort_if($actor === null, 403);
+
+        return $actor;
+    }
+
     /**
      * @return array{name: string, permissions: list<string>}
      */
-    private function validated(Request $request, ?Role $role = null): array
+    private function validated(Request $request, Role $actor, ?Role $role = null): array
     {
         $validated = $request->validate([
             'name' => [
@@ -75,6 +91,12 @@ class RoleController extends Controller
             'permissions.*' => ['string', Rule::enum(Permission::class)],
         ]);
 
-        return ['name' => $validated['name'], 'permissions' => array_values(array_unique($validated['permissions']))];
+        $permissions = array_values(array_unique($validated['permissions']));
+
+        if (! $actor->is_owner && array_diff($permissions, $actor->permissions) !== []) {
+            throw ValidationException::withMessages(['permissions' => __('You can only give out permissions you have yourself.')]);
+        }
+
+        return ['name' => $validated['name'], 'permissions' => $permissions];
     }
 }

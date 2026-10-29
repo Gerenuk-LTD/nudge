@@ -1,5 +1,7 @@
 <?php
 
+use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Invitation;
 use Gerenuk\Marketing\Models\Membership;
 use Gerenuk\Marketing\Models\Role;
@@ -161,4 +163,76 @@ test('the workspace settings page leaves the app name shared by every page alone
         ->assertInertia(fn ($page) => $page
             ->where('workspaceName', 'Acme Marketing')
             ->missing('name'));
+});
+
+function memberWithCustomRole(object $owner, object $workspace, string $name, array $permissions): User
+{
+    test()->actingAs($owner)->post(route('marketing.roles.store'), [
+        'name' => $name,
+        'permissions' => $permissions,
+    ])->assertRedirect();
+
+    return test()->addMember($workspace, $name);
+}
+
+test('a role manager cannot grant permissions they lack', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $manager = memberWithCustomRole($owner, $workspace, 'Role Manager', ['roles.manage', 'contacts.view']);
+
+    $this->actingAs($manager)->post(route('marketing.roles.store'), [
+        'name' => 'Sneaky',
+        'permissions' => ['contacts.view', 'providers.manage'],
+    ])->assertSessionHasErrors('permissions');
+
+    $this->actingAs($manager)->put(route('marketing.roles.update', roleNamed('Role Manager')), [
+        'name' => 'Role Manager',
+        'permissions' => ['roles.manage', 'contacts.view', 'workspace.manage'],
+    ])->assertSessionHasErrors('permissions');
+
+    expect(Role::where('name', 'Sneaky')->exists())->toBeFalse()
+        ->and(roleNamed('Role Manager')->permissions)->toBe(['roles.manage', 'contacts.view']);
+});
+
+test('a role manager cannot edit a role more powerful than their own', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $manager = memberWithCustomRole($owner, $workspace, 'Role Manager', ['roles.manage', 'contacts.view']);
+
+    $this->actingAs($manager)->put(route('marketing.roles.update', roleNamed('Admin')), [
+        'name' => 'Admin',
+        'permissions' => ['contacts.view'],
+    ])->assertForbidden();
+});
+
+test('a member manager cannot hand out a role more powerful than their own', function () {
+    Notification::fake();
+    [$owner, $workspace] = $this->createOwner();
+    $member = memberWithCustomRole($owner, $workspace, 'People', ['members.manage', 'contacts.view']);
+    $membership = Membership::where('user_id', $member->id)->first();
+
+    $this->actingAs($member)->put(route('marketing.members.update', $membership), ['role_id' => roleNamed('Admin')->id])->assertForbidden();
+    $this->actingAs($member)->post(route('marketing.members.invite'), ['email' => 'x@example.com', 'role_id' => roleNamed('Admin')->id])->assertForbidden();
+
+    expect($membership->fresh()->role->name)->toBe('People');
+});
+
+test('removing a member revokes the API tokens they created', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $admin = $this->addMember($workspace, 'Admin');
+    app(CreateApiToken::class)->handle($workspace, $admin, 'x', ['contacts.view']);
+    $membership = Membership::where('user_id', $admin->id)->first();
+
+    $this->actingAs($owner)->delete(route('marketing.members.destroy', $membership))->assertRedirect();
+
+    expect(ApiToken::withoutGlobalScopes()->where('created_by', $admin->id)->count())->toBe(0);
+});
+
+test('demoting a member narrows their API tokens', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $admin = $this->addMember($workspace, 'Admin');
+    app(CreateApiToken::class)->handle($workspace, $admin, 'x', ['contacts.view', 'contacts.manage', 'providers.manage']);
+    $membership = Membership::where('user_id', $admin->id)->first();
+
+    $this->actingAs($owner)->put(route('marketing.members.update', $membership), ['role_id' => roleNamed('Viewer')->id])->assertRedirect();
+
+    expect(ApiToken::withoutGlobalScopes()->where('created_by', $admin->id)->first()->permissions)->toBe(['contacts.view']);
 });
