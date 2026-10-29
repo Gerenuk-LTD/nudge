@@ -66,12 +66,12 @@ class DailySeries
     {
         $since = self::since($days);
 
-        return collect(range(0, $days - 1))
+        return array_values(collect(range(0, $days - 1))
             ->map(function (int $offset) use ($since, $counts): array {
                 $day = $since->copy()->addDays($offset)->toDateString();
 
                 return ['date' => $day, 'count' => (int) ($counts[$day] ?? 0)];
             })
-            ->all();
+            ->all());
     }
 }

@@ -140,6 +140,14 @@ class EmailTemplateController extends Controller
         ]);
 
         // A save replaces the whole template, so optional fields left out are cleared rather than kept.
-        return [...['description' => null, 'subject' => null, 'preheader' => null, 'editor_state' => null], ...$validated];
+        return [
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'subject' => $validated['subject'] ?? null,
+            'preheader' => $validated['preheader'] ?? null,
+            'editor' => $validated['editor'],
+            'editor_state' => $validated['editor_state'] ?? null,
+            'html' => $validated['html'],
+        ];
     }
 }

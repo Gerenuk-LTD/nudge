@@ -54,6 +54,17 @@ class CampaignAudience
     }
 
     /**
+     * @param  Builder<Contact>  $contacts
+     */
+    private function reachableContacts(Builder $contacts): void
+    {
+        $contacts
+            ->active()
+            ->where('status', ContactStatus::Subscribed)
+            ->whereNotIn('email', Suppression::query()->select('email'));
+    }
+
+    /**
      * How many people each audience choice would reach, so the choices can show their size.
      *
      * @return array{everyone: int, lists: array<int, int>, segments: array<int, int>}
@@ -61,10 +72,7 @@ class CampaignAudience
     public function sizes(): array
     {
         $lists = ContactList::query()
-            ->withCount(['contacts as reachable_count' => fn (Builder $contacts) => $contacts
-                ->active()
-                ->where('status', ContactStatus::Subscribed)
-                ->whereNotIn('email', Suppression::query()->select('email'))])
+            ->withCount(['contacts as reachable_count' => $this->reachableContacts(...)])
             ->pluck('reachable_count', 'id')
             ->map(fn (mixed $count) => (int) $count);
 

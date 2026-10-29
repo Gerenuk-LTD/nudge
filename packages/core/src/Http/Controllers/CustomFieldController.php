@@ -17,7 +17,7 @@ class CustomFieldController extends Controller
     public function index(CustomFieldReferences $references): Response
     {
         $fields = CustomFieldDefinition::query()->orderBy('label')->get(['id', 'key', 'label', 'type']);
-        $usage = $references->usage($fields->pluck('key')->all());
+        $usage = $references->usage(array_values($fields->pluck('key')->map(fn (mixed $key) => (string) $key)->all()));
 
         return Inertia::render('marketing/custom-fields/index', [
             'fields' => $fields->map(fn (CustomFieldDefinition $field) => [

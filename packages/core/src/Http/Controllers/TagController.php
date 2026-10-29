@@ -70,7 +70,7 @@ class TagController extends Controller
             'into' => ['required', 'integer', Rule::notIn([$tag->id]), Rule::exists('tags', 'id')->where('workspace_id', $this->currentWorkspace->id())],
         ]);
 
-        $into = Tag::query()->findOrFail($validated['into']);
+        $into = Tag::query()->whereKey($validated['into'])->firstOrFail();
         $this->references->merge($tag, $into);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Merged :from into :into.', ['from' => $tag->name, 'into' => $into->name])]);

@@ -52,10 +52,9 @@ class StarterTemplates
      */
     public static function all(): array
     {
-        return collect(self::catalog())
+        return array_values(collect(self::catalog())
             ->map(fn (array $starter, string $key) => ['key' => $key, 'name' => $starter['name'], 'description' => $starter['description'], ...self::content($key)])
-            ->values()
-            ->all();
+            ->all());
     }
 
     /**

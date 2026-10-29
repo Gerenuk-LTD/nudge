@@ -42,7 +42,7 @@ class TemplateChoice
             'saved' => false,
         ]);
 
-        return $saved->concat($starters)->values()->all();
+        return array_values($saved->concat($starters)->all());
     }
 
     /**

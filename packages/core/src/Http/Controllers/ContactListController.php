@@ -34,7 +34,7 @@ class ContactListController extends Controller
             DB::table('contact_list_memberships')->whereIn('contact_list_id', $lists->modelKeys()),
             'created_at',
             'contact_list_id',
-            $lists->modelKeys(),
+            array_values($lists->modelKeys()),
             self::GROWTH_DAYS,
         );
 

@@ -86,7 +86,7 @@ class HomeController extends Controller
      */
     private function automations(): array
     {
-        return Automation::query()
+        return array_values(Automation::query()
             ->where('status', AutomationStatus::Active)
             ->withCount(['runs as active_count' => fn ($query) => $query->whereIn('status', [AutomationRunStatus::Active, AutomationRunStatus::Waiting])])
             ->orderByDesc('active_count')
@@ -97,6 +97,6 @@ class HomeController extends Controller
                 'name' => $automation->name,
                 'active_count' => (int) $automation->getAttribute('active_count'),
             ])
-            ->all();
+            ->all());
     }
 }

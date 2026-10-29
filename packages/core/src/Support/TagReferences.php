@@ -211,7 +211,7 @@ class TagReferences
 
             foreach (['yes', 'no'] as $branch) {
                 if (is_array($step[$branch] ?? null)) {
-                    $step[$branch] = $this->mapSteps($step[$branch], $change);
+                    $step[$branch] = $this->mapSteps(array_values($step[$branch]), $change);
                 }
             }
 
