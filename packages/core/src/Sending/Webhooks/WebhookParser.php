@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Sending\MessageHeaders;
+use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Sending\WebhookVerification;
 use Illuminate\Http\Request;
 use Symfony\Component\RemoteEvent\Event\Mailer\AbstractMailerEvent;
@@ -41,7 +42,7 @@ class WebhookParser
         $normalized = [];
 
         foreach ($events as $event) {
-            if ($event instanceof AbstractMailerEvent && ($type = self::typeFor($event)) !== null) {
+            if ($event instanceof AbstractMailerEvent && ($type = self::typeFor($event, $provider->type)) !== null) {
                 $normalized[] = new DeliveryEvent(
                     type: $type,
                     email: $event->getRecipientEmail(),
@@ -56,12 +57,12 @@ class WebhookParser
         return $normalized;
     }
 
-    private static function typeFor(RemoteEvent $event): ?EventType
+    private static function typeFor(RemoteEvent $event, ProviderType $type): ?EventType
     {
         return match ($event->getName()) {
             MailerDeliveryEvent::DELIVERED => EventType::Delivered,
             MailerDeliveryEvent::DEFERRED => EventType::Deferred,
-            MailerDeliveryEvent::BOUNCE => EventType::Bounced,
+            MailerDeliveryEvent::BOUNCE => BounceClassifier::isTemporary($type, $event->getPayload()) ? EventType::Deferred : EventType::Bounced,
             MailerDeliveryEvent::DROPPED => EventType::Dropped,
             MailerEngagementEvent::SPAM => EventType::Complained,
             MailerEngagementEvent::UNSUBSCRIBE => EventType::Unsubscribed,

@@ -26,20 +26,22 @@ class RecordDeliveryEvent
             $recipient = $this->findRecipient($event);
             $email = Contact::normalizeEmail($recipient->email ?? $event->email);
 
+            $firstTime = true;
+
             switch ($event->type) {
                 case EventType::Delivered:
                     if ($recipient) {
-                        $this->markFirst($recipient, 'delivered_at', 'delivered_count', $event, RecipientStatus::Delivered);
+                        $firstTime = $this->markFirst($recipient, 'delivered_at', 'delivered_count', $event, RecipientStatus::Delivered);
                     }
                     break;
                 case EventType::Bounced:
-                    $this->bounced($email, $recipient, $event);
+                    $firstTime = $this->bounced($email, $recipient, $event);
                     break;
                 case EventType::Complained:
-                    $this->complained($email, $recipient, $event);
+                    $firstTime = $this->complained($email, $recipient, $event);
                     break;
                 case EventType::Unsubscribed:
-                    $this->unsubscribed($email, $recipient, $event);
+                    $firstTime = $this->unsubscribed($email, $recipient, $event);
                     break;
                 case EventType::Dropped:
                     if ($recipient?->status === RecipientStatus::Sent) {
@@ -48,6 +50,10 @@ class RecordDeliveryEvent
                     break;
                 default:
                     break;
+            }
+
+            if (! $firstTime) {
+                return;
             }
 
             ActivityEvent::create([
@@ -61,32 +67,29 @@ class RecordDeliveryEvent
         });
     }
 
-    private function bounced(string $email, ?CampaignRecipient $recipient, DeliveryEvent $event): void
+    private function bounced(string $email, ?CampaignRecipient $recipient, DeliveryEvent $event): bool
     {
         Suppression::suppress($email, SuppressionReason::Bounce, $event->reason);
 
-        if ($recipient) {
-            $this->markFirst($recipient, 'bounced_at', 'bounced_count', $event, RecipientStatus::Bounced);
-        }
+        return $recipient === null
+            || $this->markFirst($recipient, 'bounced_at', 'bounced_count', $event, RecipientStatus::Bounced);
     }
 
-    private function complained(string $email, ?CampaignRecipient $recipient, DeliveryEvent $event): void
+    private function complained(string $email, ?CampaignRecipient $recipient, DeliveryEvent $event): bool
     {
         Suppression::suppress($email, SuppressionReason::Complaint, $event->reason);
         $this->unsubscribeContact($email);
 
-        if ($recipient) {
-            $this->markFirst($recipient, 'complained_at', 'complained_count', $event, RecipientStatus::Complained);
-        }
+        return $recipient === null
+            || $this->markFirst($recipient, 'complained_at', 'complained_count', $event, RecipientStatus::Complained);
     }
 
-    private function unsubscribed(string $email, ?CampaignRecipient $recipient, DeliveryEvent $event): void
+    private function unsubscribed(string $email, ?CampaignRecipient $recipient, DeliveryEvent $event): bool
     {
         $this->unsubscribeContact($email);
 
-        if ($recipient) {
-            $this->markFirst($recipient, 'unsubscribed_at', 'unsubscribed_count', $event);
-        }
+        return $recipient === null
+            || $this->markFirst($recipient, 'unsubscribed_at', 'unsubscribed_count', $event);
     }
 
     private function unsubscribeContact(string $email): void
@@ -101,15 +104,16 @@ class RecordDeliveryEvent
 
     /**
      * Set a first-time timestamp on the recipient and bump the campaign counter, once per recipient.
+     * Returns false when the event was already recorded.
      * The status only moves forward from sent or delivered, so a late delivery event never hides a bounce.
      */
-    private function markFirst(CampaignRecipient $recipient, string $column, string $counter, DeliveryEvent $event, ?RecipientStatus $status = null): void
+    private function markFirst(CampaignRecipient $recipient, string $column, string $counter, DeliveryEvent $event, ?RecipientStatus $status = null): bool
     {
         $changed = CampaignRecipient::query()->whereKey($recipient->id)->whereNull($column)
             ->update([$column => $event->occurredAt]) === 1;
 
         if (! $changed) {
-            return;
+            return false;
         }
 
         $recipient->campaign()->increment($counter);
@@ -119,6 +123,8 @@ class RecordDeliveryEvent
                 ->whereIn('status', [RecipientStatus::Sent, RecipientStatus::Delivered])
                 ->update(['status' => $status]);
         }
+
+        return true;
     }
 
     /**

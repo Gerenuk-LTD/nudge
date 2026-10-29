@@ -2,8 +2,10 @@
 
 use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
 use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Enums\SuppressionReason;
+use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\Contact;
@@ -12,6 +14,7 @@ use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Sending\MessageHeaders;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
+use Gerenuk\Marketing\Sending\Webhooks\BounceClassifier;
 use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -90,6 +93,37 @@ describe('Mailgun', function () {
             ->and($recipient->fresh()->status)->toBe(RecipientStatus::Delivered);
     });
 
+    test('a bounce reported twice is logged once', function () {
+        $campaign = sentCampaignThrough($this->provider, $this);
+        $recipient = CampaignRecipient::first();
+
+        foreach ([1, 2] as $attempt) {
+            $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
+                'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'No such mailbox', 'message' => ''],
+            ]))->assertNoContent();
+        }
+
+        $this->useWorkspace($this->workspace);
+
+        expect(ActivityEvent::where('type', EventType::Bounced)->count())->toBe(1)
+            ->and($campaign->fresh()->bounced_count)->toBe(1);
+    });
+
+    test('repeated complaints cannot pause a workspace on their own', function () {
+        config(['marketing.sending.auto_pause.minimum_sends' => 2]);
+        sentCampaignThrough($this->provider, $this, contacts: 4);
+        $recipient = CampaignRecipient::first();
+
+        foreach ([1, 2, 3] as $attempt) {
+            $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
+                ->assertNoContent();
+        }
+
+        $this->useWorkspace($this->workspace);
+
+        expect(ActivityEvent::where('type', EventType::Complained)->count())->toBe(1);
+    });
+
     test('a complaint unsubscribes and suppresses the contact', function () {
         sentCampaignThrough($this->provider, $this);
         $recipient = CampaignRecipient::first();
@@ -131,6 +165,56 @@ describe('Mailgun', function () {
         expect($victim->fresh()->complained_at)->toBeNull()
             ->and(Contact::first()->status)->toBe(ContactStatus::Subscribed);
     });
+});
+
+test('temporary bounces are told apart from permanent ones', function (ProviderType $type, array $payload, bool $temporary) {
+    expect(BounceClassifier::isTemporary($type, $payload))->toBe($temporary);
+})->with([
+    'brevo soft' => [ProviderType::Brevo, ['event' => 'soft_bounce'], true],
+    'brevo hard' => [ProviderType::Brevo, ['event' => 'hard_bounce'], false],
+    'mandrill soft' => [ProviderType::Mandrill, ['event' => 'soft_bounce'], true],
+    'mandrill hard' => [ProviderType::Mandrill, ['event' => 'hard_bounce'], false],
+    'mailersend soft' => [ProviderType::MailerSend, ['type' => 'activity.soft_bounced'], true],
+    'mailersend hard' => [ProviderType::MailerSend, ['type' => 'activity.hard_bounced'], false],
+    'postmark soft' => [ProviderType::Postmark, ['Type' => 'SoftBounce'], true],
+    'postmark transient' => [ProviderType::Postmark, ['Type' => 'Transient'], true],
+    'postmark hard' => [ProviderType::Postmark, ['Type' => 'HardBounce'], false],
+    'sendgrid blocked' => [ProviderType::SendGrid, ['type' => 'blocked'], true],
+    'sendgrid bounce' => [ProviderType::SendGrid, ['type' => 'bounce'], false],
+    'mailjet soft' => [ProviderType::Mailjet, ['hard_bounce' => false], true],
+    'mailjet hard' => [ProviderType::Mailjet, ['hard_bounce' => true], false],
+    'resend transient' => [ProviderType::Resend, ['data' => ['bounce' => ['type' => 'Transient']]], true],
+    'resend permanent' => [ProviderType::Resend, ['data' => ['bounce' => ['type' => 'Permanent']]], false],
+    'resend untyped' => [ProviderType::Resend, ['data' => []], false],
+    'mailgun default' => [ProviderType::Mailgun, ['event' => 'failed'], false],
+]);
+
+test('a soft bounce is recorded as a deferral and does not suppress', function () {
+    $provider = Provider::create([
+        'name' => 'Mailjet', 'type' => ProviderType::Mailjet, 'max_per_second' => 100,
+        'credentials' => ['api_key' => 'key', 'secret_key' => 'secret'],
+        'webhook_secret' => 'gmk:test',
+    ]);
+    $campaign = sentCampaignThrough($provider, $this);
+    $recipient = CampaignRecipient::first();
+
+    $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), [
+        'event' => 'bounce',
+        'time' => time(),
+        'email' => $recipient->email,
+        'MessageID' => 12345,
+        'hard_bounce' => false,
+        'smtp_reply' => 'mailbox full',
+        MessageHeaders::RECIPIENT_KEY => (string) $recipient->id,
+    ], ['Authorization' => 'Basic '.base64_encode('gmk:test')])->assertNoContent();
+
+    $this->useWorkspace($this->workspace);
+
+    expect(Suppression::count())->toBe(0)
+        ->and($recipient->fresh()->status)->not->toBe(RecipientStatus::Bounced)
+        ->and($campaign->fresh()->bounced_count)->toBe(0)
+        ->and(ActivityEvent::where('type', EventType::Deferred)->count())->toBe(1)
+        ->and(ActivityEvent::where('type', EventType::Bounced)->count())->toBe(0);
 });
 
 test('unknown webhook tokens are not found', function () {
