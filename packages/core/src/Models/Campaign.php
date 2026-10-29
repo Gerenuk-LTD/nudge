@@ -45,6 +45,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property bool $ab_enabled
  * @property string|null $ab_subject_b
  * @property string|null $ab_html_b
+ * @property array<string, mixed>|null $ab_editor_state_b
  * @property int $ab_sample_percent
  * @property int $ab_wait_minutes
  * @property string $ab_metric
@@ -71,7 +72,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'workspace_id', 'kind', 'automation_id', 'automation_step_id', 'provider_id', 'segment_id', 'created_by', 'approved_by', 'name', 'subject', 'preheader',
     'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'audience_type', 'list_ids',
     'track_opens', 'track_clicks', 'status', 'approved_at', 'scheduled_at', 'sending_started_at', 'sent_at',
-    'recipients_count', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_sample_percent', 'ab_wait_minutes',
+    'recipients_count', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_editor_state_b', 'ab_sample_percent', 'ab_wait_minutes',
     'ab_metric', 'ab_winner', 'ab_decided_at',
 ])]
 #[UseFactory(CampaignFactory::class)]
@@ -100,6 +101,7 @@ class Campaign extends Model
             'kind' => CampaignKind::class,
             'editor_state' => 'array',
             'ab_enabled' => 'boolean',
+            'ab_editor_state_b' => 'array',
             'ab_decided_at' => 'datetime',
             'audience_type' => AudienceType::class,
             'list_ids' => 'array',

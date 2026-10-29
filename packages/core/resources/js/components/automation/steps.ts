@@ -38,6 +38,7 @@ export function newStep(type: StepType): AutomationStep {
                 type,
                 config: {
                     subject: '',
+                    editor: 'blocks',
                     html: '',
                     track_clicks: true,
                     track_opens: true,
@@ -142,4 +143,69 @@ export function summarize(step: AutomationStep): string {
         default:
             return 'The contact leaves the automation';
     }
+}
+
+/**
+ * Where a new step goes: a position in the top-level steps (no parent), or in one branch of a condition.
+ */
+export type InsertPoint = {
+    parentId: string | null;
+    branch: 'yes' | 'no' | null;
+    index: number;
+};
+
+/**
+ * Put a step at an insert point, wherever it sits in the tree.
+ */
+export function insertStep(
+    steps: AutomationStep[],
+    at: InsertPoint,
+    step: AutomationStep,
+): AutomationStep[] {
+    if (at.parentId === null) {
+        return [...steps.slice(0, at.index), step, ...steps.slice(at.index)];
+    }
+
+    return steps.map((candidate) => {
+        if (candidate.type !== 'condition') {
+            return candidate;
+        }
+
+        if (candidate.id === at.parentId && at.branch) {
+            return {
+                ...candidate,
+                [at.branch]: insertStep(
+                    candidate[at.branch] ?? [],
+                    { ...at, parentId: null },
+                    step,
+                ),
+            };
+        }
+
+        return {
+            ...candidate,
+            yes: insertStep(candidate.yes ?? [], at, step),
+            no: insertStep(candidate.no ?? [], at, step),
+        };
+    });
+}
+
+/**
+ * Take a step out of the tree, with its branches if it is a condition.
+ */
+export function removeStep(
+    steps: AutomationStep[],
+    id: string,
+): AutomationStep[] {
+    return steps
+        .filter((step) => step.id !== id)
+        .map((step) =>
+            step.type === 'condition'
+                ? {
+                      ...step,
+                      yes: removeStep(step.yes ?? [], id),
+                      no: removeStep(step.no ?? [], id),
+                  }
+                : step,
+        );
 }

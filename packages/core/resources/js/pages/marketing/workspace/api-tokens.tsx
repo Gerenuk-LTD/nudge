@@ -1,10 +1,10 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, KeyRound } from 'lucide-react';
 import type { FormEvent } from 'react';
 import ApiTokenController from '@/actions/Gerenuk/Marketing/Http/Controllers/ApiTokenController';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
+import { SettingsSection } from '@marketing/components/settings-section';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,12 @@ import { Label } from '@/components/ui/label';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
 import { ConfirmDelete } from '@marketing/components/confirm-delete';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
+import {
+    SettingsList,
+    SettingsListItem,
+} from '@marketing/components/settings-list';
 import type { Permission } from '@marketing/types';
+import { formatDate, formatDateTime } from '@marketing/lib/format';
 
 type Token = {
     id: number;
@@ -69,43 +73,51 @@ export default function ApiTokens({
             <Head title="API tokens" />
 
             {plainToken && (
-                <div className="space-y-2 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/40">
-                    <p className="text-sm font-medium">
-                        Copy your new token now. It will not be shown again.
-                    </p>
-                    <div className="flex gap-2">
-                        <Input
-                            readOnly
-                            value={plainToken}
-                            className="font-mono text-xs"
-                        />
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            aria-label="Copy token"
-                            onClick={() => copy(plainToken)}
-                        >
-                            {copiedText === plainToken ? <Check /> : <Copy />}
-                        </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        Send it as a bearer token:{' '}
-                        <code>Authorization: Bearer {'<token>'}</code>
-                    </p>
-                </div>
+                <Alert>
+                    <KeyRound />
+                    <AlertTitle>Copy your new token now</AlertTitle>
+                    <AlertDescription className="w-full gap-2">
+                        <p>It won't be shown again.</p>
+                        <div className="flex w-full gap-2">
+                            <Input
+                                readOnly
+                                value={plainToken}
+                                className="font-mono text-xs"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                aria-label="Copy token"
+                                onClick={() => copy(plainToken)}
+                            >
+                                {copiedText === plainToken ? (
+                                    <Check />
+                                ) : (
+                                    <Copy />
+                                )}
+                            </Button>
+                        </div>
+                        <p className="text-xs">
+                            Send it as a bearer token:{' '}
+                            <code>Authorization: Bearer {'<token>'}</code>
+                        </p>
+                    </AlertDescription>
+                </Alert>
             )}
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
+            <form onSubmit={submit}>
+                <SettingsSection
                     title="Create a token"
-                    description="Tokens act on this workspace only, with the permissions you choose"
-                />
-
-                <form onSubmit={submit} className="space-y-4">
+                    description="Tokens act on this workspace only, with the permissions you choose."
+                    actions={
+                        <Button size="sm" disabled={form.processing}>
+                            Create token
+                        </Button>
+                    }
+                >
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="grid gap-2">
+                        <div className="grid content-start gap-2">
                             <Label htmlFor="token-name">Name</Label>
                             <Input
                                 id="token-name"
@@ -118,7 +130,7 @@ export default function ApiTokens({
                             />
                             <InputError message={errors.name} />
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid content-start gap-2">
                             <Label htmlFor="token-expiry">
                                 Expires after (days)
                             </Label>
@@ -139,99 +151,79 @@ export default function ApiTokens({
                         </div>
                     </div>
 
-                    <div className="grid gap-2">
-                        {permissions.map((permission) => (
-                            <label
-                                key={permission.value}
-                                className="flex items-start gap-2 text-sm"
-                            >
-                                <Checkbox
-                                    className="mt-0.5"
-                                    checked={form.data.permissions.includes(
-                                        permission.value,
-                                    )}
-                                    onCheckedChange={(checked) =>
-                                        form.setData(
-                                            'permissions',
-                                            checked === true
-                                                ? [
-                                                      ...form.data.permissions,
-                                                      permission.value,
-                                                  ]
-                                                : form.data.permissions.filter(
-                                                      (p) =>
-                                                          p !==
+                    <div className="grid content-start gap-2">
+                        <Label>Permissions</Label>
+                        <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+                            {permissions.map((permission) => (
+                                <label
+                                    key={permission.value}
+                                    className="flex items-start gap-2 text-sm"
+                                >
+                                    <Checkbox
+                                        className="mt-0.5"
+                                        checked={form.data.permissions.includes(
+                                            permission.value,
+                                        )}
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'permissions',
+                                                checked === true
+                                                    ? [
+                                                          ...form.data
+                                                              .permissions,
                                                           permission.value,
-                                                  ),
-                                        )
-                                    }
-                                />
-                                {permission.label}
-                            </label>
-                        ))}
+                                                      ]
+                                                    : form.data.permissions.filter(
+                                                          (p) =>
+                                                              p !==
+                                                              permission.value,
+                                                      ),
+                                            )
+                                        }
+                                    />
+                                    {permission.label}
+                                </label>
+                            ))}
+                        </div>
                         <InputError message={errors.permissions} />
                     </div>
+                </SettingsSection>
+            </form>
 
-                    <Button disabled={form.processing}>Create token</Button>
-                </form>
-            </div>
-
-            <div className="space-y-4">
-                <Heading variant="small" title="Tokens" />
-                <DataTable
-                    headers={['Name', 'Permissions', 'Last used', '']}
-                    empty={
-                        tokens.length === 0 && (
-                            <EmptyRow message="No tokens yet." />
-                        )
-                    }
-                >
-                    {tokens.map((token) => (
-                        <tr key={token.id}>
-                            <Cell>
-                                <p className="font-medium">{token.name}</p>
-                                {token.expires_at && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Expires{' '}
-                                        {new Date(
-                                            token.expires_at,
-                                        ).toLocaleDateString()}
-                                    </p>
-                                )}
-                            </Cell>
-                            <Cell>
-                                <div className="flex flex-wrap gap-1">
-                                    {token.permissions.map((permission) => (
-                                        <Badge
-                                            key={permission}
-                                            variant="outline"
-                                        >
-                                            {permission}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </Cell>
-                            <Cell className="text-muted-foreground">
-                                {token.last_used_at
-                                    ? new Date(
-                                          token.last_used_at,
-                                      ).toLocaleString()
-                                    : 'Never'}
-                            </Cell>
-                            <Cell className="text-right">
-                                <ConfirmDelete
-                                    url={ApiTokenController.destroy.url(
-                                        token.id,
-                                    )}
-                                    trigger="Revoke"
-                                    title={`Revoke ${token.name}?`}
-                                    description="Anything using this token stops working immediately."
-                                />
-                            </Cell>
-                        </tr>
-                    ))}
-                </DataTable>
-            </div>
+            <SettingsList
+                title="Tokens"
+                description="Revoke a token as soon as nothing needs it."
+                empty="No tokens yet."
+            >
+                {tokens.map((token) => (
+                    <SettingsListItem
+                        key={token.id}
+                        leading={
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background text-muted-foreground">
+                                <KeyRound className="size-4" />
+                            </span>
+                        }
+                        title={token.name}
+                        detail={[
+                            token.last_used_at
+                                ? `Last used ${formatDateTime(token.last_used_at)}`
+                                : 'Never used',
+                            token.expires_at &&
+                                `expires ${formatDate(token.expires_at)}`,
+                            token.permissions.join(', '),
+                        ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                    >
+                        <ConfirmDelete
+                            url={ApiTokenController.destroy.url(token.id)}
+                            trigger="Revoke"
+                            title={`Revoke ${token.name}?`}
+                            description="Anything using this token stops working immediately."
+                        />
+                    </SettingsListItem>
+                ))}
+            </SettingsList>
         </>
     );
 }

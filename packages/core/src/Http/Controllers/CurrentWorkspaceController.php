@@ -16,6 +16,6 @@ class CurrentWorkspaceController extends Controller
 
         abort_unless($workspace !== null && $this->user($request)->switchWorkspace($workspace), 403);
 
-        return to_route('marketing.contacts.index');
+        return to_route('marketing.home');
     }
 }

@@ -35,6 +35,8 @@ class ProviderController extends Controller
                 'last_sent_at' => $provider->last_sent_at?->toIso8601String(),
                 'last_webhook_at' => $provider->last_webhook_at?->toIso8601String(),
                 'receives_webhooks' => $provider->type->webhookVerification() !== WebhookVerification::None,
+                'max_per_second' => $provider->max_per_second,
+                'daily_limit' => $provider->daily_limit,
             ]),
         ]);
     }

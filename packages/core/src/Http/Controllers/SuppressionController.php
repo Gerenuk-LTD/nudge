@@ -4,6 +4,7 @@ namespace Gerenuk\Marketing\Http\Controllers;
 
 use Gerenuk\Marketing\Enums\SuppressionReason;
 use Gerenuk\Marketing\Models\Suppression;
+use Gerenuk\Marketing\Support\TableQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,13 +14,18 @@ class SuppressionController extends Controller
 {
     public function index(Request $request): Response
     {
-        $search = mb_strtolower(trim($request->string('search')->toString()));
+        $query = Suppression::query()
+            ->when(TableQuery::values($request->input('reason')), fn ($query, array $reasons) => $query->whereIn('reason', $reasons));
+
+        TableQuery::search($query, $request->string('search')->toString(), ['email']);
 
         return Inertia::render('marketing/suppressions/index', [
-            'suppressions' => Suppression::query()
-                ->when($search !== '', fn ($query) => $query->whereRaw("email like ? escape '!'", ['%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%']))
-                ->orderByDesc('id')
-                ->paginate(50)
+            'suppressions' => TableQuery::sort($query, $request, [
+                'email' => 'email',
+                'reason' => 'reason',
+                'since' => 'created_at',
+            ])
+                ->paginate(TableQuery::perPage($request, 50))
                 ->withQueryString()
                 ->through(fn (Suppression $suppression) => [
                     'id' => $suppression->id,
@@ -28,7 +34,6 @@ class SuppressionController extends Controller
                     'detail' => $suppression->detail,
                     'created_at' => $suppression->created_at?->toIso8601String(),
                 ]),
-            'search' => $search ?: null,
         ]);
     }
 

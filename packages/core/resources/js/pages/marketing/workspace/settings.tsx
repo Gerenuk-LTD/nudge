@@ -1,7 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import WorkspaceController from '@/actions/Gerenuk/Marketing/Http/Controllers/WorkspaceController';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { SettingsSection } from '@marketing/components/settings-section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,37 +15,44 @@ export default function WorkspaceSettings({ name }: { name: string }) {
         <>
             <Head title="Workspace settings" />
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="General"
-                    description="The name everyone in this workspace sees"
-                />
-
-                <Form
-                    {...WorkspaceController.update.form()}
-                    options={{ preserveScroll: true }}
-                    className="space-y-6"
-                >
-                    {({ processing, errors }) => (
-                        <fieldset disabled={!canEdit} className="space-y-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Workspace name</Label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    defaultValue={name}
-                                    required
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-                            {canEdit && (
-                                <Button disabled={processing}>Save</Button>
-                            )}
+            <Form
+                {...WorkspaceController.update.form()}
+                options={{ preserveScroll: true }}
+            >
+                {({ processing, recentlySuccessful, errors }) => (
+                    <SettingsSection
+                        title="General"
+                        description="The name everyone in this workspace sees, in the sidebar and in invitations."
+                        hint={
+                            recentlySuccessful
+                                ? 'Saved.'
+                                : !canEdit &&
+                                  'Only people who can manage the workspace can rename it.'
+                        }
+                        actions={
+                            canEdit && (
+                                <Button size="sm" disabled={processing}>
+                                    Save
+                                </Button>
+                            )
+                        }
+                    >
+                        <fieldset
+                            disabled={!canEdit}
+                            className="grid gap-2 sm:max-w-sm"
+                        >
+                            <Label htmlFor="name">Workspace name</Label>
+                            <Input
+                                id="name"
+                                name="name"
+                                defaultValue={name}
+                                required
+                            />
+                            <InputError message={errors.name} />
                         </fieldset>
-                    )}
-                </Form>
-            </div>
+                    </SettingsSection>
+                )}
+            </Form>
         </>
     );
 }

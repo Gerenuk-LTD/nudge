@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
+use Inertia\Testing\AssertableInertia;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -10,6 +12,29 @@ test('profile page is displayed', function () {
         ->get(route('profile.edit'));
 
     $response->assertOk();
+});
+
+test('profile page shares the current workspace so the sidebar keeps its navigation', function () {
+    $user = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($user, 'Acme');
+
+    $response = $this
+        ->actingAs($user->refresh())
+        ->get(route('profile.edit'));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('workspace.current.id', $workspace->id)
+        ->has('workspace.permissions'));
+});
+
+test('profile page is displayed without a workspace instead of redirecting to create one', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('profile.edit'));
+
+    $response->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->missing('workspace'));
 });
 
 test('profile information can be updated', function () {

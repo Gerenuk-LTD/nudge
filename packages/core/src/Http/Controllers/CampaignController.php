@@ -17,13 +17,18 @@ use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\CampaignLink;
 use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Marketing\Support\CampaignSummary;
+use Gerenuk\Marketing\Support\MergeTagOptions;
+use Gerenuk\Marketing\Support\TableQuery;
+use Gerenuk\Marketing\Templates\TemplateChoice;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -31,29 +36,61 @@ use Inertia\Response;
 class CampaignController extends Controller
 {
     /** Fields that change what recipients see; editing them withdraws an approval. */
-    private const CONTENT_FIELDS = ['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'text', 'audience_type', 'list_ids', 'segment_id', 'provider_id', 'ab_enabled', 'ab_subject_b', 'ab_html_b'];
+    private const CONTENT_FIELDS = ['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'editor_state', 'html', 'text', 'audience_type', 'list_ids', 'segment_id', 'provider_id', 'ab_enabled', 'ab_subject_b', 'ab_html_b'];
+
+    /** How many drafts and scheduled campaigns the index shelf shows. */
+    private const UPCOMING_LIMIT = 8;
 
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
-    public function index(Request $request): Response
+    /**
+     * Drafts and scheduled campaigns as a shelf of work in progress, above a table of what has gone out.
+     */
+    public function index(Request $request, TemplateChoice $templateChoice): Response
     {
-        $status = $request->string('status')->toString();
+        $history = [CampaignStatus::Sending, CampaignStatus::Sent, CampaignStatus::Cancelled];
+        $statuses = array_intersect(
+            TableQuery::values($request->input('status')),
+            array_map(fn (CampaignStatus $status) => $status->value, $history),
+        );
+
+        $query = Campaign::query()
+            ->broadcasts()
+            ->whereIn('status', $statuses ?: $history);
+
+        TableQuery::search($query, $request->string('search')->toString(), ['name', 'subject']);
 
         return Inertia::render('marketing/campaigns/index', [
-            'campaigns' => Campaign::query()
-                ->broadcasts()
-                ->when(CampaignStatus::tryFrom($status), fn ($query, CampaignStatus $value) => $query->where('status', $value))
-                ->orderByDesc('id')
-                ->paginate(25)
+            'campaigns' => TableQuery::sort($query, $request, [
+                'name' => 'name',
+                'status' => 'status',
+                'recipients' => 'recipients_count',
+                'opened' => DB::raw('opened_count * 1.0 / nullif(sent_count, 0)'),
+                'clicked' => DB::raw('clicked_count * 1.0 / nullif(sent_count, 0)'),
+                'date' => DB::raw('coalesce(sent_at, scheduled_at, created_at)'),
+            ])
+                ->paginate(TableQuery::perPage($request))
                 ->withQueryString()
-                ->through(fn (Campaign $campaign) => $this->summary($campaign)),
-            'status' => $status ?: null,
+                ->through(fn (Campaign $campaign) => CampaignSummary::from($campaign)),
+            'upcoming' => Campaign::query()
+                ->broadcasts()
+                ->whereIn('status', [CampaignStatus::Scheduled, CampaignStatus::Draft])
+                ->orderByRaw('scheduled_at is null')
+                ->orderBy('scheduled_at')
+                ->orderByDesc('updated_at')
+                ->limit(self::UPCOMING_LIMIT)
+                ->get()
+                ->map(fn (Campaign $campaign) => CampaignSummary::from($campaign)),
+            'templates' => Inertia::optional(fn () => $templateChoice->options()),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, TemplateChoice $templateChoice): RedirectResponse
     {
-        $validated = $request->validate(['name' => ['required', 'string', 'max:150']]);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'template' => ['nullable', 'string', 'max:50'],
+        ]);
         $provider = Provider::query()->orderBy('id')->first();
 
         $campaign = Campaign::create([
@@ -63,13 +100,13 @@ class CampaignController extends Controller
             'from_name' => $provider?->from_name,
             'from_email' => $provider?->from_email,
             'reply_to' => $provider?->reply_to,
-            'html' => self::starterHtml(),
+            ...$templateChoice->content($validated['template'] ?? null),
         ]);
 
         return to_route('marketing.campaigns.edit', $campaign);
     }
 
-    public function edit(Campaign $campaign, CampaignChecklist $checklist, CampaignAudience $audience): Response|RedirectResponse
+    public function edit(Campaign $campaign, CampaignChecklist $checklist, CampaignAudience $audience, TemplateChoice $templateChoice): Response|RedirectResponse
     {
         if ($campaign->kind === CampaignKind::Automation) {
             return to_route('marketing.automations.edit', (int) $campaign->automation_id);
@@ -93,9 +130,11 @@ class CampaignController extends Controller
             ]),
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'segments' => Segment::query()->orderBy('name')->get(['id', 'name']),
-            'mergeTags' => $this->mergeTags(),
+            'mergeTags' => MergeTagOptions::all(),
+            'templates' => Inertia::optional(fn () => $templateChoice->options()),
             'checklist' => Inertia::defer(fn () => array_map(fn (ChecklistItem $item) => $item->toArray(), $checklist->for($campaign, $workspace))),
             'audienceCount' => Inertia::defer(fn () => $audience->count($campaign)),
+            'audienceSizes' => Inertia::defer(fn () => $audience->sizes()),
             'requiresApproval' => $workspace->requires_campaign_approval,
         ]);
     }
@@ -227,10 +266,8 @@ class CampaignController extends Controller
             return to_route('marketing.campaigns.edit', $campaign);
         }
 
-        $recipientStatus = RecipientStatus::tryFrom($request->string('recipients')->toString());
-
         return Inertia::render('marketing/campaigns/show', [
-            'campaign' => $this->summary($campaign),
+            'campaign' => CampaignSummary::from($campaign),
             'snapshot' => $campaign->snapshot?->only(['subject', 'subject_b', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'html_b']),
             'abTest' => $campaign->ab_enabled ? [
                 'metric' => $campaign->ab_metric,
@@ -240,19 +277,37 @@ class CampaignController extends Controller
             ] : null,
             'links' => $campaign->links()->orderByDesc('unique_clicks_count')->orderBy('id')->get()
                 ->map(fn (CampaignLink $link) => $link->only(['id', 'url', 'clicks_count', 'unique_clicks_count'])),
-            'recipients' => Inertia::defer(fn () => $campaign->recipients()
-                ->when($recipientStatus, fn ($query, RecipientStatus $status) => $query->where('status', $status))
-                ->orderBy('id')
-                ->paginate(50, ['id', 'contact_id', 'email', 'status', 'error', 'sent_at', 'opened_at', 'clicked_at'])
-                ->withQueryString()
-                ->through(fn (CampaignRecipient $recipient) => [
-                    ...$recipient->only(['id', 'contact_id', 'email', 'error']),
-                    'status' => $recipient->status->value,
-                    'opened' => $recipient->opened_at !== null,
-                    'clicked' => $recipient->clicked_at !== null,
-                ])),
-            'recipientStatus' => $recipientStatus?->value,
+            'recipients' => Inertia::defer(fn () => $this->recipients($request, $campaign)),
         ]);
+    }
+
+    /**
+     * One page of the campaign's recipients, searched, filtered by status and sorted from the query string.
+     *
+     * @return LengthAwarePaginator<int, array{id: int, contact_id: int, email: string, error: string|null, status: string, opened: bool, clicked: bool}>
+     */
+    private function recipients(Request $request, Campaign $campaign): LengthAwarePaginator
+    {
+        $query = CampaignRecipient::query()
+            ->where('campaign_id', $campaign->id)
+            ->when(TableQuery::values($request->input('status')), fn ($query, array $statuses) => $query->whereIn('status', $statuses));
+
+        TableQuery::search($query, $request->string('search')->toString(), ['email']);
+
+        return TableQuery::sort($query, $request, [
+            'email' => 'email',
+            'status' => 'status',
+            'opened' => 'opened_at',
+            'clicked' => 'clicked_at',
+        ], 'id')
+            ->paginate(TableQuery::perPage($request, 50), ['id', 'contact_id', 'email', 'status', 'error', 'sent_at', 'opened_at', 'clicked_at'])
+            ->withQueryString()
+            ->through(fn (CampaignRecipient $recipient) => [
+                ...$recipient->only(['id', 'contact_id', 'email', 'error']),
+                'status' => $recipient->status->value,
+                'opened' => $recipient->opened_at !== null,
+                'clicked' => $recipient->clicked_at !== null,
+            ]);
     }
 
     private function ensureEditable(Campaign $campaign): void
@@ -271,43 +326,12 @@ class CampaignController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function summary(Campaign $campaign): array
-    {
-        return [
-            'id' => $campaign->id,
-            'name' => $campaign->name,
-            'subject' => $campaign->subject,
-            'status' => $campaign->status->value,
-            'scheduled_at' => $campaign->scheduled_at?->toIso8601String(),
-            'sent_at' => $campaign->sent_at?->toIso8601String(),
-            'created_at' => $campaign->created_at?->toIso8601String(),
-            'stats' => [
-                'recipients' => $campaign->recipients_count,
-                'sent' => $campaign->sent_count,
-                'failed' => $campaign->failed_count,
-                'delivered' => $campaign->delivered_count,
-                'bounced' => $campaign->bounced_count,
-                'complained' => $campaign->complained_count,
-                'opened' => $campaign->opened_count,
-                'clicked' => $campaign->clicked_count,
-                'unsubscribed' => $campaign->unsubscribed_count,
-            ],
-            'track_opens' => $campaign->track_opens,
-            'track_clicks' => $campaign->track_clicks,
-            'kind' => $campaign->kind->value,
-            'automation_id' => $campaign->automation_id,
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
     private function details(Campaign $campaign): array
     {
         return [
             ...$campaign->only([
-                'id', 'name', 'subject', 'preheader', 'provider_id', 'from_name', 'from_email', 'reply_to', 'html', 'text', 'segment_id',
-                'track_opens', 'track_clicks', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_sample_percent', 'ab_wait_minutes', 'ab_metric',
+                'id', 'name', 'subject', 'preheader', 'provider_id', 'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'segment_id',
+                'track_opens', 'track_clicks', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_editor_state_b', 'ab_sample_percent', 'ab_wait_minutes', 'ab_metric',
             ]),
             'status' => $campaign->status->value,
             'audience_type' => $campaign->audience_type->value,
@@ -315,41 +339,5 @@ class CampaignController extends Controller
             'approved_at' => $campaign->approved_at?->toIso8601String(),
             'scheduled_at' => $campaign->scheduled_at?->toIso8601String(),
         ];
-    }
-
-    /**
-     * @return list<array{tag: string, label: string}>
-     */
-    private function mergeTags(): array
-    {
-        $tags = [
-            ['tag' => '{{ first_name }}', 'label' => 'First name'],
-            ['tag' => '{{ last_name }}', 'label' => 'Last name'],
-            ['tag' => '{{ email }}', 'label' => 'Email'],
-            ['tag' => '{{ unsubscribe_url }}', 'label' => 'Unsubscribe link'],
-            ['tag' => '{{ postal_address }}', 'label' => 'Postal address'],
-        ];
-
-        foreach (CustomFieldDefinition::query()->orderBy('label')->get() as $field) {
-            $tags[] = ['tag' => "{{ custom.{$field->key} }}", 'label' => $field->label];
-        }
-
-        return $tags;
-    }
-
-    private static function starterHtml(): string
-    {
-        return <<<'HTML'
-            <!DOCTYPE html>
-            <html>
-            <body style="margin:0;padding:0;background:#f4f4f5;">
-              <div style="max-width:600px;margin:0 auto;padding:32px 24px;background:#ffffff;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#18181b;">
-                <p>Hi {{ first_name | there }},</p>
-                <p>Write your message here.</p>
-                <p style="font-size:12px;color:#71717a;">{{ postal_address }}<br><a href="{{ unsubscribe_url }}" style="color:#71717a;">Unsubscribe</a></p>
-              </div>
-            </body>
-            </html>
-            HTML;
     }
 }

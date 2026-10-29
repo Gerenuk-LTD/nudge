@@ -3,24 +3,43 @@
 namespace Gerenuk\Marketing\Http\Controllers;
 
 use Gerenuk\Marketing\Models\ContactList;
+use Gerenuk\Marketing\Support\DailySeries;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContactListController extends Controller
 {
+    private const GROWTH_DAYS = 30;
+
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
     public function index(): Response
     {
+        $lists = ContactList::query()
+            ->withCount(['contacts' => fn ($query) => $query->whereNull('archived_at')])
+            ->orderBy('name')
+            ->get(['id', 'name', 'description']);
+
+        // Memberships only record when a contact joined, so this is joins per day rather than net growth.
+        $joins = DailySeries::countBy(
+            DB::table('contact_list_memberships')->whereIn('contact_list_id', $lists->modelKeys()),
+            'created_at',
+            'contact_list_id',
+            $lists->modelKeys(),
+            self::GROWTH_DAYS,
+        );
+
         return Inertia::render('marketing/lists/index', [
-            'lists' => ContactList::query()
-                ->withCount(['contacts' => fn ($query) => $query->whereNull('archived_at')])
-                ->orderBy('name')
-                ->get(['id', 'name', 'description']),
+            'lists' => $lists->map(fn (ContactList $list) => [
+                ...$list->only(['id', 'name', 'description', 'contacts_count']),
+                'joins' => $joins[$list->id],
+            ]),
+            'days' => self::GROWTH_DAYS,
         ]);
     }
 

@@ -1,35 +1,46 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
+/**
+ * Sign-in, sign-up and onboarding: the product mark above a single bordered card on the app's grey page.
+ */
 export default function AuthSimpleLayout({
     children,
     title,
     description,
 }: AuthLayoutProps) {
-    return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <Link
-                            href={home()}
-                            className="flex flex-col items-center gap-2 font-medium"
-                        >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                            </div>
-                            <span className="sr-only">{title}</span>
-                        </Link>
+    const { name } = usePage().props;
 
-                        <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-medium">{title}</h1>
-                            <p className="text-center text-sm text-muted-foreground">
-                                {description}
-                            </p>
+    return (
+        <div className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-10">
+            <div className="flex w-full max-w-sm flex-col gap-6">
+                <Link
+                    href={home()}
+                    className="flex items-center justify-center gap-2.5 self-center rounded-md text-sm font-semibold tracking-tight"
+                >
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
+                        <AppLogoIcon className="size-[18px]" />
+                    </span>
+                    {name}
+                </Link>
+
+                <div className="rounded-xl border bg-card p-6 shadow-xs sm:p-8">
+                    {(title || description) && (
+                        <div className="mb-6 space-y-1.5">
+                            {title && (
+                                <h1 className="text-xl font-semibold">
+                                    {title}
+                                </h1>
+                            )}
+                            {description && (
+                                <p className="text-sm text-muted-foreground">
+                                    {description}
+                                </p>
+                            )}
                         </div>
-                    </div>
+                    )}
                     {children}
                 </div>
             </div>

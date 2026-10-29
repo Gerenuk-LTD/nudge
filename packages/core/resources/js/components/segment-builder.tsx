@@ -2,7 +2,7 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { NativeSelect } from '@marketing/components/native-select';
+import { NativeSelect } from '@/components/ui/native-select';
 import type {
     SegmentCondition,
     SegmentField,

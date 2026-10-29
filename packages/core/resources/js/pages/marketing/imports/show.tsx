@@ -1,3 +1,4 @@
+import type { ColumnDef } from '@tanstack/react-table';
 import { Head, useForm, usePoll } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
@@ -6,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { index as importsIndex } from '@/routes/marketing/imports';
-import { Cell, DataTable } from '@marketing/components/data-table';
+import { DataTable } from '@marketing/components/data-table';
 import { ImportStatusBadge } from '@marketing/components/import-status-badge';
-import { NativeSelect } from '@marketing/components/native-select';
-import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { NativeSelect } from '@/components/ui/native-select';
+import { EditorBar } from '@marketing/components/editor-bar';
+import { ImportSteps } from '@marketing/components/import-steps';
+import { PageBody } from '@marketing/components/page-header';
 import { TagInput } from '@marketing/components/tag-input';
 import type { ImportSummary, Option } from '@marketing/types';
 
@@ -31,10 +34,30 @@ export default function ShowImport(props: Props) {
             <Head title={item.original_filename} />
 
             <PageBody>
-                <PageHeader
+                <EditorBar
+                    back={{ href: importsIndex(), label: 'imports' }}
                     title={item.original_filename}
-                    description={`${item.total_rows.toLocaleString()} rows`}
-                    actions={<ImportStatusBadge status={item.status} />}
+                    meta={
+                        <>
+                            <ImportStatusBadge status={item.status} />
+                            {item.total_rows.toLocaleString()} rows
+                        </>
+                    }
+                    stepper={
+                        <ImportSteps
+                            current={
+                                item.status === 'pending' ? 'map' : 'import'
+                            }
+                            finished={item.status === 'completed'}
+                        />
+                    }
+                    actions={
+                        item.status === 'pending' && (
+                            <Button type="submit" form="import-mapping">
+                                Start import
+                            </Button>
+                        )
+                    }
                 />
 
                 {item.status === 'pending' ? (
@@ -88,8 +111,51 @@ function MappingForm({
 
     const errors = form.errors as Record<string, string | undefined>;
 
+    const columns: ColumnDef<string>[] = [
+        {
+            id: 'column',
+            header: 'Column',
+            meta: { className: 'font-medium' },
+            cell: ({ row }) => row.original || `Column ${row.index + 1}`,
+        },
+        {
+            id: 'examples',
+            header: 'Example values',
+            meta: {
+                className:
+                    'max-w-xs truncate whitespace-nowrap text-muted-foreground',
+            },
+            cell: ({ row }) =>
+                sample
+                    .map((sampleRow) => sampleRow[row.index])
+                    .filter(Boolean)
+                    .slice(0, 3)
+                    .join(', '),
+        },
+        {
+            id: 'target',
+            header: 'Import as',
+            cell: ({ row }) => (
+                <NativeSelect
+                    aria-label={`Import ${row.original} as`}
+                    value={form.data.mapping[row.index] ?? ''}
+                    onChange={(event) =>
+                        setTarget(row.index, event.target.value)
+                    }
+                >
+                    <option value="">Skip</option>
+                    {targets.map((target) => (
+                        <option key={target.value} value={target.value}>
+                            {target.label}
+                        </option>
+                    ))}
+                </NativeSelect>
+            ),
+        },
+    ];
+
     return (
-        <form onSubmit={submit} className="space-y-6">
+        <form id="import-mapping" onSubmit={submit} className="space-y-6">
             <p className="text-sm text-muted-foreground">
                 Choose what each column holds. Columns set to "Skip" are
                 ignored. Contacts already in the workspace are updated by email
@@ -97,45 +163,11 @@ function MappingForm({
                 re-subscribes anyone who opted out.
             </p>
 
-            <DataTable headers={['Column', 'Example values', 'Import as']}>
-                {headers.map((header, index) => (
-                    <tr key={index}>
-                        <Cell className="font-medium">
-                            {header || `Column ${index + 1}`}
-                        </Cell>
-                        <Cell className="max-w-xs truncate text-muted-foreground">
-                            {sample
-                                .map((row) => row[index])
-                                .filter(Boolean)
-                                .slice(0, 3)
-                                .join(', ')}
-                        </Cell>
-                        <Cell>
-                            <NativeSelect
-                                aria-label={`Import ${header} as`}
-                                value={form.data.mapping[index] ?? ''}
-                                onChange={(event) =>
-                                    setTarget(index, event.target.value)
-                                }
-                            >
-                                <option value="">Skip</option>
-                                {targets.map((target) => (
-                                    <option
-                                        key={target.value}
-                                        value={target.value}
-                                    >
-                                        {target.label}
-                                    </option>
-                                ))}
-                            </NativeSelect>
-                        </Cell>
-                    </tr>
-                ))}
-            </DataTable>
+            <DataTable columns={columns} data={headers} />
             <InputError message={errors.mapping} />
 
             <div className="grid max-w-3xl gap-6 sm:grid-cols-2">
-                <div className="grid gap-2">
+                <div className="grid content-start gap-2">
                     <Label htmlFor="contact_list_id">
                         Add everyone to a list
                     </Label>
@@ -155,7 +187,7 @@ function MappingForm({
                     </NativeSelect>
                     <InputError message={errors.contact_list_id} />
                 </div>
-                <div className="grid gap-2">
+                <div className="grid content-start gap-2">
                     <Label htmlFor="import-tags">Tag everyone</Label>
                     <TagInput
                         id="import-tags"
@@ -209,7 +241,7 @@ function Progress({ item }: { item: ImportSummary }) {
             </dl>
 
             {item.status === 'failed' && (
-                <p className="text-sm text-red-600 dark:text-red-400">
+                <p className="text-13 text-red-600 dark:text-red-400">
                     The import stopped because of an error. Rows before it were
                     saved.
                 </p>

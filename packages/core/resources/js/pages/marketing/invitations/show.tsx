@@ -1,8 +1,12 @@
 import { Form, Head } from '@inertiajs/react';
 import InvitationController from '@/actions/Gerenuk/Marketing/Http/Controllers/InvitationController';
 import InputError from '@/components/input-error';
+import { CircleAlert } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { WorkspaceAvatar } from '@marketing/components/workspace-avatar';
 
 type Invitation = {
     email: string;
@@ -22,10 +26,14 @@ export default function ShowInvitation({
         return (
             <>
                 <Head title="Invitation not found" />
-                <p className="text-center text-sm text-muted-foreground">
-                    This invitation link is not valid. It may have been revoked
-                    or already used.
-                </p>
+                <Alert>
+                    <CircleAlert />
+                    <AlertTitle>This link doesn't work</AlertTitle>
+                    <AlertDescription>
+                        It may have been revoked or already used. Ask whoever
+                        invited you for a new one.
+                    </AlertDescription>
+                </Alert>
             </>
         );
     }
@@ -34,18 +42,31 @@ export default function ShowInvitation({
         <>
             <Head title="Accept invitation" />
 
-            <div className="space-y-6 text-center">
-                <p className="text-sm">
-                    You have been invited to join{' '}
-                    <strong>{invitation.workspace}</strong> as{' '}
-                    <strong>{invitation.role}</strong>. The invitation was sent
-                    to {invitation.email}.
-                </p>
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
+                    <WorkspaceAvatar
+                        workspace={{ name: invitation.workspace ?? '?' }}
+                        className="size-9 text-xs"
+                    />
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                            {invitation.workspace}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                            Invitation for {invitation.email}
+                        </p>
+                    </div>
+                    <Badge variant="outline">{invitation.role}</Badge>
+                </div>
 
                 {invitation.expired ? (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                        This invitation has expired. Ask for a new one.
-                    </p>
+                    <Alert variant="destructive">
+                        <CircleAlert />
+                        <AlertTitle>This invitation has expired</AlertTitle>
+                        <AlertDescription>
+                            Ask whoever invited you to send a new one.
+                        </AlertDescription>
+                    </Alert>
                 ) : (
                     <Form {...InvitationController.accept.form(token)}>
                         {({ processing, errors }) => (
@@ -56,7 +77,7 @@ export default function ShowInvitation({
                                     disabled={processing}
                                 >
                                     {processing && <Spinner />}
-                                    Accept invitation
+                                    Join {invitation.workspace}
                                 </Button>
                             </div>
                         )}
@@ -68,5 +89,6 @@ export default function ShowInvitation({
 }
 
 ShowInvitation.layout = {
-    title: 'Workspace invitation',
+    title: "You're invited",
+    description: 'Join the workspace to start working with your team.',
 };

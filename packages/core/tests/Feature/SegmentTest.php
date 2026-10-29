@@ -148,3 +148,15 @@ test('segments can be saved and used to filter contacts', function () {
     $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['segment' => $segment->id]))
         ->assertInertia(fn ($page) => $page->has('contacts.data', 1));
 });
+
+test('the segment list summarises which fields each segment filters on', function () {
+    Segment::create(['name' => 'Pro customers', 'definition' => ['match' => 'any', 'conditions' => [
+        condition('custom:plan', 'equals', 'pro'),
+        ['type' => 'group', 'match' => 'all', 'conditions' => [condition('custom:plan', 'equals', 'team'), condition('status', 'is', 'subscribed')]],
+    ]]]);
+
+    $this->actingAs($this->owner)->get(route('marketing.segments.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('segments.0.match', 'any')
+            ->where('segments.0.fields', ['Plan', 'Subscription status']));
+});

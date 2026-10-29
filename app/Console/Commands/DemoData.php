@@ -62,8 +62,12 @@ class DemoData extends Command
 
         $user = User::query()->firstOrCreate(
             ['email' => $this->option('email')],
-            ['name' => 'Test User', 'password' => 'password', 'email_verified_at' => now()],
+            ['name' => 'Test User', 'password' => 'password'],
         );
+
+        if ($user->wasRecentlyCreated) {
+            $user->markEmailAsVerified();
+        }
 
         $workspace = $createWorkspace->handle($user, 'Demo: '.fake()->company());
         $workspace->update(['postal_address' => fake()->address()]);
@@ -268,9 +272,11 @@ class DemoData extends Command
                 'sending_started_at' => $sentAt,
                 'sent_at' => $sentAt->copy()->addMinutes(12),
                 'ab_enabled' => $abTest,
-                'ab_subject_b' => $abTest ? $subject.' 🎉' : null,
-                'ab_winner' => $abTest ? 'b' : null,
-                'ab_decided_at' => $abTest ? $sentAt->copy()->addHours(4) : null,
+                ...($abTest ? [
+                    'ab_subject_b' => $subject.' 🎉',
+                    'ab_winner' => 'b',
+                    'ab_decided_at' => $sentAt->copy()->addHours(4),
+                ] : []),
             ]);
 
             $this->recordSend($workspace, $campaign, $newsletter, $sentAt);
@@ -434,7 +440,7 @@ class DemoData extends Command
 
     private function emailHtml(string $heading): string
     {
-        $paragraphs = collect(fake()->paragraphs(2))->map(fn (string $paragraph) => "<p>{$paragraph}</p>")->implode('');
+        $paragraphs = collect(range(1, 2))->map(fn () => '<p>'.fake()->paragraph().'</p>')->implode('');
 
         return '<html><body><h1>'.e($heading).'</h1><p>Hi {{ first_name | there }},</p>'.$paragraphs
             .'<p><a href="https://demo.test/blog?utm_source=newsletter">Read the blog</a> or <a href="https://demo.test/pricing">see pricing</a>.</p>'

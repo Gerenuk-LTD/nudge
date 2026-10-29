@@ -11,6 +11,11 @@ export type EmailEditorProps = {
     state: unknown;
     mergeTags: MergeTag[];
     onChange: (html: string, state: unknown) => void;
+    /**
+     * Whether the editor may write its own rendering of the content back as soon as it opens. Off when only showing
+     * an existing email in a different editor, so looking at it never changes it.
+     */
+    syncOnMount?: boolean;
 };
 
 export type EmailEditor = {

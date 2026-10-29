@@ -41,6 +41,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Email Images
+    |--------------------------------------------------------------------------
+    |
+    | Images uploaded in the email builder. Inboxes load them straight from
+    | this disk, so it must serve files publicly; on the default "public" disk
+    | run `php artisan storage:link` once.
+    |
+    */
+
+    'email_assets' => [
+        'disk' => env('MARKETING_EMAIL_ASSETS_DISK', 'public'),
+        'max_file_kilobytes' => 5120,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sending
     |--------------------------------------------------------------------------
     |

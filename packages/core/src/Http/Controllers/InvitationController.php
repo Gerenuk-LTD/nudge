@@ -35,6 +35,6 @@ class InvitationController extends Controller
 
         $acceptInvitation->handle($invitation, $this->user($request));
 
-        return to_route('marketing.contacts.index');
+        return to_route('marketing.home');
     }
 }

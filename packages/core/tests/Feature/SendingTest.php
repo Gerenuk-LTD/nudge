@@ -14,11 +14,13 @@ use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\Provider;
+use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -205,4 +207,55 @@ test('sent campaigns cannot be edited', function () {
 
     $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['subject' => 'Too late'])
         ->assertSessionHasErrors('campaign');
+});
+
+test('the campaign history is filtered by status and sorted by open rate, leaving drafts out', function () {
+    Campaign::factory()->create(['name' => 'Draft', 'provider_id' => $this->provider->id]);
+    Campaign::factory()->create(['name' => 'Cancelled', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Cancelled]);
+    Campaign::factory()->create(['name' => 'Half opened', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Sent])
+        ->forceFill(['sent_count' => 10, 'opened_count' => 5])->save();
+    Campaign::factory()->create(['name' => 'Mostly opened', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Sent])
+        ->forceFill(['sent_count' => 4, 'opened_count' => 3])->save();
+
+    $response = $this->actingAs($this->owner)->get(route('marketing.campaigns.index', ['status' => 'sent,draft', 'sort' => '-opened']));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->has('campaigns.data', 2)
+        ->where('campaigns.data.0.name', 'Mostly opened')
+        ->where('campaigns.data.1.name', 'Half opened'));
+});
+
+test('drafts and scheduled campaigns sit on the shelf, soonest scheduled first', function () {
+    Campaign::factory()->create(['name' => 'Draft', 'provider_id' => $this->provider->id]);
+    Campaign::factory()->create(['name' => 'Next week', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Scheduled, 'scheduled_at' => now()->addWeek()]);
+    Campaign::factory()->create(['name' => 'Tomorrow', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Scheduled, 'scheduled_at' => now()->addDay()]);
+    Campaign::factory()->create(['name' => 'Sent', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Sent]);
+
+    $response = $this->actingAs($this->owner)->get(route('marketing.campaigns.index'));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('upcoming', fn ($upcoming) => collect($upcoming)->pluck('name')->all() === ['Tomorrow', 'Next week', 'Draft'])
+        ->has('campaigns.data', 1)
+        ->where('campaigns.data.0.name', 'Sent'));
+});
+
+test('the campaign editor shows how many people each audience choice reaches', function () {
+    $newsletter = ContactList::factory()->create(['name' => 'Newsletter']);
+    $empty = ContactList::factory()->create(['name' => 'Empty']);
+    $ann = Contact::factory()->create(['email' => 'ann@example.com', 'first_name' => 'Ann']);
+    $gone = Contact::factory()->unsubscribed()->create(['email' => 'gone@example.com']);
+    $bounced = Contact::factory()->create(['email' => 'bounced@example.com']);
+    Suppression::suppress('bounced@example.com', SuppressionReason::Bounce);
+    $newsletter->contacts()->attach([$ann->id, $gone->id, $bounced->id]);
+    $segment = Segment::create(['name' => 'Anns', 'definition' => ['match' => 'all', 'conditions' => [
+        ['type' => 'condition', 'field' => 'first_name', 'operator' => 'equals', 'value' => 'Ann'],
+    ]]]);
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    $this->actingAs($this->owner)->get(route('marketing.campaigns.edit', $campaign))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->loadDeferredProps(fn (AssertableInertia $reload) => $reload
+                ->where('audienceSizes.everyone', 1)
+                ->where('audienceSizes.lists', [$newsletter->id => 1, $empty->id => 0])
+                ->where('audienceSizes.segments', [$segment->id => 1])));
 });

@@ -29,7 +29,7 @@ class WorkspaceController extends Controller
         $workspace = $createWorkspace->handle($user, $validated['name'], $account);
         $user->switchWorkspace($workspace);
 
-        return to_route('marketing.contacts.index');
+        return to_route('marketing.home');
     }
 
     public function edit(CurrentWorkspace $currentWorkspace): Response

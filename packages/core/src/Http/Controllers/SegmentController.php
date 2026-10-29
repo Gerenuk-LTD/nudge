@@ -31,6 +31,8 @@ class SegmentController extends Controller
                 'id' => $segment->id,
                 'name' => $segment->name,
                 'contacts_count' => $this->segmentQuery->contacts($segment->definition)->count(),
+                'match' => $segment->definition['match'] ?? 'all',
+                'fields' => $this->fieldLabels($segment->definition),
                 'updated_at' => $segment->updated_at?->toIso8601String(),
             ]),
         ]);
@@ -119,5 +121,23 @@ class SegmentController extends Controller
         $this->validator->validate($validated['definition']);
 
         return $validated;
+    }
+
+    /**
+     * The fields a definition filters on, by label and without repeats, for a one-line summary of the segment.
+     *
+     * @param  array<string, mixed>  $group
+     * @return list<string>
+     */
+    private function fieldLabels(array $group): array
+    {
+        return collect($group['conditions'] ?? [])
+            ->flatMap(fn (array $item) => ($item['type'] ?? null) === 'group'
+                ? $this->fieldLabels($item)
+                : [$this->catalog->find($item['field'] ?? '')?->label])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }

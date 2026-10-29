@@ -1,12 +1,17 @@
+import { useState } from 'react';
 import { text } from './steps';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { editorFor } from '@marketing/components/email-editors';
+import { EmailContentEditor } from '@marketing/components/email-editors';
 import type { MergeTag } from '@marketing/components/email-editors';
-import { NativeSelect } from '@marketing/components/native-select';
+import { NativeSelect } from '@/components/ui/native-select';
 import { SegmentGroupEditor } from '@marketing/components/segment-builder';
 import { TagInput } from '@marketing/components/tag-input';
+import {
+    TemplateDialog,
+    templateHtml,
+} from '@marketing/components/template-picker';
 import type {
     AutomationStep,
     CustomField,
@@ -55,7 +60,7 @@ export function StepEditor({ step, options, readOnly, onChange }: Props) {
 
             {step.type === 'wait' && (
                 <div className="flex items-end gap-2">
-                    <div className="grid gap-2">
+                    <div className="grid content-start gap-2">
                         <Label htmlFor="wait-amount">Wait for</Label>
                         <Input
                             id="wait-amount"
@@ -104,7 +109,7 @@ export function StepEditor({ step, options, readOnly, onChange }: Props) {
             )}
 
             {step.type === 'webhook' && (
-                <div className="grid gap-2">
+                <div className="grid content-start gap-2">
                     <Label htmlFor="webhook-url">URL</Label>
                     <Input
                         id="webhook-url"
@@ -141,7 +146,8 @@ function EmailStepEditor({
     onChange: (config: Record<string, unknown>) => void;
     options: StepEditorOptions;
 }) {
-    const Editor = editorFor('html').component;
+    // Bumped when a template replaces the content, so the editor starts over from it.
+    const [revision, setRevision] = useState(0);
     const value = (key: string) => text(config[key]);
 
     const chooseProvider = (id: number | null) => {
@@ -241,11 +247,38 @@ function EmailStepEditor({
                     Track opens
                 </label>
             </div>
-            <Editor
-                html={value('html')}
-                state={null}
+            <div className="flex justify-end">
+                <TemplateDialog
+                    onChoose={(template) => {
+                        onChange({
+                            ...config,
+                            subject: template.subject ?? value('subject'),
+                            preheader: template.preheader ?? value('preheader'),
+                            editor: template.editor,
+                            editor_state: template.editor_state ?? null,
+                            html: templateHtml(template),
+                        });
+                        setRevision((current) => current + 1);
+                    }}
+                />
+            </div>
+            <EmailContentEditor
+                key={revision}
+                content={{
+                    // Steps made before the builder existed are HTML.
+                    editor: value('editor') || 'html',
+                    state: config.editor_state ?? null,
+                    html: value('html'),
+                }}
                 mergeTags={options.mergeTags}
-                onChange={(html) => set('html', html)}
+                onChange={(content) =>
+                    onChange({
+                        ...config,
+                        editor: content.editor,
+                        editor_state: content.state,
+                        html: content.html,
+                    })
+                }
             />
         </>
     );
@@ -385,7 +418,7 @@ function Field({
     children: React.ReactNode;
 }) {
     return (
-        <div className="grid gap-2">
+        <div className="grid content-start gap-2">
             <Label>{label}</Label>
             {children}
         </div>

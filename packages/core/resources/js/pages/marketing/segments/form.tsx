@@ -12,8 +12,13 @@ import {
     show as showContact,
 } from '@/routes/marketing/contacts';
 import { index as segmentsIndex } from '@/routes/marketing/segments';
-import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { EditorBar } from '@marketing/components/editor-bar';
+import { PageBody } from '@marketing/components/page-header';
 import { SegmentGroupEditor } from '@marketing/components/segment-builder';
+import {
+    useSaveShortcut,
+    useUnsavedChangesGuard,
+} from '@marketing/hooks/use-editor';
 import { postJson } from '@marketing/lib/http';
 import type { SegmentField, SegmentGroup } from '@marketing/types';
 
@@ -72,17 +77,39 @@ export default function SegmentForm({
         };
     }, [definition]);
 
-    const submit = (event: FormEvent) => {
-        event.preventDefault();
+    const [savedDefinition, setSavedDefinition] = useState(() =>
+        JSON.stringify(definition),
+    );
+    const dirty =
+        form.isDirty || JSON.stringify(definition) !== savedDefinition;
+
+    const save = () => {
+        if (segment && !dirty) {
+            return;
+        }
 
         form.transform((data) => ({ ...data, definition }));
         form.submit(
             segment
                 ? SegmentController.update(segment.id)
                 : SegmentController.store(),
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    form.setDefaults();
+                    setSavedDefinition(JSON.stringify(definition));
+                },
+            },
         );
     };
+
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        save();
+    };
+
+    useSaveShortcut(save);
+    useUnsavedChangesGuard(dirty && !form.processing);
 
     const errors = form.errors as Record<string, string | undefined>;
     const errorPaths = [...Object.keys(previewErrors), ...Object.keys(errors)];
@@ -98,9 +125,30 @@ export default function SegmentForm({
             <Head title={segment ? segment.name : 'New segment'} />
 
             <PageBody>
-                <PageHeader
-                    title={segment ? segment.name : 'New segment'}
-                    description="Segments update automatically: contacts join and leave as their details change."
+                <EditorBar
+                    back={{ href: segmentsIndex(), label: 'segments' }}
+                    title={form.data.name || segment?.name || 'New segment'}
+                    saveState={
+                        form.processing
+                            ? 'saving'
+                            : form.hasErrors
+                              ? 'error'
+                              : dirty || !segment
+                                ? 'unsaved'
+                                : 'saved'
+                    }
+                    meta="Contacts join and leave as their details change"
+                    actions={
+                        <Button
+                            onClick={save}
+                            disabled={
+                                form.processing || (segment !== null && !dirty)
+                            }
+                        >
+                            {form.processing && <Spinner />}
+                            {segment ? 'Save segment' : 'Create segment'}
+                        </Button>
+                    }
                 />
 
                 <form
@@ -140,19 +188,9 @@ export default function SegmentForm({
                                 )}
                             </ul>
                         )}
-
-                        <div className="flex gap-2">
-                            <Button disabled={form.processing}>
-                                {form.processing && <Spinner />}
-                                Save segment
-                            </Button>
-                            <Button variant="ghost" asChild>
-                                <Link href={segmentsIndex()}>Cancel</Link>
-                            </Button>
-                        </div>
                     </div>
 
-                    <aside className="h-fit space-y-4 rounded-xl border p-4">
+                    <aside className="h-fit space-y-4 rounded-xl border bg-card p-4 shadow-xs lg:sticky lg:top-[calc(var(--marketing-header-height,4rem)+5.5rem)]">
                         <div>
                             <p className="text-sm text-muted-foreground">
                                 Matching contacts

@@ -1,15 +1,29 @@
+import type { ColumnDef } from '@tanstack/react-table';
+import { Check } from 'lucide-react';
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/CampaignController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { show as showContact } from '@/routes/marketing/contacts';
-import { index as campaignsIndex, show } from '@/routes/marketing/campaigns';
+import { index as campaignsIndex } from '@/routes/marketing/campaigns';
 import { CampaignStatusBadge } from '@marketing/components/campaign-status-badge';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
-import { NativeSelect } from '@marketing/components/native-select';
+import {
+    byId,
+    DataTable,
+    DataTableSkeleton,
+} from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { SaveTemplateDialog } from '@marketing/components/template-picker';
+import { StatusBadge } from '@marketing/components/status-badge';
+import type { StatusTone } from '@marketing/components/status-badge';
 import { Pagination } from '@marketing/components/pagination';
+import {
+    FacetedFilter,
+    ResetFilters,
+    TableSearch,
+} from '@marketing/components/table-toolbar';
+import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDateTime, percent } from '@marketing/lib/format';
 import type { CampaignSummary, Paginated } from '@marketing/types';
@@ -55,12 +69,56 @@ type Recipient = {
     clicked: boolean;
 };
 
+type AbRow = VariantResult & {
+    variant: 'a' | 'b';
+    subject: string | null | undefined;
+    won: boolean;
+};
+
+/** A tick for yes in a table, with the word kept for screen readers; blank means no. */
+function YesMark() {
+    return (
+        <>
+            <Check
+                className="size-4 text-emerald-600 dark:text-emerald-500"
+                aria-hidden="true"
+            />
+            <span className="sr-only">Yes</span>
+        </>
+    );
+}
+
+const RECIPIENT_TONES: Record<string, StatusTone> = {
+    queued: 'neutral',
+    held: 'neutral',
+    sending: 'info',
+    sent: 'info',
+    delivered: 'success',
+    bounced: 'danger',
+    complained: 'danger',
+    failed: 'danger',
+    skipped: 'warning',
+};
+
+const RECIPIENT_STATUSES = [
+    'queued',
+    'held',
+    'sent',
+    'delivered',
+    'bounced',
+    'complained',
+    'failed',
+    'skipped',
+].map((status) => ({
+    value: status,
+    label: status.charAt(0).toUpperCase() + status.slice(1),
+}));
+
 export default function ShowCampaign({
     campaign,
     snapshot,
     links,
     recipients,
-    recipientStatus,
     abTest,
 }: {
     abTest: AbTest;
@@ -68,14 +126,115 @@ export default function ShowCampaign({
     snapshot: Snapshot;
     links: LinkRow[];
     recipients?: Paginated<Recipient>;
-    recipientStatus: string | null;
 }) {
     const can = useCan();
+    const recipientQuery = useTableQuery({ only: ['recipients'] });
     const { stats } = campaign;
     const active =
         campaign.status === 'sending' || campaign.status === 'scheduled';
 
     usePoll(4000, { only: ['campaign', 'links'] }, { autoStart: active });
+
+    const abRows: AbRow[] = abTest
+        ? (['a', 'b'] as const).map((variant) => ({
+              ...abTest.results[variant],
+              variant,
+              subject:
+                  variant === 'b'
+                      ? (snapshot?.subject_b ?? snapshot?.subject)
+                      : snapshot?.subject,
+              won: abTest.winner === variant,
+          }))
+        : [];
+
+    const abColumns: ColumnDef<AbRow>[] = [
+        {
+            id: 'variant',
+            header: 'Variant',
+            meta: { className: 'font-medium' },
+            cell: ({ row }) => (
+                <>
+                    {row.original.variant.toUpperCase()}{' '}
+                    {row.original.won && (
+                        <Badge variant="secondary">Winner</Badge>
+                    )}
+                </>
+            ),
+        },
+        {
+            id: 'subject',
+            header: 'Subject',
+            meta: { className: 'max-w-sm truncate whitespace-nowrap' },
+            cell: ({ row }) => row.original.subject,
+        },
+        {
+            id: 'sent',
+            header: 'Sent',
+            meta: { numeric: true },
+            cell: ({ row }) => row.original.sent.toLocaleString(),
+        },
+        {
+            id: 'opened',
+            header: 'Opened',
+            meta: { numeric: true },
+            cell: ({ row }) => percent(row.original.opened, row.original.sent),
+        },
+        {
+            id: 'clicked',
+            header: 'Clicked',
+            meta: { numeric: true },
+            cell: ({ row }) => percent(row.original.clicked, row.original.sent),
+        },
+    ];
+
+    const recipientColumns: ColumnDef<Recipient>[] = [
+        {
+            id: 'email',
+            header: 'Email',
+            meta: { sortable: true },
+            cell: ({ row: { original: recipient } }) => (
+                <>
+                    <Link
+                        href={showContact(recipient.contact_id)}
+                        className="hover:underline"
+                    >
+                        {recipient.email}
+                    </Link>
+                    {recipient.error && (
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                            {recipient.error}
+                        </p>
+                    )}
+                </>
+            ),
+        },
+        {
+            id: 'status',
+            header: 'Status',
+            meta: { sortable: true },
+            cell: ({ row }) => (
+                <StatusBadge
+                    tone={RECIPIENT_TONES[row.original.status] ?? 'neutral'}
+                    live={row.original.status === 'sending'}
+                >
+                    {row.original.status.charAt(0).toUpperCase() +
+                        row.original.status.slice(1)}
+                </StatusBadge>
+            ),
+        },
+        {
+            id: 'opened',
+            header: 'Opened',
+            meta: { sortable: true },
+            cell: ({ row }) => row.original.opened && <YesMark />,
+        },
+        {
+            id: 'clicked',
+            header: 'Clicked',
+            meta: { sortable: true },
+            cell: ({ row }) => row.original.clicked && <YesMark />,
+        },
+    ];
 
     return (
         <>
@@ -108,6 +267,13 @@ export default function ShowCampaign({
                                     >
                                         Duplicate
                                     </Button>
+                                )}
+                            {can('campaigns.manage') &&
+                                campaign.kind === 'broadcast' && (
+                                    <SaveTemplateDialog
+                                        defaultName={campaign.name}
+                                        campaignId={campaign.id}
+                                    />
                                 )}
                             {can('campaigns.send') &&
                                 campaign.status === 'scheduled' && (
@@ -196,7 +362,7 @@ export default function ShowCampaign({
                 </dl>
 
                 {stats.failed > 0 && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
+                    <p className="text-13 text-red-600 dark:text-red-400">
                         {stats.failed.toLocaleString()} could not be sent.
                         Filter recipients by "Failed" to see why.
                     </p>
@@ -205,7 +371,9 @@ export default function ShowCampaign({
                 {abTest && (
                     <section className="space-y-3">
                         <div className="flex items-center justify-between gap-4">
-                            <h2 className="font-medium">A/B test</h2>
+                            <h2 className="text-base font-semibold">
+                                A/B test
+                            </h2>
                             {abTest.winner === null &&
                                 campaign.status === 'sending' &&
                                 can('campaigns.send') && (
@@ -230,197 +398,110 @@ export default function ShowCampaign({
                                 : `The winner is picked by ${abTest.metric} at ${formatDateTime(abTest.decides_at) ?? 'the end of the test'}.`}
                         </p>
                         <DataTable
-                            headers={[
-                                'Variant',
-                                'Subject',
-                                'Sent',
-                                'Opened',
-                                'Clicked',
-                            ]}
-                        >
-                            {(['a', 'b'] as const).map((variant) => (
-                                <tr key={variant}>
-                                    <Cell className="font-medium">
-                                        {variant.toUpperCase()}{' '}
-                                        {abTest.winner === variant && (
-                                            <Badge variant="secondary">
-                                                Winner
-                                            </Badge>
-                                        )}
-                                    </Cell>
-                                    <Cell className="max-w-sm truncate">
-                                        {variant === 'b'
-                                            ? (snapshot?.subject_b ??
-                                              snapshot?.subject)
-                                            : snapshot?.subject}
-                                    </Cell>
-                                    <Cell>
-                                        {abTest.results[
-                                            variant
-                                        ].sent.toLocaleString()}
-                                    </Cell>
-                                    <Cell>
-                                        {percent(
-                                            abTest.results[variant].opened,
-                                            abTest.results[variant].sent,
-                                        )}
-                                    </Cell>
-                                    <Cell>
-                                        {percent(
-                                            abTest.results[variant].clicked,
-                                            abTest.results[variant].sent,
-                                        )}
-                                    </Cell>
-                                </tr>
-                            ))}
-                        </DataTable>
+                            columns={abColumns}
+                            data={abRows}
+                            getRowId={(row) => row.variant}
+                        />
                     </section>
                 )}
 
                 {links.length > 0 && (
                     <section className="space-y-3">
-                        <h2 className="font-medium">Links</h2>
-                        <DataTable
-                            headers={['Link', 'Unique clicks', 'Total clicks']}
-                        >
-                            {links.map((link) => (
-                                <tr key={link.id}>
-                                    <Cell className="max-w-xl truncate">
-                                        <a
-                                            href={link.url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="hover:underline"
-                                        >
-                                            {link.url}
-                                        </a>
-                                    </Cell>
-                                    <Cell>
-                                        {link.unique_clicks_count.toLocaleString()}
-                                    </Cell>
-                                    <Cell>
-                                        {link.clicks_count.toLocaleString()}
-                                    </Cell>
-                                </tr>
-                            ))}
-                        </DataTable>
+                        <h2 className="text-base font-semibold">Links</h2>
+                        <LinkBars links={links} />
                     </section>
                 )}
 
                 <section className="space-y-3">
-                    <div className="flex items-center justify-between gap-4">
-                        <h2 className="font-medium">Recipients</h2>
-                        <NativeSelect
-                            aria-label="Recipient status"
-                            value={recipientStatus ?? ''}
-                            onChange={(event) =>
-                                router.get(
-                                    show.url(campaign.id),
-                                    event.target.value
-                                        ? { recipients: event.target.value }
-                                        : {},
-                                    {
-                                        only: ['recipients', 'recipientStatus'],
-                                        preserveScroll: true,
-                                        preserveState: true,
-                                    },
-                                )
+                    <h2 className="text-base font-semibold">Recipients</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <TableSearch
+                            value={recipientQuery.get('search')}
+                            onSearch={(search) =>
+                                recipientQuery.update({ search })
                             }
-                        >
-                            <option value="">Everyone</option>
-                            {[
-                                'queued',
-                                'sent',
-                                'delivered',
-                                'bounced',
-                                'complained',
-                                'failed',
-                                'skipped',
-                            ].map((status) => (
-                                <option key={status} value={status}>
-                                    {status.charAt(0).toUpperCase() +
-                                        status.slice(1)}
-                                </option>
-                            ))}
-                        </NativeSelect>
+                            placeholder="Search by email"
+                        />
+                        <FacetedFilter
+                            title="Status"
+                            options={RECIPIENT_STATUSES}
+                            selected={recipientQuery.values('status')}
+                            onChange={(status) =>
+                                recipientQuery.update({ status })
+                            }
+                        />
+                        <ResetFilters
+                            active={recipientQuery.values('status').length > 0}
+                            onReset={() =>
+                                recipientQuery.update({ status: null })
+                            }
+                        />
                     </div>
                     {!recipients ? (
-                        <Spinner />
+                        <DataTableSkeleton columns={4} />
                     ) : (
                         <>
                             <DataTable
-                                headers={[
-                                    'Email',
-                                    'Status',
-                                    'Opened',
-                                    'Clicked',
-                                ]}
-                                empty={
-                                    recipients.data.length === 0 && (
-                                        <EmptyRow message="Nobody here." />
-                                    )
-                                }
-                            >
-                                {recipients.data.map((recipient) => (
-                                    <tr key={recipient.id}>
-                                        <Cell>
-                                            <Link
-                                                href={showContact(
-                                                    recipient.contact_id,
-                                                )}
-                                                className="hover:underline"
-                                            >
-                                                {recipient.email}
-                                            </Link>
-                                            {recipient.error && (
-                                                <p className="text-xs text-red-600">
-                                                    {recipient.error}
-                                                </p>
-                                            )}
-                                        </Cell>
-                                        <Cell>
-                                            <Badge variant="outline">
-                                                {recipient.status}
-                                            </Badge>
-                                        </Cell>
-                                        <Cell>
-                                            {recipient.opened ? 'Yes' : ''}
-                                        </Cell>
-                                        <Cell>
-                                            {recipient.clicked ? 'Yes' : ''}
-                                        </Cell>
-                                    </tr>
-                                ))}
-                            </DataTable>
-                            <Pagination page={recipients} />
+                                columns={recipientColumns}
+                                data={recipients.data}
+                                getRowId={byId}
+                                emptyMessage="Nobody here."
+                                sort={recipientQuery.sort}
+                            />
+                            <Pagination
+                                page={recipients}
+                                query={recipientQuery}
+                            />
                         </>
                     )}
                 </section>
 
                 {snapshot && (
                     <section className="space-y-3">
-                        <h2 className="font-medium">What was sent</h2>
-                        <div className="space-y-1 text-sm">
-                            <p>
-                                <span className="text-muted-foreground">
-                                    Subject:
-                                </span>{' '}
-                                {snapshot.subject}
-                            </p>
-                            <p>
-                                <span className="text-muted-foreground">
-                                    From:
-                                </span>{' '}
-                                {snapshot.from_name} &lt;{snapshot.from_email}
-                                &gt;
-                            </p>
+                        <h2 className="text-base font-semibold">
+                            What was sent
+                        </h2>
+                        <div className="max-w-3xl overflow-hidden rounded-xl border bg-card shadow-xs">
+                            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-b px-5 py-4 text-13">
+                                <dt className="text-muted-foreground">From</dt>
+                                <dd className="min-w-0 truncate">
+                                    <span className="font-medium">
+                                        {snapshot.from_name}
+                                    </span>{' '}
+                                    <span className="text-muted-foreground">
+                                        &lt;{snapshot.from_email}&gt;
+                                    </span>
+                                </dd>
+                                {snapshot.reply_to && (
+                                    <>
+                                        <dt className="text-muted-foreground">
+                                            Reply-to
+                                        </dt>
+                                        <dd className="min-w-0 truncate">
+                                            {snapshot.reply_to}
+                                        </dd>
+                                    </>
+                                )}
+                                <dt className="text-muted-foreground">
+                                    Subject
+                                </dt>
+                                <dd className="min-w-0 font-medium">
+                                    {snapshot.subject}
+                                    {snapshot.preheader && (
+                                        <span className="font-normal text-muted-foreground">
+                                            {' '}
+                                            · {snapshot.preheader}
+                                        </span>
+                                    )}
+                                </dd>
+                            </dl>
+                            <iframe
+                                title="Sent content"
+                                sandbox=""
+                                srcDoc={snapshot.html}
+                                className="block h-[40rem] w-full bg-white"
+                            />
                         </div>
-                        <iframe
-                            title="Sent content"
-                            sandbox=""
-                            srcDoc={snapshot.html}
-                            className="h-[40rem] w-full max-w-3xl rounded-md border bg-white"
-                        />
                     </section>
                 )}
             </PageBody>
@@ -451,3 +532,69 @@ function Stat({
 ShowCampaign.layout = {
     breadcrumbs: [{ title: 'Campaigns', href: campaignsIndex() }],
 };
+
+/**
+ * Links ranked by unique clicks, each row backed by a bar sized against the most clicked link.
+ */
+function LinkBars({ links }: { links: LinkRow[] }) {
+    const ranked = [...links].sort(
+        (a, b) =>
+            b.unique_clicks_count - a.unique_clicks_count ||
+            b.clicks_count - a.clicks_count,
+    );
+    const most = Math.max(1, ranked[0]?.unique_clicks_count ?? 0);
+
+    return (
+        <div className="rounded-xl border bg-card p-2 shadow-xs">
+            <div className="flex justify-between px-3 py-2 text-xs text-muted-foreground">
+                <span>Link</span>
+                <span>Unique · total clicks</span>
+            </div>
+            <ul className="space-y-1">
+                {ranked.map((link) => (
+                    <li
+                        key={link.id}
+                        className="relative flex items-center justify-between gap-4 rounded-md px-3 py-2"
+                    >
+                        <span
+                            aria-hidden
+                            className="absolute inset-y-0 left-0 rounded-md bg-sky-500/10 dark:bg-sky-400/15"
+                            style={{
+                                width: `${(link.unique_clicks_count / most) * 100}%`,
+                            }}
+                        />
+                        <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={link.url}
+                            className="relative min-w-0 truncate text-13 hover:underline"
+                        >
+                            {readableUrl(link.url)}
+                        </a>
+                        <span className="relative shrink-0 text-13 tabular-nums">
+                            <span className="font-medium">
+                                {link.unique_clicks_count.toLocaleString()}
+                            </span>
+                            <span className="text-muted-foreground">
+                                {' · '}
+                                {link.clicks_count.toLocaleString()}
+                            </span>
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+/** A link without its scheme or a trailing slash, as people read it, falling back to the raw text if it does not parse. */
+function readableUrl(url: string): string {
+    try {
+        const parsed = new URL(url);
+
+        return `${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}`;
+    } catch {
+        return url;
+    }
+}

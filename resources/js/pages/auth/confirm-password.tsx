@@ -29,7 +29,7 @@ export default function ConfirmPassword() {
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
-                        <div className="grid gap-2">
+                        <div className="grid content-start gap-2">
                             <Label htmlFor="password">Password</Label>
                             <PasswordInput
                                 id="password"
@@ -60,7 +60,7 @@ export default function ConfirmPassword() {
 }
 
 ConfirmPassword.layout = {
-    title: 'Confirm password',
+    title: 'Confirm your password',
     description:
-        'This is a secure area of the application. Please confirm your password before continuing.',
+        "You're about to change security settings, so enter your password to continue.",
 };

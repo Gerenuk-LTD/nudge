@@ -15,7 +15,8 @@ test('it creates a demo workspace with contacts, campaigns and engagement', func
     $user = User::query()->where('email', 'demo@example.com')->firstOrFail();
     $workspace = Workspace::query()->sole();
 
-    expect($user->current_workspace_id)->toBe($workspace->id);
+    expect($user->current_workspace_id)->toBe($workspace->id)
+        ->and($user->hasVerifiedEmail())->toBeTrue();
 
     app(CurrentWorkspace::class)->runAs($workspace, function () {
         expect(Contact::count())->toBe(40);

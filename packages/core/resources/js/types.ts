@@ -18,7 +18,11 @@ export type Permission =
 export type WorkspaceSharedProps = {
     current: { id: number; name: string };
     all: { id: number; name: string }[];
+    /** The signed-in user's role in the current workspace, such as "Owner". */
+    role: string | null;
     permissions: Permission[];
+    /** The most pressing reason campaigns can't go out, or null when sending is healthy. */
+    sendingIssue: 'paused' | 'no_provider' | 'no_postal_address' | null;
 };
 
 export type Option = { id: number; name: string };
@@ -30,6 +34,7 @@ export type Paginated<T> = {
     from: number | null;
     to: number | null;
     total: number;
+    per_page: number;
     prev_page_url: string | null;
     next_page_url: string | null;
 };
@@ -149,6 +154,7 @@ export type CampaignSummary = {
     scheduled_at: string | null;
     sent_at: string | null;
     created_at: string | null;
+    updated_at: string | null;
     stats: CampaignStats;
     track_opens: boolean;
     track_clicks: boolean;
@@ -188,4 +194,17 @@ export type StepStats = {
     clicked?: number;
     unsubscribed?: number;
     bounced?: number;
+};
+
+/** A template an email can start from, keyed `starter:<name>` for built-ins or `saved:<id>` for the workspace's own. */
+export type TemplateOption = {
+    key: string;
+    name: string;
+    description: string | null;
+    subject: string | null;
+    preheader: string | null;
+    editor: string;
+    editor_state: unknown;
+    html: string | null;
+    saved: boolean;
 };

@@ -17,9 +17,9 @@ class ContactTimeline
     /**
      * @return list<array{id: int, type: string, title: string, detail: string|null, campaign_id: int|null, occurred_at: string}>
      */
-    public function for(Contact $contact): array
+    public function for(Contact $contact, int $limit = self::LIMIT): array
     {
-        $events = $contact->events()->orderByDesc('occurred_at')->orderByDesc('id')->limit(self::LIMIT)->get();
+        $events = $contact->events()->orderByDesc('occurred_at')->orderByDesc('id')->limit($limit)->get();
         $campaigns = Campaign::query()->whereKey($events->pluck('campaign_id')->filter()->unique())->pluck('name', 'id');
 
         return array_values($events->map(function (ActivityEvent $event) use ($campaigns): array {

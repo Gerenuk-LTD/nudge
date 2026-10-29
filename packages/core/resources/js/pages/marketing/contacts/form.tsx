@@ -7,13 +7,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { SettingsSection } from '@marketing/components/settings-section';
 import { show as showCampaign } from '@/routes/marketing/campaigns';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
-import { NativeSelect } from '@marketing/components/native-select';
+import { NativeSelect } from '@/components/ui/native-select';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { TagInput } from '@marketing/components/tag-input';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { ContactStatus, CustomField, Option } from '@marketing/types';
+import { formatDate, formatDateTime } from '@marketing/lib/format';
 
 type Contact = {
     id: number;
@@ -118,7 +120,7 @@ export default function ContactForm({
                     title={title}
                     description={
                         contact
-                            ? `Added ${new Date(contact.created_at).toLocaleDateString()} via ${contact.source}${contact.archived_at ? ' · Archived' : ''}`
+                            ? `Added ${formatDate(contact.created_at)} via ${contact.source}${contact.archived_at ? ' · Archived' : ''}`
                             : 'Add a single contact. Use an import for many at once.'
                     }
                     actions={
@@ -154,96 +156,106 @@ export default function ContactForm({
                     }
                 />
 
-                <div className="grid gap-8 xl:grid-cols-[minmax(0,42rem)_1fr]">
-                    <form onSubmit={submit} className="max-w-2xl space-y-8">
+                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,44rem)_minmax(18rem,1fr)]">
+                    <form onSubmit={submit} className="space-y-6">
                         <fieldset disabled={!canEdit} className="space-y-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    required
-                                    value={form.data.email}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'email',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                                <InputError message={errors.email} />
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="first_name">
-                                        First name
+                            <SettingsSection
+                                title="Details"
+                                description="Who this is and whether they get your campaigns."
+                            >
+                                <div className="grid content-start gap-2">
+                                    <Label htmlFor="email">Email address</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        required
+                                        value={form.data.email}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'email',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={errors.email} />
+                                </div>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="grid content-start gap-2">
+                                        <Label htmlFor="first_name">
+                                            First name
+                                        </Label>
+                                        <Input
+                                            id="first_name"
+                                            value={form.data.first_name}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'first_name',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={errors.first_name}
+                                        />
+                                    </div>
+                                    <div className="grid content-start gap-2">
+                                        <Label htmlFor="last_name">
+                                            Last name
+                                        </Label>
+                                        <Input
+                                            id="last_name"
+                                            value={form.data.last_name}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'last_name',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={errors.last_name}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid content-start gap-2">
+                                    <Label htmlFor="status">
+                                        Subscription status
                                     </Label>
-                                    <Input
-                                        id="first_name"
-                                        value={form.data.first_name}
+                                    <NativeSelect
+                                        id="status"
+                                        value={form.data.status}
                                         onChange={(event) =>
                                             form.setData(
-                                                'first_name',
-                                                event.target.value,
+                                                'status',
+                                                event.target
+                                                    .value as ContactStatus,
                                             )
                                         }
-                                    />
-                                    <InputError message={errors.first_name} />
+                                    >
+                                        <option value="subscribed">
+                                            Subscribed
+                                        </option>
+                                        <option value="unsubscribed">
+                                            Unsubscribed
+                                        </option>
+                                    </NativeSelect>
+                                    {contact?.unsubscribed_at && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Unsubscribed{' '}
+                                            {formatDateTime(
+                                                contact.unsubscribed_at,
+                                            )}
+                                        </p>
+                                    )}
+                                    <InputError message={errors.status} />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="last_name">Last name</Label>
-                                    <Input
-                                        id="last_name"
-                                        value={form.data.last_name}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'last_name',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError message={errors.last_name} />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="status">
-                                    Subscription status
-                                </Label>
-                                <NativeSelect
-                                    id="status"
-                                    value={form.data.status}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'status',
-                                            event.target.value as ContactStatus,
-                                        )
-                                    }
-                                >
-                                    <option value="subscribed">
-                                        Subscribed
-                                    </option>
-                                    <option value="unsubscribed">
-                                        Unsubscribed
-                                    </option>
-                                </NativeSelect>
-                                {contact?.unsubscribed_at && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Unsubscribed{' '}
-                                        {new Date(
-                                            contact.unsubscribed_at,
-                                        ).toLocaleString()}
-                                    </p>
-                                )}
-                                <InputError message={errors.status} />
-                            </div>
+                            </SettingsSection>
 
                             {customFields.length > 0 && (
-                                <div className="space-y-4">
-                                    <h2 className="text-sm font-medium">
-                                        Custom fields
-                                    </h2>
+                                <SettingsSection
+                                    title="Custom fields"
+                                    description="Workspace-wide fields you can use in segments and personalise emails with."
+                                >
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         {customFields.map((field) => (
                                             <CustomFieldInput
@@ -271,70 +283,75 @@ export default function ContactForm({
                                     <InputError
                                         message={errors.custom_fields}
                                     />
-                                </div>
+                                </SettingsSection>
                             )}
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="tags">Tags</Label>
-                                <TagInput
-                                    id="tags"
-                                    value={form.data.tags}
-                                    onChange={(value) =>
-                                        form.setData('tags', value)
-                                    }
-                                    suggestions={tags}
-                                />
-                                <InputError message={errors.tags} />
-                            </div>
-
-                            {lists.length > 0 && (
-                                <div className="space-y-3">
-                                    <h2 className="text-sm font-medium">
-                                        Lists
-                                    </h2>
-                                    <div className="grid gap-2 sm:grid-cols-2">
-                                        {lists.map((list) => (
-                                            <label
-                                                key={list.id}
-                                                className="flex items-center gap-2 text-sm"
-                                            >
-                                                <Checkbox
-                                                    checked={form.data.lists.includes(
-                                                        list.id,
-                                                    )}
-                                                    onCheckedChange={(
-                                                        checked,
-                                                    ) =>
-                                                        toggleList(
+                            <SettingsSection
+                                title="Tags and lists"
+                                description="Tags are free-form labels. Lists are the audiences campaigns go to."
+                            >
+                                <div className="grid content-start gap-2">
+                                    <Label htmlFor="tags">Tags</Label>
+                                    <TagInput
+                                        id="tags"
+                                        value={form.data.tags}
+                                        onChange={(value) =>
+                                            form.setData('tags', value)
+                                        }
+                                        suggestions={tags}
+                                    />
+                                    <InputError message={errors.tags} />
+                                </div>
+                                {lists.length > 0 && (
+                                    <div className="grid content-start gap-2">
+                                        <Label>Lists</Label>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {lists.map((list) => (
+                                                <label
+                                                    key={list.id}
+                                                    className="flex items-center gap-2 text-sm"
+                                                >
+                                                    <Checkbox
+                                                        checked={form.data.lists.includes(
                                                             list.id,
-                                                            checked === true,
-                                                        )
-                                                    }
-                                                />
-                                                {list.name}
-                                            </label>
-                                        ))}
+                                                        )}
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            toggleList(
+                                                                list.id,
+                                                                checked ===
+                                                                    true,
+                                                            )
+                                                        }
+                                                    />
+                                                    {list.name}
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </SettingsSection>
                         </fieldset>
 
                         {canEdit && (
-                            <div className="flex gap-2">
-                                <Button disabled={form.processing}>
-                                    {form.processing && <Spinner />}
-                                    {contact ? 'Save' : 'Add contact'}
-                                </Button>
+                            <div className="flex justify-end gap-2">
                                 <Button variant="ghost" asChild>
                                     <Link href={contactsIndex()}>Cancel</Link>
+                                </Button>
+                                <Button disabled={form.processing}>
+                                    {form.processing && <Spinner />}
+                                    {contact ? 'Save changes' : 'Add contact'}
                                 </Button>
                             </div>
                         )}
                     </form>
 
                     {contact && (
-                        <section className="space-y-3">
-                            <h2 className="font-medium">Activity</h2>
+                        <SettingsSection
+                            title="Activity"
+                            description="Sends, opens, clicks and changes, newest first."
+                        >
                             {timeline === undefined ? (
                                 <Spinner />
                             ) : timeline.length === 0 ? (
@@ -367,15 +384,15 @@ export default function ContactForm({
                                                 </p>
                                             )}
                                             <p className="text-xs text-muted-foreground">
-                                                {new Date(
+                                                {formatDateTime(
                                                     entry.occurred_at,
-                                                ).toLocaleString()}
+                                                )}
                                             </p>
                                         </li>
                                     ))}
                                 </ol>
                             )}
-                        </section>
+                        </SettingsSection>
                     )}
                 </div>
             </PageBody>
@@ -398,7 +415,7 @@ function CustomFieldInput({
 
     if (field.type === 'boolean') {
         return (
-            <div className="grid gap-2">
+            <div className="grid content-start gap-2">
                 <Label htmlFor={id}>{field.label}</Label>
                 <NativeSelect
                     id={id}
@@ -421,7 +438,7 @@ function CustomFieldInput({
     }
 
     return (
-        <div className="grid gap-2">
+        <div className="grid content-start gap-2">
             <Label htmlFor={id}>{field.label}</Label>
             <Input
                 id={id}

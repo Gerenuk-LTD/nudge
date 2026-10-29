@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Http\Requests;
 
 use Gerenuk\Marketing\Enums\AudienceType;
+use Gerenuk\Marketing\Templates\EmailEditor;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,6 +28,8 @@ class CampaignRequest extends FormRequest
             'from_name' => ['sometimes', 'nullable', 'string', 'max:100'],
             'from_email' => ['sometimes', 'nullable', 'email:filter', 'max:254'],
             'reply_to' => ['sometimes', 'nullable', 'email:filter', 'max:254'],
+            'editor' => ['sometimes', Rule::in(EmailEditor::KEYS)],
+            'editor_state' => ['sometimes', 'nullable', 'array'],
             'html' => ['sometimes', 'nullable', 'string', 'max:1000000'],
             'text' => ['sometimes', 'nullable', 'string', 'max:500000'],
             'audience_type' => ['sometimes', Rule::enum(AudienceType::class)],
@@ -38,6 +41,7 @@ class CampaignRequest extends FormRequest
             'ab_enabled' => ['sometimes', 'boolean'],
             'ab_subject_b' => ['sometimes', 'nullable', 'string', 'max:255'],
             'ab_html_b' => ['sometimes', 'nullable', 'string', 'max:1000000'],
+            'ab_editor_state_b' => ['sometimes', 'nullable', 'array'],
             'ab_sample_percent' => ['sometimes', 'integer', 'min:10', 'max:50'],
             'ab_wait_minutes' => ['sometimes', 'integer', 'min:30', 'max:10080'],
             'ab_metric' => ['sometimes', 'in:clicks,opens'],

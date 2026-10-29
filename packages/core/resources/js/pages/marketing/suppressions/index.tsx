@@ -1,15 +1,21 @@
-import { Form, Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Form, Head } from '@inertiajs/react';
 import SuppressionController from '@/actions/Gerenuk/Marketing/Http/Controllers/SuppressionController';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { index as suppressionsIndex } from '@/routes/marketing/suppressions';
 import { ConfirmDelete } from '@marketing/components/confirm-delete';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
+import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { StatusBadge } from '@marketing/components/status-badge';
 import { Pagination } from '@marketing/components/pagination';
+import {
+    FacetedFilter,
+    ResetFilters,
+    TableSearch,
+} from '@marketing/components/table-toolbar';
+import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDate } from '@marketing/lib/format';
 import type { Paginated } from '@marketing/types';
@@ -22,15 +28,77 @@ type Suppression = {
     created_at: string | null;
 };
 
+const REASONS = [
+    { value: 'bounce', label: 'Bounce' },
+    { value: 'complaint', label: 'Complaint' },
+    { value: 'manual', label: 'Manual' },
+];
+
 export default function SuppressionsIndex({
     suppressions,
-    search,
 }: {
     suppressions: Paginated<Suppression>;
-    search: string | null;
 }) {
     const canEdit = useCan()('contacts.manage');
-    const [query, setQuery] = useState(search ?? '');
+    const table = useTableQuery();
+
+    const columns: ColumnDef<Suppression>[] = [
+        {
+            id: 'email',
+            header: 'Email',
+            meta: { className: 'font-medium', sortable: true },
+            cell: ({ row }) => row.original.email,
+        },
+        {
+            id: 'reason',
+            header: 'Reason',
+            meta: { sortable: true },
+            cell: ({ row: { original: suppression } }) => (
+                <>
+                    <StatusBadge
+                        tone={
+                            suppression.reason === 'manual'
+                                ? 'neutral'
+                                : 'danger'
+                        }
+                    >
+                        {REASONS.find(
+                            (reason) => reason.value === suppression.reason,
+                        )?.label ?? suppression.reason}
+                    </StatusBadge>
+                    {suppression.detail && (
+                        <p className="text-xs text-muted-foreground">
+                            {suppression.detail}
+                        </p>
+                    )}
+                </>
+            ),
+        },
+        {
+            id: 'since',
+            header: 'Since',
+            meta: { className: 'text-muted-foreground', sortable: true },
+            cell: ({ row }) => formatDate(row.original.created_at),
+        },
+        {
+            id: 'actions',
+            header: '',
+            meta: { className: 'text-right' },
+            cell: ({ row: { original: suppression } }) =>
+                canEdit && (
+                    <ConfirmDelete
+                        url={SuppressionController.destroy.url(suppression.id)}
+                        trigger="Remove"
+                        title={`Email ${suppression.email} again?`}
+                        description={
+                            suppression.reason === 'manual'
+                                ? 'The address can receive campaigns again.'
+                                : 'This address bounced or complained. Sending to it again can hurt your sender reputation. Only remove it if you know the problem is fixed.'
+                        }
+                    />
+                ),
+        },
+    ];
 
     return (
         <>
@@ -43,30 +111,27 @@ export default function SuppressionsIndex({
                 />
 
                 <div className="flex flex-wrap items-start gap-2">
-                    <form
-                        className="min-w-56 flex-1"
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            router.get(
-                                suppressionsIndex.url(),
-                                query ? { search: query } : {},
-                                { preserveState: true, replace: true },
-                            );
-                        }}
-                    >
-                        <Input
-                            type="search"
-                            placeholder="Search by email"
-                            value={query}
-                            onChange={(event) => setQuery(event.target.value)}
-                        />
-                    </form>
+                    <TableSearch
+                        value={table.get('search')}
+                        onSearch={(search) => table.update({ search })}
+                        placeholder="Search by email"
+                    />
+                    <FacetedFilter
+                        title="Reason"
+                        options={REASONS}
+                        selected={table.values('reason')}
+                        onChange={(reason) => table.update({ reason })}
+                    />
+                    <ResetFilters
+                        active={table.values('reason').length > 0}
+                        onReset={() => table.update({ reason: null })}
+                    />
                     {canEdit && (
                         <Form
                             {...SuppressionController.store.form()}
                             resetOnSuccess
                             options={{ preserveScroll: true }}
-                            className="flex items-start gap-2"
+                            className="ml-auto flex items-start gap-2"
                         >
                             {({ processing, errors }) => (
                                 <>
@@ -75,6 +140,7 @@ export default function SuppressionsIndex({
                                             name="email"
                                             type="email"
                                             placeholder="Block an address"
+                                            className="h-8"
                                             aria-label="Address to block"
                                             required
                                         />
@@ -82,6 +148,8 @@ export default function SuppressionsIndex({
                                     </div>
                                     <Button
                                         variant="outline"
+                                        size="sm"
+                                        className="h-8"
                                         disabled={processing}
                                     >
                                         Block
@@ -93,52 +161,14 @@ export default function SuppressionsIndex({
                 </div>
 
                 <DataTable
-                    headers={['Email', 'Reason', 'Since', '']}
-                    empty={
-                        suppressions.data.length === 0 && (
-                            <EmptyRow message="No suppressed addresses." />
-                        )
-                    }
-                >
-                    {suppressions.data.map((suppression) => (
-                        <tr key={suppression.id}>
-                            <Cell className="font-medium">
-                                {suppression.email}
-                            </Cell>
-                            <Cell>
-                                <Badge variant="outline">
-                                    {suppression.reason}
-                                </Badge>
-                                {suppression.detail && (
-                                    <p className="text-xs text-muted-foreground">
-                                        {suppression.detail}
-                                    </p>
-                                )}
-                            </Cell>
-                            <Cell className="text-muted-foreground">
-                                {formatDate(suppression.created_at)}
-                            </Cell>
-                            <Cell className="text-right">
-                                {canEdit && (
-                                    <ConfirmDelete
-                                        url={SuppressionController.destroy.url(
-                                            suppression.id,
-                                        )}
-                                        trigger="Remove"
-                                        title={`Email ${suppression.email} again?`}
-                                        description={
-                                            suppression.reason === 'manual'
-                                                ? 'The address can receive campaigns again.'
-                                                : 'This address bounced or complained. Sending to it again can hurt your sender reputation. Only remove it if you know the problem is fixed.'
-                                        }
-                                    />
-                                )}
-                            </Cell>
-                        </tr>
-                    ))}
-                </DataTable>
+                    columns={columns}
+                    data={suppressions.data}
+                    getRowId={byId}
+                    emptyMessage="No suppressed addresses."
+                    sort={table.sort}
+                />
 
-                <Pagination page={suppressions} />
+                <Pagination page={suppressions} query={table} />
             </PageBody>
         </>
     );

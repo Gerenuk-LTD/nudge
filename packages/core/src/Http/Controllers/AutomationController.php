@@ -20,6 +20,8 @@ use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Segments\SegmentField;
 use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
+use Gerenuk\Marketing\Support\MergeTagOptions;
+use Gerenuk\Marketing\Templates\TemplateChoice;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,6 +48,7 @@ class AutomationController extends Controller
                     'entered_count' => $automation->entered_count,
                     'completed_count' => $automation->completed_count,
                     'active_count' => $automation->getAttribute('active_count'),
+                    'outline' => array_column($automation->definition['steps'] ?? [], 'type'),
                 ]),
             'triggers' => array_map(fn (AutomationTrigger $trigger) => ['value' => $trigger->value, 'label' => $trigger->label()], AutomationTrigger::cases()),
         ]);
@@ -68,7 +71,7 @@ class AutomationController extends Controller
         return to_route('marketing.automations.edit', $automation);
     }
 
-    public function edit(Automation $automation, ActivationChecklist $checklist, SegmentFieldCatalog $catalog): Response
+    public function edit(Automation $automation, ActivationChecklist $checklist, SegmentFieldCatalog $catalog, TemplateChoice $templateChoice): Response
     {
         $workspace = $this->currentWorkspace->getOrFail();
 
@@ -94,7 +97,8 @@ class AutomationController extends Controller
             'customFields' => CustomFieldDefinition::query()->orderBy('label')->get(['key', 'label', 'type']),
             'providers' => Provider::query()->orderBy('name')->get(['id', 'name', 'from_name', 'from_email', 'reply_to']),
             'segmentFields' => array_values(array_map(fn (SegmentField $field) => $field->toArray(), $catalog->all())),
-            'mergeTags' => $this->mergeTags(),
+            'mergeTags' => MergeTagOptions::all(),
+            'templates' => Inertia::optional(fn () => $templateChoice->options()),
         ]);
     }
 
@@ -182,25 +186,5 @@ class AutomationController extends Controller
         }
 
         return $stats;
-    }
-
-    /**
-     * @return list<array{tag: string, label: string}>
-     */
-    private function mergeTags(): array
-    {
-        $tags = [
-            ['tag' => '{{ first_name }}', 'label' => 'First name'],
-            ['tag' => '{{ last_name }}', 'label' => 'Last name'],
-            ['tag' => '{{ email }}', 'label' => 'Email'],
-            ['tag' => '{{ unsubscribe_url }}', 'label' => 'Unsubscribe link'],
-            ['tag' => '{{ postal_address }}', 'label' => 'Postal address'],
-        ];
-
-        foreach (CustomFieldDefinition::query()->orderBy('label')->get() as $field) {
-            $tags[] = ['tag' => "{{ custom.{$field->key} }}", 'label' => $field->label];
-        }
-
-        return $tags;
     }
 }

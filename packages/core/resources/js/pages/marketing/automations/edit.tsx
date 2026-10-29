@@ -4,7 +4,6 @@ import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import AutomationController from '@/actions/Gerenuk/Marketing/Http/Controllers/AutomationController';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -12,23 +11,34 @@ import { Label } from '@/components/ui/label';
 import {
     Sheet,
     SheetContent,
+    SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 import { index as automationsIndex } from '@/routes/marketing/automations';
 import type { StepEditorOptions } from '@marketing/components/automation/step-editor';
 import { StepEditor } from '@marketing/components/automation/step-editor';
-import { StepList } from '@marketing/components/automation/step-list';
+import { FlowCanvas } from '@marketing/components/automation/flow-canvas';
 import {
     findStep,
+    insertStep,
+    newStep,
+    removeStep,
     stepLabels,
     text,
     updateStep,
 } from '@marketing/components/automation/steps';
 import { ConfirmDelete } from '@marketing/components/confirm-delete';
-import { NativeSelect } from '@marketing/components/native-select';
-import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { NativeSelect } from '@/components/ui/native-select';
+import { EditorBar } from '@marketing/components/editor-bar';
+import { PageBody } from '@marketing/components/page-header';
+import { StatusBadge } from '@marketing/components/status-badge';
+import {
+    useSaveShortcut,
+    useUnsavedChangesGuard,
+} from '@marketing/hooks/use-editor';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { AutomationStep, StepStats } from '@marketing/types';
 
@@ -80,6 +90,14 @@ export default function EditAutomation(props: Props) {
 
     const selected = findStep(steps, selectedId);
 
+    /** Everything stopping it from starting, including save errors that belong to settings in a closed panel. */
+    const problems = [
+        ...props.problems,
+        ...[errors.automation, errors.name, errors.definition].filter(
+            (message): message is string => Boolean(message),
+        ),
+    ];
+
     const save = (then?: () => void) => {
         setSaving(true);
         router.put(
@@ -106,6 +124,9 @@ export default function EditAutomation(props: Props) {
         );
     };
 
+    useSaveShortcut(() => dirty && !saving && save(), !readOnly);
+    useUnsavedChangesGuard(dirty && !saving);
+
     const activate = () =>
         save(() =>
             router.post(
@@ -123,22 +144,59 @@ export default function EditAutomation(props: Props) {
             <Head title={name} />
 
             <PageBody>
-                <PageHeader
+                <EditorBar
+                    back={{ href: automationsIndex(), label: 'automations' }}
                     title={name || 'Untitled automation'}
-                    description={`${automation.entered_count.toLocaleString()} entered · ${automation.completed_count.toLocaleString()} finished${dirty ? ' · Unsaved changes' : ''}`}
+                    saveState={
+                        readOnly
+                            ? undefined
+                            : saving
+                              ? 'saving'
+                              : Object.keys(errors).length > 0
+                                ? 'error'
+                                : dirty
+                                  ? 'unsaved'
+                                  : 'saved'
+                    }
+                    meta={
+                        <>
+                            <StatusBadge
+                                tone={
+                                    automation.status === 'active'
+                                        ? 'success'
+                                        : automation.status === 'paused'
+                                          ? 'warning'
+                                          : 'neutral'
+                                }
+                                live={automation.status === 'active'}
+                            >
+                                {automation.status === 'active'
+                                    ? 'Live'
+                                    : automation.status === 'paused'
+                                      ? 'Paused'
+                                      : 'Draft'}
+                            </StatusBadge>
+                            <span>
+                                {automation.entered_count.toLocaleString()}{' '}
+                                entered ·{' '}
+                                {automation.completed_count.toLocaleString()}{' '}
+                                finished
+                            </span>
+                        </>
+                    }
                     actions={
                         <>
-                            <Badge
-                                variant={
-                                    automation.status === 'active'
-                                        ? 'secondary'
-                                        : 'outline'
-                                }
-                            >
-                                {automation.status}
-                            </Badge>
                             {!readOnly && (
                                 <>
+                                    {automation.status !== 'active' && (
+                                        <ConfirmDelete
+                                            url={AutomationController.destroy.url(
+                                                automation.id,
+                                            )}
+                                            title={`Delete ${automation.name}?`}
+                                            description="The automation and everyone's progress through it are deleted. Emails already sent stay on contacts' timelines."
+                                        />
+                                    )}
                                     <Button
                                         variant="outline"
                                         disabled={saving || !dirty}
@@ -172,15 +230,6 @@ export default function EditAutomation(props: Props) {
                                                 : 'Start automation'}
                                         </Button>
                                     )}
-                                    {automation.status !== 'active' && (
-                                        <ConfirmDelete
-                                            url={AutomationController.destroy.url(
-                                                automation.id,
-                                            )}
-                                            title={`Delete ${automation.name}?`}
-                                            description="The automation and everyone's progress through it are deleted. Emails already sent stay on contacts' timelines."
-                                        />
-                                    )}
                                 </>
                             )}
                         </>
@@ -195,146 +244,208 @@ export default function EditAutomation(props: Props) {
                     </p>
                 )}
 
-                {(props.problems.length > 0 || errors.automation) &&
-                    automation.status !== 'active' && (
-                        <div className="space-y-1 rounded-xl border p-4">
-                            <p className="text-sm font-medium">
-                                Before it can start
+                {problems.length > 0 && automation.status !== 'active' && (
+                    <div className="space-y-1.5 rounded-xl border bg-card p-4 shadow-xs">
+                        <p className="text-sm font-medium">
+                            Before it can start
+                        </p>
+                        {problems.map((problem) => (
+                            <p
+                                key={problem}
+                                className="flex items-start gap-2 text-13 text-muted-foreground"
+                            >
+                                <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                                {problem}
                             </p>
-                            {[
-                                ...props.problems,
-                                ...(errors.automation
-                                    ? [errors.automation]
-                                    : []),
-                            ].map((problem) => (
-                                <p
-                                    key={problem}
-                                    className="flex items-start gap-2 text-sm text-muted-foreground"
-                                >
-                                    <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                                    {problem}
-                                </p>
-                            ))}
-                        </div>
-                    )}
-
-                <fieldset
-                    disabled={readOnly}
-                    className="grid max-w-4xl gap-4 rounded-xl border p-4 md:grid-cols-2"
-                >
-                    <div className="grid gap-2">
-                        <Label htmlFor="automation-name">Name</Label>
-                        <Input
-                            id="automation-name"
-                            value={name}
-                            onChange={(event) =>
-                                change(setName)(event.target.value)
-                            }
-                        />
-                        <InputError message={errors.name} />
+                        ))}
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="automation-trigger">
-                            Starts when someone
-                        </Label>
-                        <NativeSelect
-                            id="automation-trigger"
-                            value={triggerType}
-                            onChange={(event) => {
-                                change(setTriggerType)(event.target.value);
-                                setTriggerConfig({});
-                            }}
-                        >
-                            {props.triggers.map((trigger) => (
-                                <option
-                                    key={trigger.value}
-                                    value={trigger.value}
-                                >
-                                    {trigger.label.toLowerCase()}
-                                </option>
-                            ))}
-                        </NativeSelect>
-                    </div>
-                    <TriggerSettings
-                        type={triggerType}
-                        config={triggerConfig}
-                        onChange={change(setTriggerConfig)}
-                        props={props}
-                    />
-                    <label className="flex items-start gap-2 text-sm md:col-span-2">
-                        <Checkbox
-                            className="mt-0.5"
-                            checked={allowReentry}
-                            onCheckedChange={(checked) =>
-                                change(setAllowReentry)(checked === true)
-                            }
-                        />
-                        <span>
-                            Let people go through it more than once
-                            <span className="block text-xs text-muted-foreground">
-                                Nobody is ever in it twice at the same time.
-                            </span>
-                        </span>
-                    </label>
-                    <InputError message={errors.definition} />
-                </fieldset>
+                )}
 
-                <div className="max-w-4xl">
-                    <StepList
-                        steps={steps}
-                        onChange={change(setSteps)}
-                        onSelect={setSelectedId}
-                        selectedId={selectedId}
-                        stats={props.stepStats}
-                        readOnly={readOnly}
-                    />
-                </div>
+                <FlowCanvas
+                    steps={steps}
+                    trigger={{
+                        title: 'Trigger',
+                        summary: triggerSummary(
+                            triggerType,
+                            triggerConfig,
+                            props,
+                        ),
+                    }}
+                    live={automation.status === 'active'}
+                    readOnly={readOnly}
+                    selectedId={selectedId}
+                    stats={props.stepStats}
+                    onSelect={setSelectedId}
+                    onInsert={(at, type) => {
+                        const step = newStep(type);
+                        change(setSteps)(insertStep(steps, at, step));
+                        setSelectedId(step.id);
+                    }}
+                    onRemove={(id) => {
+                        change(setSteps)(removeStep(steps, id));
+                        setSelectedId((current) =>
+                            current === id ? null : current,
+                        );
+                    }}
+                />
             </PageBody>
 
             <Sheet
-                open={selected !== null}
+                open={selectedId === 'trigger' || selected !== null}
                 onOpenChange={(open) => !open && setSelectedId(null)}
             >
-                <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
-                    {selected && (
+                <SheetContent
+                    className={cn(
+                        'w-full overflow-y-auto sm:max-w-3xl',
+                        selected?.type === 'send_email' && 'sm:max-w-5xl',
+                    )}
+                >
+                    {selectedId === 'trigger' ? (
                         <>
                             <SheetHeader>
-                                <SheetTitle>
-                                    {stepLabels[selected.type]}
-                                </SheetTitle>
+                                <SheetTitle>Trigger and settings</SheetTitle>
+                                <SheetDescription>
+                                    What starts the automation and who can go
+                                    through it.
+                                </SheetDescription>
                             </SheetHeader>
-                            <div className="p-4">
-                                <StepEditor
-                                    step={selected}
-                                    options={props}
-                                    readOnly={readOnly}
-                                    onChange={(config) =>
-                                        change(setSteps)(
-                                            updateStep(
-                                                steps,
-                                                selected.id,
-                                                (step) => ({ ...step, config }),
-                                            ),
-                                        )
-                                    }
+                            <fieldset
+                                disabled={readOnly}
+                                className="grid gap-4 p-4 md:grid-cols-2"
+                            >
+                                <div className="grid content-start gap-2">
+                                    <Label htmlFor="automation-name">
+                                        Name
+                                    </Label>
+                                    <Input
+                                        id="automation-name"
+                                        value={name}
+                                        onChange={(event) =>
+                                            change(setName)(event.target.value)
+                                        }
+                                    />
+                                    <InputError message={errors.name} />
+                                </div>
+                                <div className="grid content-start gap-2">
+                                    <Label htmlFor="automation-trigger">
+                                        Starts when someone
+                                    </Label>
+                                    <NativeSelect
+                                        id="automation-trigger"
+                                        value={triggerType}
+                                        onChange={(event) => {
+                                            change(setTriggerType)(
+                                                event.target.value,
+                                            );
+                                            setTriggerConfig({});
+                                        }}
+                                    >
+                                        {props.triggers.map((trigger) => (
+                                            <option
+                                                key={trigger.value}
+                                                value={trigger.value}
+                                            >
+                                                {trigger.label.toLowerCase()}
+                                            </option>
+                                        ))}
+                                    </NativeSelect>
+                                </div>
+                                <TriggerSettings
+                                    type={triggerType}
+                                    config={triggerConfig}
+                                    onChange={change(setTriggerConfig)}
+                                    props={props}
                                 />
-                                {Object.entries(errors)
-                                    .filter(([key]) =>
-                                        key.startsWith('definition.'),
-                                    )
-                                    .map(([key, message]) => (
-                                        <InputError
-                                            key={key}
-                                            message={message}
-                                        />
-                                    ))}
-                            </div>
+                                <label className="flex items-start gap-2 text-sm md:col-span-2">
+                                    <Checkbox
+                                        className="mt-0.5"
+                                        checked={allowReentry}
+                                        onCheckedChange={(checked) =>
+                                            change(setAllowReentry)(
+                                                checked === true,
+                                            )
+                                        }
+                                    />
+                                    <span>
+                                        Let people go through it more than once
+                                        <span className="block text-xs text-muted-foreground">
+                                            Nobody is ever in it twice at the
+                                            same time.
+                                        </span>
+                                    </span>
+                                </label>
+                            </fieldset>
                         </>
+                    ) : (
+                        selected && (
+                            <>
+                                <SheetHeader>
+                                    <SheetTitle>
+                                        {stepLabels[selected.type]}
+                                    </SheetTitle>
+                                </SheetHeader>
+                                <div className="p-4">
+                                    <StepEditor
+                                        step={selected}
+                                        options={props}
+                                        readOnly={readOnly}
+                                        onChange={(config) =>
+                                            change(setSteps)(
+                                                updateStep(
+                                                    steps,
+                                                    selected.id,
+                                                    (step) => ({
+                                                        ...step,
+                                                        config,
+                                                    }),
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    {Object.entries(errors)
+                                        .filter(([key]) =>
+                                            key.startsWith('definition.'),
+                                        )
+                                        .map(([key, message]) => (
+                                            <InputError
+                                                key={key}
+                                                message={message}
+                                            />
+                                        ))}
+                                </div>
+                            </>
+                        )
                     )}
                 </SheetContent>
             </Sheet>
         </>
     );
+}
+
+/**
+ * The trigger node's one-line description, such as "Joins a list: Newsletter".
+ */
+function triggerSummary(
+    type: string,
+    config: Record<string, unknown>,
+    props: Props,
+): string {
+    const label =
+        props.triggers.find((trigger) => trigger.value === type)?.label ?? type;
+    const named = (options: { id: number; name: string }[], key: string) =>
+        options.find((option) => option.id === config[key])?.name;
+    const target =
+        type === 'list_joined'
+            ? named(props.lists, 'list_id')
+            : type === 'tag_added'
+              ? named(props.tags, 'tag_id')
+              : type === 'segment_entered'
+                ? named(props.segments, 'segment_id')
+                : type === 'api_event'
+                  ? text(config.event)
+                  : undefined;
+
+    return target ? `${label}: ${target}` : label;
 }
 
 function TriggerSettings({
@@ -356,7 +467,7 @@ function TriggerSettings({
         label: string,
         options: { id: number; name: string }[],
     ) => (
-        <div className="grid gap-2">
+        <div className="grid content-start gap-2">
             <Label>{label}</Label>
             <NativeSelect
                 value={value(key)}
@@ -407,7 +518,7 @@ function TriggerSettings({
         case 'date_field':
             return (
                 <>
-                    <div className="grid gap-2">
+                    <div className="grid content-start gap-2">
                         <Label>Date field</Label>
                         <NativeSelect
                             value={value('field_key')}
@@ -423,7 +534,7 @@ function TriggerSettings({
                             ))}
                         </NativeSelect>
                     </div>
-                    <div className="grid gap-2">
+                    <div className="grid content-start gap-2">
                         <Label>Start</Label>
                         <div className="flex items-center gap-2 text-sm">
                             <Input
@@ -457,7 +568,7 @@ function TriggerSettings({
             );
         case 'inactivity':
             return (
-                <div className="grid gap-2">
+                <div className="grid content-start gap-2">
                     <Label>Days without opening or clicking</Label>
                     <Input
                         type="number"
@@ -475,7 +586,7 @@ function TriggerSettings({
             );
         case 'api_event':
             return (
-                <div className="grid gap-2">
+                <div className="grid content-start gap-2">
                     <Label>Event name</Label>
                     <Input
                         placeholder="signed_up"

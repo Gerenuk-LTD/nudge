@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { index as importsIndex } from '@/routes/marketing/imports';
-import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { EditorBar } from '@marketing/components/editor-bar';
+import { ImportSteps } from '@marketing/components/import-steps';
+import { PageBody } from '@marketing/components/page-header';
 
 export default function CreateImport({
     maxFileKilobytes,
@@ -18,9 +20,11 @@ export default function CreateImport({
             <Head title="Import contacts" />
 
             <PageBody>
-                <PageHeader
+                <EditorBar
+                    back={{ href: importsIndex(), label: 'imports' }}
                     title="Import contacts"
-                    description="Upload a CSV with a header row. You will match its columns to contact fields next."
+                    meta="Upload a CSV with a header row"
+                    stepper={<ImportSteps current="upload" />}
                 />
 
                 <Form
@@ -29,7 +33,7 @@ export default function CreateImport({
                 >
                     {({ processing, progress, errors }) => (
                         <>
-                            <div className="grid gap-2">
+                            <div className="grid content-start gap-2">
                                 <Label htmlFor="file">CSV file</Label>
                                 <Input
                                     id="file"

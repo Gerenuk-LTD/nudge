@@ -41,7 +41,7 @@ export default function PasskeyVerify({
 
     return (
         <>
-            <div className="grid gap-2">
+            <div className="grid content-start gap-2">
                 <Button
                     type="button"
                     variant="outline"
@@ -64,7 +64,7 @@ export default function PasskeyVerify({
                     <Separator className="w-full" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                    <span className="bg-card px-2 text-muted-foreground">
                         {separator ?? 'Or continue with email'}
                     </span>
                 </div>

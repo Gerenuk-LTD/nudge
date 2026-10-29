@@ -47,7 +47,10 @@ export function EditDialog({
                     {({ processing, errors }) => (
                         <>
                             {fields.map((field) => (
-                                <div key={field.name} className="grid gap-2">
+                                <div
+                                    key={field.name}
+                                    className="grid content-start gap-2"
+                                >
                                     <Label htmlFor={`edit-${field.name}`}>
                                         {field.label}
                                     </Label>

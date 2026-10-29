@@ -27,7 +27,7 @@ const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH_ICON = "calc(3rem + 1px)" // The 1px is the right border, so icons sit 8px from both edges
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContext = {

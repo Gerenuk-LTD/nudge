@@ -89,7 +89,7 @@ test('an invited user accepts and joins with the invited role', function () {
         return true;
     });
 
-    $this->actingAs($invitee)->post(route('marketing.invitations.accept', $token))->assertRedirect(route('marketing.contacts.index'));
+    $this->actingAs($invitee)->post(route('marketing.invitations.accept', $token))->assertRedirect(route('marketing.home'));
 
     expect($invitee->membershipFor($workspace)->role->name)->toBe('Viewer')
         ->and(Invitation::withoutGlobalScopes()->count())->toBe(0);

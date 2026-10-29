@@ -1,26 +1,19 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@marketing/components/status-badge';
+import type { StatusTone } from '@marketing/components/status-badge';
 import type { CampaignStatus } from '@marketing/types';
 
-const labels: Record<CampaignStatus, string> = {
-    draft: 'Draft',
-    scheduled: 'Scheduled',
-    sending: 'Sending',
-    sent: 'Sent',
-    cancelled: 'Cancelled',
+const statuses: Record<CampaignStatus, { label: string; tone: StatusTone }> = {
+    draft: { label: 'Draft', tone: 'neutral' },
+    scheduled: { label: 'Scheduled', tone: 'info' },
+    sending: { label: 'Sending', tone: 'warning' },
+    sent: { label: 'Sent', tone: 'success' },
+    cancelled: { label: 'Cancelled', tone: 'danger' },
 };
 
 export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
     return (
-        <Badge
-            variant={
-                status === 'sent'
-                    ? 'secondary'
-                    : status === 'cancelled'
-                      ? 'destructive'
-                      : 'outline'
-            }
-        >
-            {labels[status]}
-        </Badge>
+        <StatusBadge tone={statuses[status].tone} live={status === 'sending'}>
+            {statuses[status].label}
+        </StatusBadge>
     );
 }

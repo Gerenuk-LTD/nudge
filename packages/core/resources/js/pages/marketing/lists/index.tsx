@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { index as listsIndex } from '@/routes/marketing/lists';
 import { ConfirmDelete } from '@marketing/components/confirm-delete';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
+import type { DailyCount } from '@marketing/components/charts';
+import { Sparkline } from '@marketing/components/charts';
 import { EditDialog } from '@marketing/components/edit-dialog';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { useCan } from '@marketing/hooks/use-workspace';
@@ -16,9 +17,16 @@ type ListRow = {
     name: string;
     description: string | null;
     contacts_count: number;
+    joins: DailyCount[];
 };
 
-export default function ListsIndex({ lists }: { lists: ListRow[] }) {
+export default function ListsIndex({
+    lists,
+    days,
+}: {
+    lists: ListRow[];
+    days: number;
+}) {
     const canEdit = useCan()('contacts.manage');
 
     return (
@@ -55,68 +63,101 @@ export default function ListsIndex({ lists }: { lists: ListRow[] }) {
                     </Form>
                 )}
 
-                <DataTable
-                    headers={['Name', 'Contacts', '']}
-                    empty={
-                        lists.length === 0 && (
-                            <EmptyRow message="No lists yet." />
-                        )
-                    }
-                >
-                    {lists.map((list) => (
-                        <tr key={list.id}>
-                            <Cell>
-                                <Link
-                                    href={contactsIndex({
-                                        query: { list: list.id },
-                                    })}
-                                    className="font-medium hover:underline"
-                                >
-                                    {list.name}
-                                </Link>
-                                {list.description && (
-                                    <p className="text-xs text-muted-foreground">
-                                        {list.description}
-                                    </p>
-                                )}
-                            </Cell>
-                            <Cell>{list.contacts_count.toLocaleString()}</Cell>
-                            <Cell className="text-right whitespace-nowrap">
-                                {canEdit && (
-                                    <>
-                                        <EditDialog
-                                            title="Edit list"
-                                            action={ContactListController.update.form(
-                                                list.id,
-                                            )}
-                                            fields={[
-                                                {
-                                                    name: 'name',
-                                                    label: 'Name',
-                                                    value: list.name,
-                                                },
-                                                {
-                                                    name: 'description',
-                                                    label: 'Description',
-                                                    value: list.description,
-                                                },
-                                            ]}
-                                        />
-                                        <ConfirmDelete
-                                            url={ContactListController.destroy.url(
-                                                list.id,
-                                            )}
-                                            title={`Delete ${list.name}?`}
-                                            description="The list is removed. Its contacts are kept."
-                                        />
-                                    </>
-                                )}
-                            </Cell>
-                        </tr>
-                    ))}
-                </DataTable>
+                {lists.length === 0 ? (
+                    <div className="rounded-xl border border-dashed px-6 py-14 text-center text-sm text-muted-foreground">
+                        No lists yet. Add one above, then import or add contacts
+                        to it.
+                    </div>
+                ) : (
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {lists.map((list) => (
+                            <ListCard
+                                key={list.id}
+                                list={list}
+                                days={days}
+                                canEdit={canEdit}
+                            />
+                        ))}
+                    </div>
+                )}
             </PageBody>
         </>
+    );
+}
+
+function ListCard({
+    list,
+    days,
+    canEdit,
+}: {
+    list: ListRow;
+    days: number;
+    canEdit: boolean;
+}) {
+    const joined = list.joins.reduce((sum, day) => sum + day.count, 0);
+
+    return (
+        <div className="group relative flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <Link
+                        href={contactsIndex({ query: { list: list.id } })}
+                        className="text-sm font-semibold after:absolute after:inset-0 after:rounded-xl"
+                    >
+                        {list.name}
+                    </Link>
+                    <p className="truncate text-13 text-muted-foreground">
+                        {list.description || 'No description'}
+                    </p>
+                </div>
+                {canEdit && (
+                    <div className="relative z-10 -mt-1 -mr-2 flex shrink-0">
+                        <EditDialog
+                            title="Edit list"
+                            action={ContactListController.update.form(list.id)}
+                            fields={[
+                                {
+                                    name: 'name',
+                                    label: 'Name',
+                                    value: list.name,
+                                },
+                                {
+                                    name: 'description',
+                                    label: 'Description',
+                                    value: list.description,
+                                },
+                            ]}
+                        />
+                        <ConfirmDelete
+                            url={ContactListController.destroy.url(list.id)}
+                            title={`Delete ${list.name}?`}
+                            description="The list is removed. Its contacts are kept."
+                        />
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-end justify-between gap-4">
+                <div>
+                    <p className="text-2xl font-semibold tabular-nums">
+                        {list.contacts_count.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        {joined > 0
+                            ? `+${joined.toLocaleString()} joined in ${days} days`
+                            : `No one joined in ${days} days`}
+                    </p>
+                </div>
+                <div className="w-32">
+                    <Sparkline
+                        data={list.joins}
+                        label={`Contacts joining ${list.name} per day`}
+                        height={32}
+                        className="text-emerald-600/70 dark:text-emerald-400/70"
+                    />
+                </div>
+            </div>
+        </div>
     );
 }
 

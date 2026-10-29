@@ -1,21 +1,31 @@
+import type { ColumnDef } from '@tanstack/react-table';
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     create as createContact,
     index as contactsIndex,
     show as showContact,
 } from '@/routes/marketing/contacts';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
-import { NativeSelect } from '@marketing/components/native-select';
+import type { ContactPreviewData } from '@marketing/components/contact-preview';
+import { ContactPreview } from '@marketing/components/contact-preview';
+import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { StatusBadge } from '@marketing/components/status-badge';
 import { Pagination } from '@marketing/components/pagination';
+import {
+    ChoiceFilter,
+    FacetedFilter,
+    ResetFilters,
+    TableSearch,
+} from '@marketing/components/table-toolbar';
+import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { ContactStatus, Option, Paginated } from '@marketing/types';
+import { formatDate } from '@marketing/lib/format';
 
 type ContactRow = {
     id: number;
@@ -26,49 +36,97 @@ type ContactRow = {
     created_at: string;
 };
 
-type Filters = {
-    search?: string;
-    status?: string;
-    list?: string;
-    tag?: string;
-    segment?: string;
-    archived?: string;
-};
+/** The filters the toolbar sets, cleared together by Reset. */
+const FILTERS = ['segment', 'list', 'tag', 'status', 'archived'];
+
+const options = (items: Option[]) =>
+    items.map((item) => ({ value: String(item.id), label: item.name }));
 
 export default function ContactsIndex({
     contacts,
-    filters,
     lists,
     tags,
     segments,
+    preview,
 }: {
     contacts: Paginated<ContactRow>;
-    filters: Filters;
     lists: Option[];
     tags: Option[];
     segments: Option[];
+    preview?: ContactPreviewData | null;
 }) {
     const can = useCan();
-    const [search, setSearch] = useState(filters.search ?? '');
+    const table = useTableQuery();
+    const filtered = FILTERS.some((key) => table.get(key) !== '');
+    const [previewId, setPreviewId] = useState<number | null>(null);
 
-    const applyFilters = (changes: Filters) => {
-        const next = Object.fromEntries(
-            Object.entries({ ...filters, ...changes }).filter(
-                ([, value]) => value !== '' && value !== undefined,
-            ),
-        );
+    /** A plain click previews the contact in the side panel; modified clicks still open the full profile. */
+    const openPreview = (event: MouseEvent, id: number) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+        }
 
-        router.get(contactsIndex.url(), next, {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
+        event.preventDefault();
+        setPreviewId(id);
+        router.reload({
+            only: ['preview'],
+            data: { preview: id },
+            preserveUrl: true,
         });
     };
 
-    const submitSearch = (event: FormEvent) => {
-        event.preventDefault();
-        applyFilters({ search });
-    };
+    const columns: ColumnDef<ContactRow>[] = [
+        {
+            id: 'email',
+            header: 'Email',
+            meta: { sortable: true },
+            cell: ({ row }) => (
+                <Link
+                    href={showContact(row.original.id)}
+                    onClick={(event) => openPreview(event, row.original.id)}
+                    className="font-medium hover:underline"
+                >
+                    {row.original.email}
+                </Link>
+            ),
+        },
+        {
+            id: 'name',
+            header: 'Name',
+            meta: { className: 'text-muted-foreground', sortable: true },
+            cell: ({ row }) => row.original.name ?? '—',
+        },
+        {
+            id: 'status',
+            header: 'Status',
+            meta: { sortable: true },
+            cell: ({ row }) => (
+                <ContactStatusBadge status={row.original.status} />
+            ),
+        },
+        {
+            id: 'tags',
+            header: 'Tags',
+            cell: ({ row }) => (
+                <div className="flex flex-wrap gap-1">
+                    {row.original.tags.map((tag) => (
+                        <Badge key={tag} variant="outline">
+                            {tag}
+                        </Badge>
+                    ))}
+                </div>
+            ),
+        },
+        {
+            id: 'added',
+            header: 'Added',
+            meta: {
+                className: 'whitespace-nowrap text-muted-foreground',
+                sortable: true,
+            },
+            cell: ({ row }) => formatDate(row.original.created_at),
+        },
+    ];
 
     return (
         <>
@@ -77,7 +135,7 @@ export default function ContactsIndex({
             <PageBody>
                 <PageHeader
                     title="Contacts"
-                    description={`${contacts.total.toLocaleString()} ${filters.archived ? 'archived ' : ''}contacts`}
+                    description={`${contacts.total.toLocaleString()} ${table.get('archived') ? 'archived ' : ''}contacts`}
                     actions={
                         can('contacts.manage') && (
                             <Button asChild>
@@ -91,139 +149,81 @@ export default function ContactsIndex({
                 />
 
                 <div className="flex flex-wrap items-center gap-2">
-                    <form onSubmit={submitSearch} className="min-w-56 flex-1">
-                        <Input
-                            type="search"
-                            placeholder="Search by email or name"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                        />
-                    </form>
-                    <FilterSelect
-                        label="Segment"
-                        value={filters.segment}
-                        options={segments}
-                        onChange={(segment) => applyFilters({ segment })}
+                    <TableSearch
+                        value={table.get('search')}
+                        onSearch={(search) => table.update({ search })}
+                        placeholder="Search email or name"
                     />
-                    <FilterSelect
-                        label="List"
-                        value={filters.list}
-                        options={lists}
-                        onChange={(list) => applyFilters({ list })}
+                    <ChoiceFilter
+                        title="Segment"
+                        options={options(segments)}
+                        value={table.get('segment')}
+                        onChange={(segment) => table.update({ segment })}
                     />
-                    <FilterSelect
-                        label="Tag"
-                        value={filters.tag}
-                        options={tags}
-                        onChange={(tag) => applyFilters({ tag })}
+                    <FacetedFilter
+                        title="List"
+                        options={options(lists)}
+                        selected={table.values('list')}
+                        onChange={(list) => table.update({ list })}
                     />
-                    <NativeSelect
-                        aria-label="Status"
-                        value={filters.status ?? ''}
-                        onChange={(event) =>
-                            applyFilters({ status: event.target.value })
+                    <FacetedFilter
+                        title="Tag"
+                        options={options(tags)}
+                        selected={table.values('tag')}
+                        onChange={(tag) => table.update({ tag })}
+                    />
+                    <FacetedFilter
+                        title="Status"
+                        options={[
+                            { value: 'subscribed', label: 'Subscribed' },
+                            { value: 'unsubscribed', label: 'Unsubscribed' },
+                        ]}
+                        selected={table.values('status')}
+                        onChange={(status) => table.update({ status })}
+                    />
+                    <ChoiceFilter
+                        title="Archived"
+                        options={[{ value: '1', label: 'Archived only' }]}
+                        value={table.get('archived')}
+                        onChange={(archived) => table.update({ archived })}
+                    />
+                    <ResetFilters
+                        active={filtered}
+                        onReset={() =>
+                            table.update(
+                                Object.fromEntries(
+                                    FILTERS.map((key) => [key, null]),
+                                ),
+                            )
                         }
-                    >
-                        <option value="">Any status</option>
-                        <option value="subscribed">Subscribed</option>
-                        <option value="unsubscribed">Unsubscribed</option>
-                    </NativeSelect>
-                    <NativeSelect
-                        aria-label="Archived"
-                        value={filters.archived ? '1' : ''}
-                        onChange={(event) =>
-                            applyFilters({ archived: event.target.value })
-                        }
-                    >
-                        <option value="">Active</option>
-                        <option value="1">Archived</option>
-                    </NativeSelect>
+                    />
                 </div>
 
                 <DataTable
-                    headers={['Email', 'Name', 'Status', 'Tags', 'Added']}
-                    empty={
-                        contacts.data.length === 0 && (
-                            <EmptyRow message="No contacts match these filters." />
-                        )
-                    }
-                >
-                    {contacts.data.map((contact) => (
-                        <tr key={contact.id} className="hover:bg-muted/30">
-                            <Cell>
-                                <Link
-                                    href={showContact(contact.id)}
-                                    className="font-medium hover:underline"
-                                >
-                                    {contact.email}
-                                </Link>
-                            </Cell>
-                            <Cell className="text-muted-foreground">
-                                {contact.name ?? '—'}
-                            </Cell>
-                            <Cell>
-                                <StatusBadge status={contact.status} />
-                            </Cell>
-                            <Cell>
-                                <div className="flex flex-wrap gap-1">
-                                    {contact.tags.map((tag) => (
-                                        <Badge key={tag} variant="outline">
-                                            {tag}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </Cell>
-                            <Cell className="whitespace-nowrap text-muted-foreground">
-                                {new Date(
-                                    contact.created_at,
-                                ).toLocaleDateString()}
-                            </Cell>
-                        </tr>
-                    ))}
-                </DataTable>
+                    columns={columns}
+                    data={contacts.data}
+                    getRowId={byId}
+                    emptyMessage="No contacts match these filters."
+                    sort={table.sort}
+                />
 
-                <Pagination page={contacts} />
+                <Pagination page={contacts} query={table} />
             </PageBody>
+
+            <ContactPreview
+                open={previewId !== null}
+                contact={preview?.id === previewId ? preview : null}
+                onClose={() => setPreviewId(null)}
+            />
         </>
     );
 }
 
-function FilterSelect({
-    label,
-    value,
-    options,
-    onChange,
-}: {
-    label: string;
-    value?: string;
-    options: Option[];
-    onChange: (value: string) => void;
-}) {
-    if (options.length === 0) {
-        return null;
-    }
-
+function ContactStatusBadge({ status }: { status: ContactStatus }) {
     return (
-        <NativeSelect
-            aria-label={label}
-            value={value ?? ''}
-            onChange={(event) => onChange(event.target.value)}
-        >
-            <option value="">Any {label.toLowerCase()}</option>
-            {options.map((option) => (
-                <option key={option.id} value={option.id}>
-                    {option.name}
-                </option>
-            ))}
-        </NativeSelect>
-    );
-}
-
-export function StatusBadge({ status }: { status: ContactStatus }) {
-    return (
-        <Badge variant={status === 'subscribed' ? 'secondary' : 'outline'}>
+        <StatusBadge tone={status === 'subscribed' ? 'success' : 'neutral'}>
             {status === 'subscribed' ? 'Subscribed' : 'Unsubscribed'}
-        </Badge>
+        </StatusBadge>
     );
 }
 

@@ -7,10 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index as customFieldsIndex } from '@/routes/marketing/custom-fields';
 import { ConfirmDelete } from '@marketing/components/confirm-delete';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
 import { EditDialog } from '@marketing/components/edit-dialog';
-import { NativeSelect } from '@marketing/components/native-select';
+import { NativeSelect } from '@/components/ui/native-select';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import {
+    SettingsList,
+    SettingsListItem,
+} from '@marketing/components/settings-list';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { CustomField, CustomFieldType } from '@marketing/types';
 
@@ -42,7 +45,7 @@ export default function CustomFieldsIndex({
                     >
                         {({ processing, errors }) => (
                             <>
-                                <div className="grid gap-1.5">
+                                <div className="grid content-start gap-2">
                                     <Label htmlFor="label">Label</Label>
                                     <Input
                                         id="label"
@@ -52,7 +55,7 @@ export default function CustomFieldsIndex({
                                     />
                                     <InputError message={errors.label} />
                                 </div>
-                                <div className="grid gap-1.5">
+                                <div className="grid content-start gap-2">
                                     <Label htmlFor="key">Key</Label>
                                     <Input
                                         id="key"
@@ -63,7 +66,7 @@ export default function CustomFieldsIndex({
                                     />
                                     <InputError message={errors.key} />
                                 </div>
-                                <div className="grid gap-1.5">
+                                <div className="grid content-start gap-2">
                                     <Label htmlFor="type">Type</Label>
                                     <NativeSelect
                                         id="type"
@@ -85,53 +88,60 @@ export default function CustomFieldsIndex({
                     </Form>
                 )}
 
-                <DataTable
-                    headers={['Label', 'Key', 'Type', '']}
-                    empty={
-                        fields.length === 0 && (
-                            <EmptyRow message="No custom fields yet." />
-                        )
-                    }
+                <SettingsList
+                    className="max-w-3xl"
+                    title="Fields"
+                    description="Use a field in emails as {{ custom.key }}."
+                    empty="No custom fields yet."
                 >
                     {fields.map((field) => (
-                        <tr key={field.id}>
-                            <Cell className="font-medium">{field.label}</Cell>
-                            <Cell>
-                                <code className="text-xs">{field.key}</code>
-                            </Cell>
-                            <Cell>
-                                <Badge variant="outline">{field.type}</Badge>
-                            </Cell>
-                            <Cell className="text-right whitespace-nowrap">
-                                {canEdit && (
-                                    <>
-                                        <EditDialog
-                                            title="Rename field"
-                                            trigger="Rename"
-                                            action={CustomFieldController.update.form(
-                                                field.id,
-                                            )}
-                                            fields={[
-                                                {
-                                                    name: 'label',
-                                                    label: 'Label',
-                                                    value: field.label,
-                                                },
-                                            ]}
-                                        />
-                                        <ConfirmDelete
-                                            url={CustomFieldController.destroy.url(
-                                                field.id,
-                                            )}
-                                            title={`Delete ${field.label}?`}
-                                            description="The field disappears from forms, segments and the API. Values already stored stay on contacts until overwritten."
-                                        />
-                                    </>
-                                )}
-                            </Cell>
-                        </tr>
+                        <SettingsListItem
+                            key={field.id}
+                            title={
+                                <>
+                                    {field.label}
+                                    <Badge
+                                        variant="outline"
+                                        className="font-normal text-muted-foreground"
+                                    >
+                                        {field.type}
+                                    </Badge>
+                                </>
+                            }
+                            detail={
+                                <code className="font-mono text-xs">
+                                    {field.key}
+                                </code>
+                            }
+                        >
+                            {canEdit && (
+                                <>
+                                    <EditDialog
+                                        title="Rename field"
+                                        trigger="Rename"
+                                        action={CustomFieldController.update.form(
+                                            field.id,
+                                        )}
+                                        fields={[
+                                            {
+                                                name: 'label',
+                                                label: 'Label',
+                                                value: field.label,
+                                            },
+                                        ]}
+                                    />
+                                    <ConfirmDelete
+                                        url={CustomFieldController.destroy.url(
+                                            field.id,
+                                        )}
+                                        title={`Delete ${field.label}?`}
+                                        description="The field disappears from forms, segments and the API. Values already stored stay on contacts until overwritten."
+                                    />
+                                </>
+                            )}
+                        </SettingsListItem>
                     ))}
-                </DataTable>
+                </SettingsList>
             </PageBody>
         </>
     );

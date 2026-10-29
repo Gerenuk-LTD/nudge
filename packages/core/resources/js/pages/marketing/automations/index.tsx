@@ -1,8 +1,9 @@
-import { Form, Head, Link } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Plus, Workflow } from 'lucide-react';
+import { Fragment } from 'react';
+import type { ReactNode } from 'react';
 import AutomationController from '@/actions/Gerenuk/Marketing/Http/Controllers/AutomationController';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -17,10 +18,13 @@ import {
     edit,
     index as automationsIndex,
 } from '@/routes/marketing/automations';
-import { Cell, DataTable, EmptyRow } from '@marketing/components/data-table';
-import { NativeSelect } from '@marketing/components/native-select';
+import { stepKinds } from '@marketing/components/automation/step-kinds';
+import { NativeSelect } from '@/components/ui/native-select';
+import { cn } from '@/lib/utils';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { StatusBadge } from '@marketing/components/status-badge';
 import { useCan } from '@marketing/hooks/use-workspace';
+import type { StepType } from '@marketing/types';
 
 type AutomationRow = {
     id: number;
@@ -30,6 +34,7 @@ type AutomationRow = {
     entered_count: number;
     completed_count: number;
     active_count: number;
+    outline: StepType[];
 };
 
 type Trigger = { value: string; label: string };
@@ -54,66 +59,147 @@ export default function AutomationsIndex({
                     actions={canManage && <NewAutomation triggers={triggers} />}
                 />
 
-                <DataTable
-                    headers={[
-                        'Automation',
-                        'Status',
-                        'Starts when someone',
-                        'In it now',
-                        'Entered',
-                        'Finished',
-                    ]}
-                    empty={
-                        automations.length === 0 && (
-                            <EmptyRow message="No automations yet. A welcome series is a good first one." />
-                        )
-                    }
-                >
-                    {automations.map((automation) => (
-                        <tr key={automation.id}>
-                            <Cell>
-                                <Link
-                                    href={edit(automation.id)}
-                                    className="font-medium hover:underline"
-                                >
-                                    {automation.name}
-                                </Link>
-                            </Cell>
-                            <Cell>
-                                <Badge
-                                    variant={
-                                        automation.status === 'active'
-                                            ? 'secondary'
-                                            : 'outline'
-                                    }
-                                >
-                                    {automation.status.charAt(0).toUpperCase() +
-                                        automation.status.slice(1)}
-                                </Badge>
-                            </Cell>
-                            <Cell className="text-muted-foreground">
-                                {automation.trigger.toLowerCase()}
-                            </Cell>
-                            <Cell>
-                                {automation.active_count.toLocaleString()}
-                            </Cell>
-                            <Cell>
-                                {automation.entered_count.toLocaleString()}
-                            </Cell>
-                            <Cell>
-                                {automation.completed_count.toLocaleString()}
-                            </Cell>
-                        </tr>
-                    ))}
-                </DataTable>
+                {automations.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-14 text-center">
+                        <Workflow className="size-5 text-muted-foreground" />
+                        <p className="text-sm font-medium">
+                            No automations yet
+                        </p>
+                        <p className="max-w-sm text-13 text-muted-foreground">
+                            A welcome series is a good first one: an email when
+                            someone joins a list, then a follow-up a few days
+                            later.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {automations.map((automation) => (
+                            <AutomationCard
+                                key={automation.id}
+                                automation={automation}
+                            />
+                        ))}
+                    </div>
+                )}
             </PageBody>
         </>
     );
 }
 
-function NewAutomation({ triggers }: { triggers: Trigger[] }) {
+const statuses = {
+    active: { label: 'Live', tone: 'success' },
+    paused: { label: 'Paused', tone: 'warning' },
+    draft: { label: 'Draft', tone: 'neutral' },
+} as const;
+
+/** How many steps the card's outline draws before summing up the rest. */
+const OUTLINE_STEPS = 6;
+
+/**
+ * An automation at a glance: whether it is live, what starts it, the shape of its steps and how many people are in it.
+ */
+function AutomationCard({ automation }: { automation: AutomationRow }) {
+    const shown = automation.outline.slice(0, OUTLINE_STEPS);
+    const hidden = automation.outline.length - shown.length;
+    const Trigger = stepKinds.trigger.icon;
+
     return (
-        <Dialog>
+        <Link
+            href={edit(automation.id)}
+            className="group flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm"
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                    <p className="truncate text-sm font-semibold">
+                        {automation.name}
+                    </p>
+                    <p className="truncate text-13 text-muted-foreground">
+                        Starts when someone {automation.trigger.toLowerCase()}
+                    </p>
+                </div>
+                <StatusBadge
+                    tone={statuses[automation.status].tone}
+                    live={automation.status === 'active'}
+                >
+                    {statuses[automation.status].label}
+                </StatusBadge>
+            </div>
+
+            <div
+                className="flex items-center"
+                aria-label={`${automation.outline.length} steps`}
+            >
+                <OutlineTile tone={stepKinds.trigger.tone}>
+                    <Trigger className="size-3.5" />
+                </OutlineTile>
+                {shown.map((type, index) => {
+                    const Icon = stepKinds[type].icon;
+
+                    return (
+                        <Fragment key={index}>
+                            <span className="h-px w-3 bg-border" />
+                            <OutlineTile tone={stepKinds[type].tone}>
+                                <Icon className="size-3.5" />
+                            </OutlineTile>
+                        </Fragment>
+                    );
+                })}
+                {hidden > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                        +{hidden}
+                    </span>
+                )}
+                {automation.outline.length === 0 && (
+                    <span className="ml-3 text-xs text-muted-foreground">
+                        No steps yet
+                    </span>
+                )}
+            </div>
+
+            <dl className="grid grid-cols-3 gap-2 border-t pt-4 text-xs text-muted-foreground">
+                {(
+                    [
+                        ['In it now', automation.active_count],
+                        ['Entered', automation.entered_count],
+                        ['Finished', automation.completed_count],
+                    ] as const
+                ).map(([label, value]) => (
+                    <div key={label}>
+                        <dt>{label}</dt>
+                        <dd className="text-sm font-medium text-foreground tabular-nums">
+                            {value.toLocaleString()}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+        </Link>
+    );
+}
+
+function OutlineTile({
+    tone,
+    children,
+}: {
+    tone: string;
+    children: ReactNode;
+}) {
+    return (
+        <span
+            className={cn(
+                'flex size-7 shrink-0 items-center justify-center rounded-md',
+                tone,
+            )}
+        >
+            {children}
+        </span>
+    );
+}
+
+function NewAutomation({ triggers }: { triggers: Trigger[] }) {
+    const { url } = usePage();
+
+    return (
+        <Dialog defaultOpen={new URLSearchParams(url.split('?')[1]).has('new')}>
             <DialogTrigger asChild>
                 <Button>
                     <Plus />
@@ -128,7 +214,7 @@ function NewAutomation({ triggers }: { triggers: Trigger[] }) {
                 >
                     {({ processing, errors }) => (
                         <>
-                            <div className="grid gap-2">
+                            <div className="grid content-start gap-2">
                                 <Label htmlFor="automation-name">Name</Label>
                                 <Input
                                     id="automation-name"
@@ -139,7 +225,7 @@ function NewAutomation({ triggers }: { triggers: Trigger[] }) {
                                 />
                                 <InputError message={errors.name} />
                             </div>
-                            <div className="grid gap-2">
+                            <div className="grid content-start gap-2">
                                 <Label htmlFor="automation-trigger">
                                     Starts when someone
                                 </Label>

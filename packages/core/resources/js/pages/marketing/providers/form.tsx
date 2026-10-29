@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { index as providersIndex } from '@/routes/marketing/providers';
-import { NativeSelect } from '@marketing/components/native-select';
+import { NativeSelect } from '@/components/ui/native-select';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import type { ProviderTypeDefinition } from '@marketing/types';
 
@@ -154,7 +154,7 @@ export default function ProviderForm({
 
                     {type && (
                         <>
-                            <div className="grid gap-2">
+                            <div className="grid content-start gap-2">
                                 <Label htmlFor="name">Name</Label>
                                 <Input
                                     id="name"
@@ -175,7 +175,7 @@ export default function ProviderForm({
                                     {type.fields.map((field) => (
                                         <div
                                             key={field.key}
-                                            className="grid gap-2"
+                                            className="grid content-start gap-2"
                                         >
                                             <Label
                                                 htmlFor={`credential-${field.key}`}
@@ -275,7 +275,7 @@ export default function ProviderForm({
                             </fieldset>
 
                             {type.webhook_verification === 'signing_secret' && (
-                                <div className="grid gap-2">
+                                <div className="grid content-start gap-2">
                                     <Label htmlFor="webhook_secret">
                                         {type.webhook_secret_label}
                                     </Label>
@@ -413,7 +413,7 @@ function TextField({
     type?: string;
 }) {
     return (
-        <div className="grid gap-2">
+        <div className="grid content-start gap-2">
             <Label htmlFor={id}>{label}</Label>
             <Input
                 id={id}

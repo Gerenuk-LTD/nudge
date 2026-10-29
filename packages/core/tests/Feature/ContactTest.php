@@ -148,3 +148,105 @@ test('contacts can be searched by email or name', function () {
     $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['search' => 'JAN']))
         ->assertInertia(fn (AssertableInertia $page) => $page->has('contacts.data', 1)->where('contacts.data.0.email', 'jane@example.com'));
 });
+
+test('contacts can be sorted by an allowed column in either direction', function () {
+    Contact::factory()->create(['email' => 'bob@example.com']);
+    Contact::factory()->create(['email' => 'amy@example.com']);
+    Contact::factory()->create(['email' => 'cat@example.com']);
+
+    $ascending = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['sort' => 'email']));
+    $descending = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['sort' => '-email']));
+
+    $ascending->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('contacts.data.0.email', 'amy@example.com')
+        ->where('contacts.data.2.email', 'cat@example.com'));
+    $descending->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('contacts.data.0.email', 'cat@example.com')
+        ->where('contacts.data.2.email', 'amy@example.com'));
+});
+
+test('an unknown sort or page size falls back to the newest contacts, 50 a page', function () {
+    $first = Contact::factory()->create();
+    $latest = Contact::factory()->create();
+
+    $response = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['sort' => 'password', 'per_page' => 7]));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('contacts.per_page', 50)
+        ->where('contacts.data.0.id', $latest->id)
+        ->where('contacts.data.1.id', $first->id));
+});
+
+test('contacts can be paged by an allowed page size', function () {
+    Contact::factory()->count(11)->create();
+
+    $response = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['per_page' => 10]));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('contacts.per_page', 10)
+        ->has('contacts.data', 10)
+        ->where('contacts.last_page', 2));
+});
+
+test('comma-separated filters keep contacts matching any of the values', function () {
+    $customers = ContactList::factory()->create();
+    $leads = ContactList::factory()->create();
+    $other = ContactList::factory()->create();
+    $customers->contacts()->attach(Contact::factory()->create(['email' => 'customer@example.com']));
+    $leads->contacts()->attach(Contact::factory()->create(['email' => 'lead@example.com']));
+    $other->contacts()->attach(Contact::factory()->create(['email' => 'other@example.com']));
+
+    $response = $this->actingAs($this->owner)->get(route('marketing.contacts.index', [
+        'list' => "{$customers->id},{$leads->id}",
+        'sort' => 'email',
+    ]));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->has('contacts.data', 2)
+        ->where('contacts.data.0.email', 'customer@example.com')
+        ->where('contacts.data.1.email', 'lead@example.com'));
+});
+
+test('lists show how many contacts joined each one per day', function () {
+    $this->travelTo('2026-10-28 12:00:00');
+    $newsletter = ContactList::factory()->create(['name' => 'Newsletter']);
+    $quiet = ContactList::factory()->create(['name' => 'Quiet']);
+    $newsletter->contacts()->attach(Contact::factory()->count(2)->create(), ['created_at' => '2026-10-27 09:00:00']);
+    $newsletter->contacts()->attach(Contact::factory()->create(), ['created_at' => '2026-08-01 09:00:00']);
+
+    $response = $this->actingAs($this->owner)->get(route('marketing.lists.index'));
+
+    $response->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('lists.0.name', 'Newsletter')
+        ->where('lists.0.contacts_count', 3)
+        ->has('lists.0.joins', 30)
+        ->where('lists.0.joins.28', ['date' => '2026-10-27', 'count' => 2])
+        ->where('lists.1.joins', fn ($joins) => collect($joins)->sum('count') === 0));
+});
+
+test('the contacts list loads a side panel preview only when asked for one', function () {
+    CustomFieldDefinition::create(['key' => 'plan', 'label' => 'Plan', 'type' => 'text']);
+    CustomFieldDefinition::create(['key' => 'seats', 'label' => 'Seats', 'type' => 'number']);
+    $list = ContactList::factory()->create(['name' => 'Newsletter']);
+    $contact = Contact::factory()->create(['email' => 'jane@example.com', 'first_name' => 'Jane', 'last_name' => 'Doe', 'custom_fields' => ['plan' => 'pro']]);
+    $contact->lists()->attach($list);
+
+    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['preview' => $contact->id]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->missing('preview')
+            ->reloadOnly('preview', fn (AssertableInertia $reload) => $reload
+                ->where('preview.name', 'Jane Doe')
+                ->where('preview.lists', ['Newsletter'])
+                ->where('preview.fields', [['label' => 'Plan', 'type' => 'text', 'value' => 'pro']])
+                ->has('preview.activity')));
+});
+
+test('the side panel cannot preview a contact from another workspace', function () {
+    $this->createOwner('Globex');
+    $foreign = Contact::factory()->create();
+    $this->useWorkspace($this->workspace);
+
+    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['preview' => $foreign->id]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->reloadOnly('preview', fn (AssertableInertia $reload) => $reload->where('preview', null)));
+});

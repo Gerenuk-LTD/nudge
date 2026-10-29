@@ -1,26 +1,22 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@marketing/components/status-badge';
+import type { StatusTone } from '@marketing/components/status-badge';
 import type { ImportStatus } from '@marketing/types';
 
-const statusLabels: Record<ImportStatus, string> = {
-    pending: 'Needs mapping',
-    queued: 'Queued',
-    processing: 'Importing',
-    completed: 'Completed',
-    failed: 'Failed',
+const statuses: Record<ImportStatus, { label: string; tone: StatusTone }> = {
+    pending: { label: 'Needs mapping', tone: 'warning' },
+    queued: { label: 'Queued', tone: 'neutral' },
+    processing: { label: 'Importing', tone: 'info' },
+    completed: { label: 'Completed', tone: 'success' },
+    failed: { label: 'Failed', tone: 'danger' },
 };
 
 export function ImportStatusBadge({ status }: { status: ImportStatus }) {
     return (
-        <Badge
-            variant={
-                status === 'failed'
-                    ? 'destructive'
-                    : status === 'completed'
-                      ? 'secondary'
-                      : 'outline'
-            }
+        <StatusBadge
+            tone={statuses[status].tone}
+            live={status === 'processing'}
         >
-            {statusLabels[status]}
-        </Badge>
+            {statuses[status].label}
+        </StatusBadge>
     );
 }

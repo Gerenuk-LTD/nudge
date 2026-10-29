@@ -28,7 +28,7 @@ enum Permission: string
             self::ContactsImport => 'Import contacts from CSV',
             self::SegmentsManage => 'Create and edit segments',
             self::CampaignsView => 'View campaigns and their reports',
-            self::CampaignsManage => 'Create and edit draft campaigns',
+            self::CampaignsManage => 'Create and edit draft campaigns and email templates',
             self::CampaignsSend => 'Send and schedule campaigns',
             self::CampaignsApprove => 'Approve campaigns when approval is required',
             self::ProvidersManage => 'Connect sending providers and change sending settings',

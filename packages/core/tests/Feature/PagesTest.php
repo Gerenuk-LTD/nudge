@@ -4,6 +4,7 @@ use Gerenuk\Marketing\Actions\Imports\CreateImport;
 use Gerenuk\Marketing\Models\Automation;
 use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Marketing\Models\EmailTemplate;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Sending\ProviderType;
@@ -21,15 +22,19 @@ test('every dashboard page renders its component', function () {
     $draft = Campaign::factory()->create(['provider_id' => $provider->id]);
     $sent = Campaign::factory()->create(['provider_id' => $provider->id, 'status' => 'sent', 'sent_at' => now()]);
     $automation = Automation::factory()->create();
+    $template = EmailTemplate::factory()->create();
     $import = app(CreateImport::class)->handle($workspace, $owner, UploadedFile::fake()->createWithContent('a.csv', "email\na@example.com\n"));
 
     $pages = [
+        'marketing/home' => route('marketing.home'),
         'marketing/contacts/index' => route('marketing.contacts.index'),
         'marketing/contacts/form' => route('marketing.contacts.create'),
         'marketing/lists/index' => route('marketing.lists.index'),
         'marketing/tags/index' => route('marketing.tags.index'),
         'marketing/custom-fields/index' => route('marketing.custom-fields.index'),
         'marketing/segments/index' => route('marketing.segments.index'),
+        'marketing/templates/index' => route('marketing.templates.index'),
+        'marketing/templates/form' => route('marketing.templates.edit', $template),
         'marketing/segments/form' => route('marketing.segments.edit', $segment),
         'marketing/imports/index' => route('marketing.imports.index'),
         'marketing/imports/create' => route('marketing.imports.create'),

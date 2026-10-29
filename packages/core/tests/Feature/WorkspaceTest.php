@@ -3,7 +3,9 @@
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
 use Gerenuk\Marketing\Events\WorkspaceCreated;
 use Gerenuk\Marketing\Models\Membership;
+use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Role;
+use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tests\Fixtures\User;
 use Illuminate\Support\Facades\Event;
 
@@ -35,7 +37,7 @@ test('a user can create a workspace and lands in it', function () {
 
     $this->actingAs($user)
         ->post(route('marketing.workspaces.store'), ['name' => 'Acme'])
-        ->assertRedirect(route('marketing.contacts.index'));
+        ->assertRedirect(route('marketing.home'));
 
     expect($user->fresh()->currentWorkspace->name)->toBe('Acme');
 });
@@ -75,4 +77,27 @@ test('a removed member falls back to another workspace they belong to', function
     $member->memberships()->where('workspace_id', $acme->id)->delete();
 
     expect($member->fresh()->resolveCurrentWorkspace()->is($globex))->toBeTrue();
+});
+
+test('pages flag the most pressing reason campaigns cannot go out', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $sendingIssue = fn () => $this->actingAs($owner)->get(route('marketing.contacts.index'))->inertiaProps('workspace.sendingIssue');
+
+    $withoutProvider = $sendingIssue();
+    Provider::create(['name' => 'SMTP', 'type' => ProviderType::Smtp, 'max_per_second' => 1, 'credentials' => ['host' => 'h', 'port' => '25', 'encryption' => 'starttls']]);
+    $withoutAddress = $sendingIssue();
+    $workspace->update(['postal_address' => "1 High Street\nLondon"]);
+    $healthy = $sendingIssue();
+    $workspace->update(['sending_paused_at' => now()]);
+    $paused = $sendingIssue();
+
+    expect([$withoutProvider, $withoutAddress, $healthy, $paused])->toBe(['no_provider', 'no_postal_address', null, 'paused']);
+});
+
+test('pages share the signed-in user\'s role in the current workspace', function () {
+    [$owner] = $this->createOwner();
+
+    $response = $this->actingAs($owner)->get(route('marketing.contacts.index'));
+
+    expect($response->inertiaProps('workspace.role'))->toBe('Owner');
 });

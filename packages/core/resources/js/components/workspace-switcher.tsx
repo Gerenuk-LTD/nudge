@@ -16,6 +16,7 @@ import {
 import { update as switchWorkspace } from '@/routes/marketing/current-workspace';
 import { edit as workspaceSettings } from '@/routes/marketing/workspace';
 import { create as createWorkspace } from '@/routes/marketing/workspaces';
+import { WorkspaceAvatar } from '@marketing/components/workspace-avatar';
 import { useWorkspace } from '@marketing/hooks/use-workspace';
 
 export function WorkspaceSwitcher() {
@@ -32,25 +33,27 @@ export function WorkspaceSwitcher() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="data-[state=open]:bg-sidebar-accent"
+                            tooltip={{ children: workspace.current.name }}
+                            className="h-11 border border-sidebar-border bg-card px-1.5 shadow-xs group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0.5! group-data-[collapsible=icon]:shadow-none hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
                         >
-                            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-                                {workspace.current.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate font-semibold">
+                            <WorkspaceAvatar workspace={workspace.current} />
+                            <div className="grid flex-1 text-left leading-tight">
+                                <span className="truncate text-13 font-medium">
                                     {workspace.current.name}
                                 </span>
-                                <span className="truncate text-xs text-muted-foreground">
-                                    Workspace
-                                </span>
+                                {workspace.role && (
+                                    <span className="truncate text-xs text-muted-foreground">
+                                        {workspace.role}
+                                    </span>
+                                )}
                             </div>
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+                        className="w-(--radix-dropdown-menu-trigger-width) min-w-60"
                         align="start"
+                        sideOffset={6}
                     >
                         <DropdownMenuLabel className="text-xs text-muted-foreground">
                             Workspaces
@@ -64,6 +67,10 @@ export function WorkspaceSwitcher() {
                                     })
                                 }
                             >
+                                <WorkspaceAvatar
+                                    workspace={item}
+                                    className="size-5 rounded text-[9px]"
+                                />
                                 <span className="truncate">{item.name}</span>
                                 {item.id === workspace.current.id && (
                                     <Check className="ml-auto size-4" />

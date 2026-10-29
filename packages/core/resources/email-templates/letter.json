@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "settings": {
+    "backdrop": "#ffffff",
+    "canvas": "#ffffff",
+    "width": 560,
+    "font": "Georgia, \"Times New Roman\", serif",
+    "text": "#18181b",
+    "link": "#2563eb"
+  },
+  "blocks": [
+    {
+      "id": "body",
+      "type": "text",
+      "html": "<p>Hi {{ first_name | there }},</p><p>A personal note reads like it came from a person, not a brand. Keep it short and write the way you'd talk.</p><p>If you'd like a reply, ask a question at the end.</p><p>Thanks,<br>Your name</p>",
+      "align": "left"
+    },
+    {
+      "id": "footer",
+      "type": "footer",
+      "html": "<p>You are receiving this because you signed up.</p>",
+      "align": "left"
+    }
+  ]
+}

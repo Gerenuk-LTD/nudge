@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Filters for contact listings, shared by the dashboard and the API.
+ * Status, list and tag take one value or several, comma-separated; a contact matching any of them is kept.
  */
 class ContactFilter
 {
@@ -26,25 +27,18 @@ class ContactFilter
             ? $query->whereNotNull('archived_at')
             : $query->active();
 
-        if (filled($filters['search'] ?? null)) {
-            $term = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($filters['search'])));
+        TableQuery::search($query, $filters['search'] ?? null, ['email', 'first_name', 'last_name']);
 
-            $query->where(fn (Builder $q) => $q
-                ->whereRaw("lower(email) like ? escape '!'", ["%{$term}%"])
-                ->orWhereRaw("lower(first_name) like ? escape '!'", ["%{$term}%"])
-                ->orWhereRaw("lower(last_name) like ? escape '!'", ["%{$term}%"]));
+        if (($statuses = TableQuery::values($filters['status'] ?? null)) !== []) {
+            $query->whereIn('status', $statuses);
         }
 
-        if (filled($filters['status'] ?? null)) {
-            $query->where('status', $filters['status']);
+        if (($listIds = self::ids($filters['list'] ?? null)) !== []) {
+            $query->whereHas('lists', fn (Builder $lists) => $lists->whereKey($listIds));
         }
 
-        if (filled($filters['list'] ?? null)) {
-            $query->whereHas('lists', fn (Builder $lists) => $lists->whereKey((int) $filters['list']));
-        }
-
-        if (filled($filters['tag'] ?? null)) {
-            $query->whereHas('tags', fn (Builder $tags) => $tags->whereKey((int) $filters['tag']));
+        if (($tagIds = self::ids($filters['tag'] ?? null)) !== []) {
+            $query->whereHas('tags', fn (Builder $tags) => $tags->whereKey($tagIds));
         }
 
         if (filled($filters['segment'] ?? null)) {
@@ -53,5 +47,13 @@ class ContactFilter
         }
 
         return $query;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function ids(mixed $value): array
+    {
+        return array_map(intval(...), TableQuery::values($value));
     }
 }

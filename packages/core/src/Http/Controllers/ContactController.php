@@ -15,6 +15,7 @@ use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Support\ContactData;
 use Gerenuk\Marketing\Support\ContactFilter;
 use Gerenuk\Marketing\Support\ContactTimeline;
+use Gerenuk\Marketing\Support\TableQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,14 +23,21 @@ use Inertia\Response;
 
 class ContactController extends Controller
 {
-    public function index(Request $request, ContactFilter $filter): Response
+    /** How many recent events the side panel shows before linking to the full profile. */
+    private const PREVIEW_ACTIVITY = 8;
+
+    public function index(Request $request, ContactFilter $filter, ContactTimeline $timeline): Response
     {
         $filters = $request->only(['search', 'status', 'list', 'tag', 'segment', 'archived']);
 
-        $contacts = $filter->query($filters)
+        $contacts = TableQuery::sort($filter->query($filters), $request, [
+            'email' => 'email',
+            'name' => 'first_name',
+            'status' => 'status',
+            'added' => 'created_at',
+        ])
             ->with('tags:id,name')
-            ->orderByDesc('id')
-            ->paginate(50)
+            ->paginate(TableQuery::perPage($request, 50))
             ->withQueryString()
             ->through(fn (Contact $contact) => [
                 'id' => $contact->id,
@@ -42,10 +50,10 @@ class ContactController extends Controller
 
         return Inertia::render('marketing/contacts/index', [
             'contacts' => $contacts,
-            'filters' => $filters,
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'tags' => Tag::query()->orderBy('name')->get(['id', 'name']),
             'segments' => Segment::query()->orderBy('name')->get(['id', 'name']),
+            'preview' => Inertia::optional(fn () => $this->preview($request->integer('preview'), $timeline)),
         ]);
     }
 
@@ -118,6 +126,40 @@ class ContactController extends Controller
     /**
      * @return array<string, mixed>
      */
+    /**
+     * One contact's details and latest activity for the side panel on the contacts list, or null when it is not in this workspace.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function preview(int $contactId, ContactTimeline $timeline): ?array
+    {
+        $contact = Contact::query()->with(['tags:id,name', 'lists:id,name'])->find($contactId);
+
+        if ($contact === null) {
+            return null;
+        }
+
+        $definitions = CustomFieldDefinition::query()->orderBy('label')->get(['key', 'label', 'type']);
+
+        return [
+            'id' => $contact->id,
+            'email' => $contact->email,
+            'name' => trim("{$contact->first_name} {$contact->last_name}") ?: null,
+            'status' => $contact->status->value,
+            'source' => $contact->source->value,
+            'tags' => $contact->tags->pluck('name'),
+            'lists' => $contact->lists->pluck('name'),
+            'fields' => $definitions
+                ->map(fn (CustomFieldDefinition $field) => ['label' => $field->label, 'type' => $field->type, 'value' => ($contact->custom_fields ?? [])[$field->key] ?? null])
+                ->filter(fn (array $field) => $field['value'] !== null && $field['value'] !== '')
+                ->values(),
+            'unsubscribed_at' => $contact->unsubscribed_at?->toIso8601String(),
+            'archived_at' => $contact->archived_at?->toIso8601String(),
+            'created_at' => $contact->created_at->toIso8601String(),
+            'activity' => $timeline->for($contact, self::PREVIEW_ACTIVITY),
+        ];
+    }
+
     private function formOptions(): array
     {
         return [

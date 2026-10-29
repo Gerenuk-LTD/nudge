@@ -10,11 +10,9 @@ export function PageHeader({
     actions?: ReactNode;
 }) {
     return (
-        <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-0.5">
-                <h1 className="text-xl font-semibold tracking-tight">
-                    {title}
-                </h1>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-1">
+                <h1 className="text-2xl font-semibold">{title}</h1>
                 {description && (
                     <p className="text-sm text-muted-foreground">
                         {description}
@@ -27,5 +25,9 @@ export function PageHeader({
 }
 
 export function PageBody({ children }: { children: ReactNode }) {
-    return <div className="flex flex-1 flex-col gap-6 p-4">{children}</div>;
+    return (
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+            {children}
+        </div>
+    );
 }

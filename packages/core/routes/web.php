@@ -7,6 +7,9 @@ use Gerenuk\Marketing\Http\Controllers\ContactController;
 use Gerenuk\Marketing\Http\Controllers\ContactListController;
 use Gerenuk\Marketing\Http\Controllers\CurrentWorkspaceController;
 use Gerenuk\Marketing\Http\Controllers\CustomFieldController;
+use Gerenuk\Marketing\Http\Controllers\EmailAssetController;
+use Gerenuk\Marketing\Http\Controllers\EmailTemplateController;
+use Gerenuk\Marketing\Http\Controllers\HomeController;
 use Gerenuk\Marketing\Http\Controllers\ImportController;
 use Gerenuk\Marketing\Http\Controllers\InvitationController;
 use Gerenuk\Marketing\Http\Controllers\MemberController;
@@ -27,6 +30,9 @@ Route::post('invitations/{token}', [InvitationController::class, 'accept'])->nam
 
 Route::middleware('marketing.workspace')->group(function () {
     Route::put('current-workspace', [CurrentWorkspaceController::class, 'update'])->name('current-workspace.update');
+    Route::get('home', HomeController::class)->name('home');
+    Route::get('email-assets', [EmailAssetController::class, 'index'])->name('email-assets.index');
+    Route::post('email-assets', [EmailAssetController::class, 'store'])->name('email-assets.store');
 
     Route::middleware('can:contacts.view')->group(function () {
         Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
@@ -83,6 +89,7 @@ Route::middleware('marketing.workspace')->group(function () {
     Route::middleware('can:campaigns.view')->group(function () {
         Route::get('campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
         Route::get('campaigns/{campaign}', [CampaignController::class, 'show'])->name('campaigns.show');
+        Route::get('templates', [EmailTemplateController::class, 'index'])->name('templates.index');
     });
 
     Route::middleware('can:campaigns.manage')->group(function () {
@@ -92,6 +99,14 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
         Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
         Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test');
+        Route::post('campaigns/{campaign}/template', [EmailTemplateController::class, 'storeFromCampaign'])->name('campaigns.template');
+
+        Route::get('templates/create', [EmailTemplateController::class, 'create'])->name('templates.create');
+        Route::post('templates', [EmailTemplateController::class, 'store'])->name('templates.store');
+        Route::get('templates/{template}/edit', [EmailTemplateController::class, 'edit'])->name('templates.edit');
+        Route::put('templates/{template}', [EmailTemplateController::class, 'update'])->name('templates.update');
+        Route::delete('templates/{template}', [EmailTemplateController::class, 'destroy'])->name('templates.destroy');
+        Route::post('templates/{template}/duplicate', [EmailTemplateController::class, 'duplicate'])->name('templates.duplicate');
     });
 
     Route::post('campaigns/{campaign}/approve', [CampaignController::class, 'approve'])->middleware('can:campaigns.approve')->name('campaigns.approve');

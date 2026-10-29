@@ -53,7 +53,7 @@ export function HtmlEditor({ html, mergeTags, onChange }: EmailEditorProps) {
                     spellCheck={false}
                     value={html}
                     onChange={(event) => onChange(event.target.value, null)}
-                    className="min-h-[32rem] w-full rounded-md border border-input bg-transparent p-3 font-mono text-xs leading-relaxed shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="min-h-[32rem] w-full rounded-md border border-input bg-card p-3 font-mono text-xs leading-relaxed shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 />
                 <iframe
                     title="Preview"

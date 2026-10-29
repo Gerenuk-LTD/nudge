@@ -99,7 +99,9 @@ export default function ShowProvider({
                 </dl>
 
                 <section className="max-w-3xl space-y-3 rounded-xl border p-4">
-                    <h2 className="font-medium">Delivery webhooks</h2>
+                    <h2 className="text-base font-semibold">
+                        Delivery webhooks
+                    </h2>
                     {verification === 'none' ? (
                         <p className="text-sm text-muted-foreground">
                             {provider.type.label} does not send delivery
@@ -158,7 +160,7 @@ export default function ShowProvider({
                 </section>
 
                 <section className="max-w-3xl space-y-3 rounded-xl border p-4">
-                    <h2 className="font-medium">Send a test</h2>
+                    <h2 className="text-base font-semibold">Send a test</h2>
                     <Form
                         {...ProviderController.test.form(provider.id)}
                         options={{ preserveScroll: true }}
@@ -166,7 +168,7 @@ export default function ShowProvider({
                     >
                         {({ processing, errors }) => (
                             <>
-                                <div className="grid gap-1.5">
+                                <div className="grid content-start gap-2">
                                     <Label htmlFor="test-from">From</Label>
                                     <Input
                                         id="test-from"
@@ -177,7 +179,7 @@ export default function ShowProvider({
                                     />
                                     <InputError message={errors.from} />
                                 </div>
-                                <div className="grid gap-1.5">
+                                <div className="grid content-start gap-2">
                                     <Label htmlFor="test-to">To</Label>
                                     <Input
                                         id="test-to"
