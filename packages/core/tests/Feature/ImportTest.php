@@ -48,6 +48,18 @@ test('uploading a file records its headers and row count', function () {
         ->and($import->status)->toBe(ImportStatus::Pending);
 });
 
+test('an import started from a list has that list chosen when mapping columns', function () {
+    $list = ContactList::factory()->create();
+
+    $this->actingAs($this->owner)->post(route('marketing.imports.store'), [
+        'file' => csvUpload("email\na@example.com\n"),
+        'list' => $list->id,
+    ])->assertRedirect(route('marketing.imports.show', ['import' => Import::first(), 'list' => $list->id]));
+
+    $this->actingAs($this->owner)->get(route('marketing.imports.show', ['import' => Import::first(), 'list' => $list->id]))
+        ->assertInertia(fn ($page) => $page->where('defaultList', $list->id));
+});
+
 test('a mapped import creates and updates contacts, adds them to a list and tags them', function () {
     CustomFieldDefinition::create(['key' => 'plan', 'label' => 'Plan', 'type' => 'text']);
     Contact::factory()->create(['email' => 'existing@example.com', 'first_name' => 'Old']);

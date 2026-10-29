@@ -24,6 +24,7 @@ type Props = {
     targets: { value: string; label: string }[];
     lists: Option[];
     tags: string[];
+    defaultList: number | null;
 };
 
 export default function ShowImport(props: Props) {
@@ -78,6 +79,7 @@ function MappingForm({
     targets,
     lists,
     tags,
+    defaultList,
 }: Props) {
     const form = useForm<{
         mapping: (string | null)[];
@@ -85,7 +87,7 @@ function MappingForm({
         tags: string[];
     }>({
         mapping: suggestedMapping,
-        contact_list_id: '',
+        contact_list_id: defaultList === null ? '' : String(defaultList),
         tags: [],
     });
 

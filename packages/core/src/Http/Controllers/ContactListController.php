@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Http\Controllers;
 
+use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Support\DailySeries;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
@@ -21,7 +22,10 @@ class ContactListController extends Controller
     public function index(): Response
     {
         $lists = ContactList::query()
-            ->withCount(['contacts' => fn ($query) => $query->whereNull('archived_at')])
+            ->withCount([
+                'contacts' => fn ($query) => $query->whereNull('archived_at'),
+                'contacts as subscribed_count' => fn ($query) => $query->whereNull('archived_at')->where('status', ContactStatus::Subscribed),
+            ])
             ->orderBy('name')
             ->get(['id', 'name', 'description']);
 
@@ -36,7 +40,7 @@ class ContactListController extends Controller
 
         return Inertia::render('marketing/lists/index', [
             'lists' => $lists->map(fn (ContactList $list) => [
-                ...$list->only(['id', 'name', 'description', 'contacts_count']),
+                ...$list->only(['id', 'name', 'description', 'contacts_count', 'subscribed_count']),
                 'joins' => $joins[$list->id],
             ]),
             'days' => self::GROWTH_DAYS,
@@ -47,12 +51,16 @@ class ContactListController extends Controller
     {
         ContactList::create($this->validated($request));
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('List created.')]);
+
         return to_route('marketing.lists.index');
     }
 
     public function update(Request $request, ContactList $list): RedirectResponse
     {
         $list->update($this->validated($request, $list));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('List saved.')]);
 
         return to_route('marketing.lists.index');
     }
@@ -77,6 +85,8 @@ class ContactListController extends Controller
                 Rule::unique('contact_lists', 'name')->where('workspace_id', $this->currentWorkspace->id())->ignore($list?->id),
             ],
             'description' => ['nullable', 'string', 'max:500'],
+        ], [
+            'name.unique' => __('There is already a list with this name.'),
         ]);
     }
 }

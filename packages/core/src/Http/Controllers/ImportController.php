@@ -42,16 +42,18 @@ class ImportController extends Controller
 
     public function store(Request $request, CreateImport $createImport): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'file' => ['required', 'file', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel', 'max:'.config('marketing.imports.max_file_kilobytes')],
+            'list' => ['nullable', 'integer', Rule::exists('contact_lists', 'id')->where('workspace_id', $this->currentWorkspace->id())],
         ]);
 
         $import = $createImport->handle($this->currentWorkspace->getOrFail(), $this->user($request), $request->file('file'));
 
-        return to_route('marketing.imports.show', $import);
+        // An import started from a list carries it through, so the mapping step has that list chosen.
+        return to_route('marketing.imports.show', array_filter(['import' => $import, 'list' => $validated['list'] ?? null]));
     }
 
-    public function show(Import $import): Response
+    public function show(Request $request, Import $import): Response
     {
         $customFields = CustomFieldDefinition::query()->orderBy('label')->get();
         $sample = [];
@@ -79,6 +81,7 @@ class ImportController extends Controller
             ]),
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'tags' => Tag::query()->orderBy('name')->pluck('name'),
+            'defaultList' => ContactList::query()->whereKey($request->integer('list'))->value('id'),
         ]);
     }
 

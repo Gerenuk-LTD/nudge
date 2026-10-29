@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ export default function CreateImport({
 }: {
     maxFileKilobytes: number;
 }) {
+    // Set when the import was started from a list, which the mapping step then picks.
+    const list = new URLSearchParams(usePage().url.split('?')[1]).get('list');
+
     return (
         <>
             <Head title="Import contacts" />
@@ -33,6 +36,9 @@ export default function CreateImport({
                 >
                     {({ processing, progress, errors }) => (
                         <>
+                            {list && (
+                                <input type="hidden" name="list" value={list} />
+                            )}
                             <div className="grid content-start gap-2">
                                 <Label htmlFor="file">CSV file</Label>
                                 <Input

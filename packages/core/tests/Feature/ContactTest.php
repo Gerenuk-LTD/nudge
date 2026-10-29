@@ -294,18 +294,26 @@ test('comma-separated filters keep contacts matching any of the values', functio
         ->where('contacts.data.1.email', 'lead@example.com'));
 });
 
+test('list names are unique in a workspace', function () {
+    ContactList::factory()->create(['name' => 'Newsletter']);
+
+    $this->actingAs($this->owner)->post(route('marketing.lists.store'), ['name' => 'Newsletter'])
+        ->assertSessionHasErrors(['name' => 'There is already a list with this name.']);
+});
+
 test('lists show how many contacts joined each one per day', function () {
     $this->travelTo('2026-10-28 12:00:00');
     $newsletter = ContactList::factory()->create(['name' => 'Newsletter']);
     $quiet = ContactList::factory()->create(['name' => 'Quiet']);
     $newsletter->contacts()->attach(Contact::factory()->count(2)->create(), ['created_at' => '2026-10-27 09:00:00']);
-    $newsletter->contacts()->attach(Contact::factory()->create(), ['created_at' => '2026-08-01 09:00:00']);
+    $newsletter->contacts()->attach(Contact::factory()->unsubscribed()->create(), ['created_at' => '2026-08-01 09:00:00']);
 
     $response = $this->actingAs($this->owner)->get(route('marketing.lists.index'));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->where('lists.0.name', 'Newsletter')
         ->where('lists.0.contacts_count', 3)
+        ->where('lists.0.subscribed_count', 2)
         ->has('lists.0.joins', 30)
         ->where('lists.0.joins.28', ['date' => '2026-10-27', 'count' => 2])
         ->where('lists.1.joins', fn ($joins) => collect($joins)->sum('count') === 0));
