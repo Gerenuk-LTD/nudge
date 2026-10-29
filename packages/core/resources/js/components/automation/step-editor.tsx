@@ -319,6 +319,8 @@ function UpdateStepEditor({
                     value={(config.remove_tags as string[]) ?? []}
                     onChange={(value) => set('remove_tags', value)}
                     suggestions={tagNames}
+                    allowCreate={false}
+                    placeholder="Search tags"
                 />
             </Field>
             {options.lists.length > 0 && (

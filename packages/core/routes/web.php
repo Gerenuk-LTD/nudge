@@ -56,7 +56,9 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::put('lists/{list}', [ContactListController::class, 'update'])->name('lists.update');
         Route::delete('lists/{list}', [ContactListController::class, 'destroy'])->name('lists.destroy');
 
+        Route::post('tags', [TagController::class, 'store'])->name('tags.store');
         Route::put('tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+        Route::post('tags/{tag}/merge', [TagController::class, 'merge'])->name('tags.merge');
         Route::delete('tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
 
         Route::post('custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');

@@ -29,7 +29,8 @@ export function SettingsSection({
     return (
         <section
             className={cn(
-                'overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs',
+                // Not overflow-hidden, so menus such as tag suggestions can open past the card's edge.
+                'rounded-xl border bg-card text-card-foreground shadow-xs',
                 danger && 'border-destructive/30',
                 className,
             )}
@@ -52,7 +53,7 @@ export function SettingsSection({
             {(hint || actions) && (
                 <footer
                     className={cn(
-                        'flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3 sm:px-6',
+                        'flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t px-5 py-3 sm:px-6',
                         danger
                             ? 'border-destructive/30 bg-destructive/5'
                             : 'bg-muted/40',

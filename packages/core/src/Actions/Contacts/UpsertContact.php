@@ -102,7 +102,8 @@ class UpsertContact
             }
 
             $seen[$key] = true;
-            $ids[] = Tag::firstOrCreate(['name' => $name])->id;
+            // Matched without regard to case on every database, so "VIP" joins an existing "vip" tag.
+            $ids[] = (Tag::query()->whereRaw('lower(name) = ?', [$key])->first() ?? Tag::create(['name' => $name]))->id;
         }
 
         return $ids;
