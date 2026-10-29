@@ -76,7 +76,7 @@ jobs:
 
       - name: Run core tests on MySQL 8.4
         working-directory: packages/core
-        run: vendor/bin/pest --testsuite=Feature
+        run: vendor/bin/pest
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
