@@ -9,13 +9,13 @@ use Gerenuk\Marketing\Models\Automation;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Queue\Queueable;
 
 /**
  * Starts every active automation whose trigger matches something that just happened to a contact.
  */
-class StartAutomationsForTrigger implements ShouldQueue
+class StartAutomationsForTrigger implements ShouldQueueAfterCommit
 {
     use Queueable;
 

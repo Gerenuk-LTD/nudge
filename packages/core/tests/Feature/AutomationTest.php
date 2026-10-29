@@ -28,6 +28,7 @@ use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Support\ContactData;
 use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
@@ -304,4 +305,43 @@ test('a contact queued just before a pause waits and carries on when resumed', f
     $this->useWorkspace($this->workspace);
 
     expect($run->fresh()->status)->toBe(AutomationRunStatus::Waiting)->and($this->transports->sent)->toBe([]);
+});
+
+test('list automations start only after the contact is saved', function () {
+    $list = ContactList::factory()->create();
+    liveAutomation($this, AutomationTrigger::ListJoined, ['list_id' => $list->id], [
+        emailStep('e1', 'Welcome', $this->provider->id),
+    ]);
+
+    DB::transaction(function () use ($list) {
+        app(UpsertContact::class)->handle(ContactData::fromValidated(['email' => 'new@example.com', 'lists' => [$list->id]]), ContactSource::Api);
+        $this->useWorkspace($this->workspace);
+
+        expect(AutomationRun::count())->toBe(0);
+    });
+
+    $this->useWorkspace($this->workspace);
+
+    expect(AutomationRun::count())->toBe(1);
+});
+
+test('triggers from a rolled back save are dropped', function () {
+    $list = ContactList::factory()->create();
+    liveAutomation($this, AutomationTrigger::ListJoined, ['list_id' => $list->id], [
+        emailStep('e1', 'Welcome', $this->provider->id),
+    ]);
+
+    try {
+        DB::transaction(function () use ($list) {
+            app(UpsertContact::class)->handle(ContactData::fromValidated(['email' => 'gone@example.com', 'lists' => [$list->id]]), ContactSource::Api);
+
+            throw new RuntimeException('rollback');
+        });
+    } catch (RuntimeException) {
+    }
+
+    $this->useWorkspace($this->workspace);
+
+    expect(AutomationRun::count())->toBe(0)
+        ->and(Contact::count())->toBe(0);
 });

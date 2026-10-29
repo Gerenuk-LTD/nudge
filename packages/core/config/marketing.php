@@ -65,6 +65,10 @@ return [
     | can serve them. Auto-pause stops a workspace's sending when its bounce or
     | complaint rate over the last week passes these limits.
     |
+    | The host queue connection's `retry_after` must exceed the longest job
+    | timeout (imports run up to an hour), or long jobs are handed to a second
+    | worker while still running.
+    |
     */
 
     'tracking_url' => env('MARKETING_TRACKING_URL'),

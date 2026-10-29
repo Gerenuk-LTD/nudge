@@ -13,6 +13,7 @@ use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Segments\SegmentQuery;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Queue\Queueable;
@@ -22,9 +23,11 @@ use Illuminate\Support\Collection;
  * Enrols contacts for triggers that depend on time rather than an action: entering a segment,
  * a date field coming round, and going quiet.
  */
-class EnrollScheduledTriggers implements ShouldQueue
+class EnrollScheduledTriggers implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+
+    public int $uniqueFor = 1800;
 
     /**
      * @param  list<AutomationTrigger>  $triggers
@@ -32,6 +35,11 @@ class EnrollScheduledTriggers implements ShouldQueue
     public function __construct(public array $triggers)
     {
         $this->onQueue(config('marketing.sending.queue'));
+    }
+
+    public function uniqueId(): string
+    {
+        return implode(',', array_map(fn (AutomationTrigger $trigger) => $trigger->value, $this->triggers));
     }
 
     public function handle(CurrentWorkspace $currentWorkspace, EnrollContact $enroll, SegmentQuery $segments): void
