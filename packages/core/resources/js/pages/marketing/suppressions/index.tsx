@@ -1,60 +1,132 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { Form, Head } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import {
+    Ban,
+    CircleAlert,
+    Download,
+    Ellipsis,
+    MailX,
+    ShieldCheck,
+    User,
+    UserRoundX,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import SuppressionController from '@/actions/Gerenuk/Marketing/Http/Controllers/SuppressionController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { show as showContact } from '@/routes/marketing/contacts';
 import { index as suppressionsIndex } from '@/routes/marketing/suppressions';
-import { ConfirmDelete } from '@marketing/components/confirm-delete';
 import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
-import { StatusBadge } from '@marketing/components/status-badge';
 import { Pagination } from '@marketing/components/pagination';
-import {
-    FacetedFilter,
-    ResetFilters,
-    TableSearch,
-} from '@marketing/components/table-toolbar';
+import { StatusBadge } from '@marketing/components/status-badge';
+import { ResetFilters, TableSearch } from '@marketing/components/table-toolbar';
 import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDate } from '@marketing/lib/format';
 import type { Paginated } from '@marketing/types';
 
+type Reason = 'bounce' | 'complaint' | 'manual';
+
 type Suppression = {
     id: number;
     email: string;
-    reason: string;
+    reason: Reason;
     detail: string | null;
     created_at: string | null;
+    contact: { id: number; name: string | null } | null;
 };
 
-const REASONS = [
-    { value: 'bounce', label: 'Bounce' },
-    { value: 'complaint', label: 'Complaint' },
-    { value: 'manual', label: 'Manual' },
-];
+const reasons: Record<
+    Reason,
+    { label: string; card: string; hint: string; icon: LucideIcon }
+> = {
+    bounce: {
+        label: 'Hard bounce',
+        card: 'Hard bounces',
+        hint: 'The address does not exist or rejects mail',
+        icon: MailX,
+    },
+    complaint: {
+        label: 'Spam complaint',
+        card: 'Spam complaints',
+        hint: 'They marked one of your emails as spam',
+        icon: CircleAlert,
+    },
+    manual: {
+        label: 'Blocked by you',
+        card: 'Blocked by you',
+        hint: 'Added here, or by an import or the API',
+        icon: Ban,
+    },
+};
 
 export default function SuppressionsIndex({
     suppressions,
+    counts,
 }: {
     suppressions: Paginated<Suppression>;
+    counts: Partial<Record<Reason, number>>;
 }) {
     const canEdit = useCan()('contacts.manage');
     const table = useTableQuery();
+    const [blocking, setBlocking] = useState(false);
+    const [removing, setRemoving] = useState<Suppression | null>(null);
+    const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    const selected = table.get('reason');
 
     const columns: ColumnDef<Suppression>[] = [
         {
             id: 'email',
             header: 'Email',
-            meta: { className: 'font-medium', sortable: true },
-            cell: ({ row }) => row.original.email,
+            meta: { sortable: true },
+            cell: ({ row: { original: suppression } }) => (
+                <div className="grid leading-tight">
+                    <span className="font-medium">{suppression.email}</span>
+                    {suppression.contact ? (
+                        <Link
+                            href={showContact(suppression.contact.id)}
+                            className="inline-flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                            <User className="size-3" />
+                            {suppression.contact.name ?? 'Contact'}
+                        </Link>
+                    ) : (
+                        <span className="text-xs text-muted-foreground">
+                            Not a contact
+                        </span>
+                    )}
+                </div>
+            ),
         },
         {
             id: 'reason',
             header: 'Reason',
             meta: { sortable: true },
             cell: ({ row: { original: suppression } }) => (
-                <>
+                <div className="space-y-1">
                     <StatusBadge
                         tone={
                             suppression.reason === 'manual'
@@ -62,42 +134,76 @@ export default function SuppressionsIndex({
                                 : 'danger'
                         }
                     >
-                        {REASONS.find(
-                            (reason) => reason.value === suppression.reason,
-                        )?.label ?? suppression.reason}
+                        {reasons[suppression.reason]?.label ??
+                            suppression.reason}
                     </StatusBadge>
                     {suppression.detail && (
-                        <p className="text-xs text-muted-foreground">
+                        <p
+                            className="max-w-md truncate text-xs text-muted-foreground"
+                            title={suppression.detail}
+                        >
                             {suppression.detail}
                         </p>
                     )}
-                </>
+                </div>
             ),
         },
         {
             id: 'since',
             header: 'Since',
-            meta: { className: 'text-muted-foreground', sortable: true },
+            meta: {
+                className: 'whitespace-nowrap text-muted-foreground',
+                sortable: true,
+            },
             cell: ({ row }) => formatDate(row.original.created_at),
         },
-        {
-            id: 'actions',
-            header: '',
-            meta: { className: 'text-right' },
-            cell: ({ row: { original: suppression } }) =>
-                canEdit && (
-                    <ConfirmDelete
-                        url={SuppressionController.destroy.url(suppression.id)}
-                        trigger="Remove"
-                        title={`Email ${suppression.email} again?`}
-                        description={
-                            suppression.reason === 'manual'
-                                ? 'The address can receive campaigns again.'
-                                : 'This address bounced or complained. Sending to it again can hurt your sender reputation. Only remove it if you know the problem is fixed.'
-                        }
-                    />
-                ),
-        },
+        ...(canEdit
+            ? [
+                  {
+                      id: 'actions',
+                      header: () => <span className="sr-only">Actions</span>,
+                      meta: { className: 'w-px' },
+                      cell: ({ row: { original: suppression } }) => (
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 text-muted-foreground"
+                                      aria-label={`Actions for ${suppression.email}`}
+                                  >
+                                      <Ellipsis />
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  {suppression.contact && (
+                                      <>
+                                          <DropdownMenuItem asChild>
+                                              <Link
+                                                  href={showContact(
+                                                      suppression.contact.id,
+                                                  )}
+                                              >
+                                                  <User />
+                                                  View contact
+                                              </Link>
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSeparator />
+                                      </>
+                                  )}
+                                  <DropdownMenuItem
+                                      variant="destructive"
+                                      onSelect={() => setRemoving(suppression)}
+                                  >
+                                      <UserRoundX />
+                                      Allow emails again
+                                  </DropdownMenuItem>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                      ),
+                  } satisfies ColumnDef<Suppression>,
+              ]
+            : []),
     ];
 
     return (
@@ -107,70 +213,293 @@ export default function SuppressionsIndex({
             <PageBody>
                 <PageHeader
                     title="Suppressions"
-                    description="Addresses that are never emailed: hard bounces, spam complaints and ones you block."
-                />
-
-                <div className="flex flex-wrap items-start gap-2">
-                    <TableSearch
-                        value={table.get('search')}
-                        onSearch={(search) => table.update({ search })}
-                        placeholder="Search by email"
-                    />
-                    <FacetedFilter
-                        title="Reason"
-                        options={REASONS}
-                        selected={table.values('reason')}
-                        onChange={(reason) => table.update({ reason })}
-                    />
-                    <ResetFilters
-                        active={table.values('reason').length > 0}
-                        onReset={() => table.update({ reason: null })}
-                    />
-                    {canEdit && (
-                        <Form
-                            {...SuppressionController.store.form()}
-                            resetOnSuccess
-                            options={{ preserveScroll: true }}
-                            className="ml-auto flex items-start gap-2"
-                        >
-                            {({ processing, errors }) => (
-                                <>
-                                    <div className="space-y-1">
-                                        <Input
-                                            name="email"
-                                            type="email"
-                                            placeholder="Block an address"
-                                            className="h-8"
-                                            aria-label="Address to block"
-                                            required
-                                        />
-                                        <InputError message={errors.email} />
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8"
-                                        disabled={processing}
+                    description="Addresses that are never emailed, whatever list or segment they are in."
+                    actions={
+                        <>
+                            {total > 0 && (
+                                <Button variant="outline" asChild>
+                                    <a
+                                        href={SuppressionController.export.url()}
                                     >
-                                        Block
-                                    </Button>
-                                </>
+                                        <Download />
+                                        Export
+                                    </a>
+                                </Button>
                             )}
-                        </Form>
-                    )}
-                </div>
-
-                <DataTable
-                    columns={columns}
-                    data={suppressions.data}
-                    getRowId={byId}
-                    emptyMessage="No suppressed addresses."
-                    sort={table.sort}
+                            {canEdit && (
+                                <Button onClick={() => setBlocking(true)}>
+                                    <Ban />
+                                    Block addresses
+                                </Button>
+                            )}
+                        </>
+                    }
                 />
 
-                <Pagination page={suppressions} query={table} />
+                {total === 0 ? (
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
+                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
+                            <ShieldCheck className="size-5" />
+                        </span>
+                        <div className="space-y-1">
+                            <p className="font-medium">
+                                No suppressed addresses
+                            </p>
+                            <p className="max-w-md text-sm text-muted-foreground">
+                                Addresses that hard bounce or mark you as spam
+                                are added here automatically, so you never email
+                                them again. You can also block addresses
+                                yourself.
+                            </p>
+                        </div>
+                        {canEdit && (
+                            <Button
+                                size="sm"
+                                className="mt-1"
+                                onClick={() => setBlocking(true)}
+                            >
+                                <Ban />
+                                Block addresses
+                            </Button>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            {(Object.keys(reasons) as Reason[]).map(
+                                (reason) => {
+                                    const {
+                                        card,
+                                        hint,
+                                        icon: Icon,
+                                    } = reasons[reason];
+                                    const active = selected === reason;
+
+                                    return (
+                                        <button
+                                            key={reason}
+                                            type="button"
+                                            aria-pressed={active}
+                                            onClick={() =>
+                                                table.update({
+                                                    reason: active
+                                                        ? null
+                                                        : reason,
+                                                })
+                                            }
+                                            className={cn(
+                                                'rounded-xl border bg-card p-4 text-left shadow-xs transition-colors outline-none hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                                                active &&
+                                                    'border-foreground ring-1 ring-foreground hover:border-foreground',
+                                            )}
+                                        >
+                                            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <Icon
+                                                    className={cn(
+                                                        'size-4',
+                                                        reason !== 'manual' &&
+                                                            'text-red-600 dark:text-red-400',
+                                                    )}
+                                                />
+                                                {card}
+                                            </span>
+                                            <span className="mt-1 block text-2xl font-semibold tabular-nums">
+                                                {(
+                                                    counts[reason] ?? 0
+                                                ).toLocaleString()}
+                                            </span>
+                                            <span className="block text-xs text-muted-foreground">
+                                                {hint}
+                                            </span>
+                                        </button>
+                                    );
+                                },
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <TableSearch
+                                value={table.get('search')}
+                                onSearch={(search) => table.update({ search })}
+                                placeholder="Search by email"
+                            />
+                            <ResetFilters
+                                active={selected !== ''}
+                                onReset={() => table.update({ reason: null })}
+                            />
+                        </div>
+
+                        <DataTable
+                            columns={columns}
+                            data={suppressions.data}
+                            getRowId={byId}
+                            emptyMessage="No suppressed addresses match."
+                            sort={table.sort}
+                        />
+
+                        <Pagination page={suppressions} query={table} />
+                    </>
+                )}
             </PageBody>
+
+            {canEdit && (
+                <>
+                    <Dialog open={blocking} onOpenChange={setBlocking}>
+                        <DialogContent>
+                            {blocking && (
+                                <BlockForm onClose={() => setBlocking(false)} />
+                            )}
+                        </DialogContent>
+                    </Dialog>
+                    <RemoveConfirm
+                        suppression={removing}
+                        onClose={() => setRemoving(null)}
+                    />
+                </>
+            )}
         </>
+    );
+}
+
+function BlockForm({ onClose }: { onClose: () => void }) {
+    const form = useForm({ emails: '', note: '' });
+    const count = form.data.emails
+        .split(/[\s,;]+/)
+        .filter((email) => email.includes('@')).length;
+
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        form.submit(SuppressionController.store(), {
+            preserveScroll: true,
+            onSuccess: onClose,
+        });
+    };
+
+    return (
+        <form onSubmit={submit} className="grid gap-4">
+            <div className="space-y-1.5">
+                <DialogTitle>Block addresses</DialogTitle>
+                <DialogDescription>
+                    They are never emailed, even if they are on a list or
+                    subscribe again. Contacts with these addresses are kept.
+                </DialogDescription>
+            </div>
+            <div className="grid content-start gap-2">
+                <Label htmlFor="block-emails">Email addresses</Label>
+                <Textarea
+                    id="block-emails"
+                    autoFocus
+                    rows={5}
+                    placeholder={'jane@example.com\nsomeone@example.org'}
+                    className="font-mono text-13"
+                    value={form.data.emails}
+                    onChange={(event) =>
+                        form.setData('emails', event.target.value)
+                    }
+                />
+                <p className="text-xs text-muted-foreground">
+                    One per line, or separated by commas. Up to 1,000 at once.
+                </p>
+                <InputError message={form.errors.emails} />
+            </div>
+            <div className="grid content-start gap-2">
+                <Label htmlFor="block-note">
+                    Note{' '}
+                    <span className="font-normal text-muted-foreground">
+                        (optional)
+                    </span>
+                </Label>
+                <Input
+                    id="block-note"
+                    placeholder="Asked to be removed by phone"
+                    value={form.data.note}
+                    onChange={(event) =>
+                        form.setData('note', event.target.value)
+                    }
+                />
+                <InputError message={form.errors.note} />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="ghost">
+                        Cancel
+                    </Button>
+                </DialogClose>
+                <Button disabled={form.processing || count === 0}>
+                    {form.processing && <Spinner />}
+                    {count > 1
+                        ? `Block ${count.toLocaleString()} addresses`
+                        : 'Block address'}
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+}
+
+function RemoveConfirm({
+    suppression,
+    onClose,
+}: {
+    suppression: Suppression | null;
+    onClose: () => void;
+}) {
+    const risky = suppression !== null && suppression.reason !== 'manual';
+
+    return (
+        <Dialog
+            open={suppression !== null}
+            onOpenChange={(open) => !open && onClose()}
+        >
+            <DialogContent>
+                {suppression && (
+                    <>
+                        <DialogTitle>
+                            Email {suppression.email} again?
+                        </DialogTitle>
+                        <DialogDescription>
+                            It is taken off the suppression list, so campaigns
+                            and automations can reach it again.
+                        </DialogDescription>
+                        {risky && (
+                            <div className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                                <p className="font-medium">
+                                    {suppression.reason === 'bounce'
+                                        ? 'This address bounced'
+                                        : 'This person marked you as spam'}
+                                </p>
+                                <p className="mt-0.5 text-13">
+                                    Sending to it again can hurt your sender
+                                    reputation and land your emails in spam for
+                                    everyone. Only do this if you know the
+                                    problem is fixed.
+                                </p>
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="ghost">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                                variant={risky ? 'destructive' : 'default'}
+                                onClick={() =>
+                                    router.delete(
+                                        SuppressionController.destroy.url(
+                                            suppression.id,
+                                        ),
+                                        {
+                                            preserveScroll: true,
+                                            onSuccess: onClose,
+                                        },
+                                    )
+                                }
+                            >
+                                Allow emails again
+                            </Button>
+                        </DialogFooter>
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
     );
 }
 

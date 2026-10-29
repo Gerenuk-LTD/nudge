@@ -86,6 +86,7 @@ Route::middleware('marketing.workspace')->group(function () {
     });
 
     Route::get('suppressions', [SuppressionController::class, 'index'])->middleware('can:contacts.view')->name('suppressions.index');
+    Route::get('suppressions/export', [SuppressionController::class, 'export'])->middleware('can:contacts.view')->name('suppressions.export');
     Route::middleware('can:contacts.manage')->group(function () {
         Route::post('suppressions', [SuppressionController::class, 'store'])->name('suppressions.store');
         Route::delete('suppressions/{suppression}', [SuppressionController::class, 'destroy'])->name('suppressions.destroy');
