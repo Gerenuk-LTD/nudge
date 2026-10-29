@@ -336,6 +336,17 @@ describe('Amazon SES through SNS', function () {
         expect(Suppression::count())->toBe(0)
             ->and($recipient->fresh()->status)->not->toBe(RecipientStatus::Bounced);
     });
+
+    test('saving an SES provider clears the pinned topic', function () {
+        $this->provider->forceFill(['webhook_topic_arn' => 'arn:aws:sns:eu-west-1:1:ses'])->save();
+
+        $this->actingAs($this->owner)->put(route('marketing.providers.update', $this->provider), [
+            'name' => 'SES', 'max_per_second' => 14,
+            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => '', 'region' => 'eu-west-1', 'configuration_set' => 'marketing'],
+        ])->assertSessionHasNoErrors();
+
+        expect($this->provider->fresh()->webhook_topic_arn)->toBeNull();
+    });
 });
 
 test('too many bounces pause the workspace', function () {
