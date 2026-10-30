@@ -48,13 +48,14 @@ class ContactController extends Controller
 
     /**
      * Create or update a contact. Custom fields are merged; tags and lists are added, never removed.
+     * Someone who unsubscribed is only subscribed again when `resubscribe` is true.
      */
     public function upsert(Request $request, string $email, ContactRules $contactRules, UpsertContact $upsertContact): JsonResponse
     {
         $data = ['email' => Contact::normalizeEmail($email), ...$request->except('email')];
-        $validated = Validator::make($data, $contactRules->rules())->validate();
+        $validated = Validator::make($data, [...$contactRules->rules(), 'resubscribe' => ['sometimes', 'boolean']])->validate();
 
-        ['contact' => $contact, 'created' => $created] = $upsertContact->handle(ContactData::fromValidated($validated), ContactSource::Api);
+        ['contact' => $contact, 'created' => $created] = $upsertContact->handle(ContactData::fromValidated($validated), ContactSource::Api, (bool) ($validated['resubscribe'] ?? false));
 
         return (new ContactResource($contact->load(['tags:id,name', 'lists:id'])))
             ->response()

@@ -164,3 +164,39 @@ test('a token cannot be given permissions its creator lacks', function () {
     $this->actingAs($this->owner)->post(route('marketing.api-tokens.store'), ['name' => 'x', 'permissions' => ['not.a.permission']])
         ->assertSessionHasErrors('permissions.0');
 });
+
+test('an api upsert cannot quietly resubscribe someone who unsubscribed', function () {
+    $contact = Contact::factory()->unsubscribed()->create(['email' => 'ann@example.com']);
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)
+        ->putJson(route('marketing.api.contacts.upsert', 'ann@example.com'), ['status' => 'subscribed', 'first_name' => 'Ann'])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'unsubscribed')
+        ->assertJsonPath('data.first_name', 'Ann');
+
+    expect($contact->fresh()->unsubscribed_at)->not->toBeNull();
+});
+
+test('an api upsert resubscribes when asked to explicitly', function () {
+    Contact::factory()->unsubscribed()->create(['email' => 'ann@example.com']);
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)
+        ->putJson(route('marketing.api.contacts.upsert', 'ann@example.com'), ['status' => 'subscribed', 'resubscribe' => true])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'subscribed');
+});
+
+test('an api upsert can still unsubscribe and create subscribed contacts', function () {
+    $token = apiToken($this->workspace, $this->owner);
+    $url = route('marketing.api.contacts.upsert', 'new@example.com');
+
+    $this->withToken($token)->putJson($url, ['status' => 'subscribed'])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'subscribed');
+
+    $this->withToken($token)->putJson($url, ['status' => 'unsubscribed'])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'unsubscribed');
+});

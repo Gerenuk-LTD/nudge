@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing\Actions\Contacts;
 use Carbon\CarbonInterface;
 use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Enums\ContactSource;
+use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Support\ContactData;
@@ -22,25 +23,26 @@ class UpsertContact
     /**
      * Create or update a contact by email, restoring it if archived. Only provided fields change:
      * custom fields are merged, and tags and lists are added, never removed.
+     * An existing contact who unsubscribed stays unsubscribed unless `$allowResubscribe` is true, so an integration cannot quietly opt people back in.
      *
      * @return array{contact: Contact, created: bool}
      */
-    public function handle(ContactData $data, ContactSource $source): array
+    public function handle(ContactData $data, ContactSource $source, bool $allowResubscribe = false): array
     {
         try {
-            return $this->upsert($data, $source);
+            return $this->upsert($data, $source, $allowResubscribe);
         } catch (UniqueConstraintViolationException) {
             // Another request created the same email between our read and insert; it now exists, so update it.
-            return $this->upsert($data, $source);
+            return $this->upsert($data, $source, $allowResubscribe);
         }
     }
 
     /**
      * @return array{contact: Contact, created: bool}
      */
-    private function upsert(ContactData $data, ContactSource $source): array
+    private function upsert(ContactData $data, ContactSource $source, bool $allowResubscribe): array
     {
-        return DB::transaction(function () use ($data, $source): array {
+        return DB::transaction(function () use ($data, $source, $allowResubscribe): array {
             $contact = Contact::query()->forEmail($data->email)->lockForUpdate()->first();
             $created = $contact === null;
 
@@ -64,7 +66,11 @@ class UpsertContact
                 );
             }
 
-            if ($data->status !== null) {
+            $resubscribing = ! $created
+                && $contact->status === ContactStatus::Unsubscribed
+                && $data->status === ContactStatus::Subscribed;
+
+            if ($data->status !== null && (! $resubscribing || $allowResubscribe)) {
                 (new ChangeContactStatus)->apply($contact, $data->status);
             }
 
