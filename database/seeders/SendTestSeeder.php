@@ -108,7 +108,7 @@ class SendTestSeeder extends Seeder
     {
         $answer = (string) $this->command->ask('Other inboxes to compare, such as Outlook or iCloud (comma separated, optional)', '');
 
-        return collect(explode(',', $answer))
+        return array_values(collect(explode(',', $answer))
             ->map(fn (string $email) => trim($email))
             ->filter()
             ->each(function (string $email): void {
@@ -117,7 +117,7 @@ class SendTestSeeder extends Seeder
                 }
             })
             ->values()
-            ->all();
+            ->all());
     }
 
     /**

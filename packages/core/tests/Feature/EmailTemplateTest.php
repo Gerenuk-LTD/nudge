@@ -73,7 +73,8 @@ test('a campaign starts from a starter, or the simple one when none is chosen', 
     $this->actingAs($this->owner)->post(route('marketing.campaigns.store'), ['name' => 'November', 'template' => $choice])->assertRedirect();
 
     $content = StarterTemplates::content($starter);
-    expect(Campaign::sole())->editor->toBe($content['editor'])->editor_state->toBe($content['editor_state'])->html->toBe($content['html']);
+    // MySQL's JSON columns reorder object keys, so stored documents are compared without regard to key order.
+    expect(Campaign::sole())->editor->toBe($content['editor'])->editor_state->toEqual($content['editor_state'])->html->toBe($content['html']);
 })->with([
     'a builder starter' => ['starter:announcement', 'announcement'],
     'the HTML starter' => ['starter:custom', 'custom'],
@@ -87,12 +88,12 @@ test('a campaign keeps the builder document alongside its HTML', function () {
     $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['editor' => 'blocks', 'editor_state' => $document, 'html' => '<p>Hi</p>'])
         ->assertSessionHasNoErrors();
 
-    expect($campaign->fresh())->editor->toBe('blocks')->editor_state->toBe($document);
+    expect($campaign->fresh())->editor->toBe('blocks')->editor_state->toEqual($document);
 
     $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['ab_editor_state_b' => $document, 'ab_html_b' => '<p>Hi B</p>'])
         ->assertSessionHasNoErrors();
 
-    expect($campaign->fresh()->ab_editor_state_b)->toBe($document);
+    expect($campaign->fresh()->ab_editor_state_b)->toEqual($document);
 
     $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['editor' => 'word'])->assertSessionHasErrors('editor');
 });

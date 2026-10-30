@@ -133,6 +133,7 @@ class HomeNotices
     }
 
     /**
+     * @param  'info'|'warning'|'danger'  $type
      * @param  array{0: string, 1: string}|null  $action
      * @return array{key: string, type: 'info'|'warning'|'danger', heading: string, body: string, action: array{label: string, href: string}|null}
      */

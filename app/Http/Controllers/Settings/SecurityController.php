@@ -86,7 +86,7 @@ class SecurityController extends Controller
             return null;
         }
 
-        return DB::connection(config('session.connection'))
+        return array_values(DB::connection(config('session.connection'))
             ->table(config('session.table', 'sessions'))
             ->where('user_id', $request->user()->getAuthIdentifier())
             ->orderByDesc('last_activity')
@@ -95,12 +95,12 @@ class SecurityController extends Controller
             ->map(fn (object $session) => [
                 'id' => hash('sha256', $session->id),
                 ...$this->device((string) $session->user_agent),
-                'ip_address' => $session->ip_address,
+                'ip_address' => is_string($session->ip_address) ? $session->ip_address : null,
                 'last_active_at' => Carbon::createFromTimestamp($session->last_activity)->toIso8601String(),
                 'current' => $session->id === $request->session()->getId(),
             ])
             ->values()
-            ->all();
+            ->all());
     }
 
     /**
