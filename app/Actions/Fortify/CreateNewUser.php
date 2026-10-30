@@ -5,6 +5,8 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Support\Registration;
+use Closure;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
@@ -19,8 +21,17 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        $registration = app(Registration::class);
+        $profileRules = $this->profileRules();
+
+        $profileRules['email'][] = function (string $attribute, mixed $value, Closure $fail) use ($registration): void {
+            if (! $registration->allows((string) $value)) {
+                $fail($registration->refusal());
+            }
+        };
+
         Validator::make($input, [
-            ...$this->profileRules(),
+            ...$profileRules,
             'password' => $this->passwordRules(),
         ])->validate();
 

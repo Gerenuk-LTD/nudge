@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Registration;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,6 +42,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'canRegister' => $request->user() === null ? app(Registration::class)->isAvailable() : false,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

@@ -11,9 +11,10 @@ import { store } from '@/routes/register';
 
 type Props = {
     passwordRules: string;
+    byInvitation: boolean;
 };
 
-export default function Register({ passwordRules }: Props) {
+export default function Register({ passwordRules, byInvitation }: Props) {
     return (
         <>
             <Head title="Register" />
@@ -25,6 +26,12 @@ export default function Register({ passwordRules }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
+                        {byInvitation && (
+                            <p className="text-center text-sm text-muted-foreground">
+                                Sign-up is by invitation. Use the email address
+                                your invitation was sent to.
+                            </p>
+                        )}
                         <div className="grid gap-4">
                             <div className="grid content-start gap-2">
                                 <Label htmlFor="name">Name</Label>

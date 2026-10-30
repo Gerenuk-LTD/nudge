@@ -51,4 +51,15 @@ class Invitation extends Model
     {
         return static::withoutGlobalScopes()->where('token_hash', hash('sha256', $token))->first();
     }
+
+    /**
+     * Whether any workspace has an unexpired invitation for this email address. Hosts use it to allow sign-up by invitation.
+     */
+    public static function isPendingFor(string $email): bool
+    {
+        return static::withoutGlobalScopes()
+            ->where('email', Contact::normalizeEmail($email))
+            ->where('expires_at', '>', now())
+            ->exists();
+    }
 }
