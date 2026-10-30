@@ -95,9 +95,14 @@ export default function EditAutomation(props: Props) {
     /** Everything stopping it from starting, including save errors that belong to settings in a closed panel. */
     const problems = [
         ...props.problems,
-        ...[errors.automation, errors.name, errors.definition].filter(
-            (message): message is string => Boolean(message),
-        ),
+        ...[
+            errors.automation,
+            errors.name,
+            errors.definition,
+            ...Object.entries(errors)
+                .filter(([key]) => key.startsWith('trigger_config.'))
+                .map(([, message]) => message),
+        ].filter((message): message is string => Boolean(message)),
     ];
 
     const save = (then?: () => void) => {

@@ -226,6 +226,10 @@ export default function EditCampaign(props: Props) {
                 : JSON.parse(data.ab_editor_state_b),
     }));
     useAutosave(form, campaign.id, scheduled);
+    const hiddenErrors = Object.entries(errors).filter(
+        (entry): entry is [string, string] =>
+            !SHOWN_ERROR_KEYS.has(entry[0]) && Boolean(entry[1]),
+    );
     useUnsavedChangesGuard(!scheduled && (form.isDirty || form.processing));
 
     const saveState: SaveState = form.processing
@@ -321,6 +325,17 @@ export default function EditCampaign(props: Props) {
                     </fieldset>
                 )}
 
+                {hiddenErrors.length > 0 && (
+                    <div
+                        role="alert"
+                        className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+                    >
+                        {hiddenErrors.map(([key, message]) => (
+                            <p key={key}>Can't save: {message}</p>
+                        ))}
+                    </div>
+                )}
+
                 {!scheduled && next && (
                     <div className="flex justify-end border-t pt-6">
                         <Button onClick={() => goTo(next)}>
@@ -346,6 +361,26 @@ export default function EditCampaign(props: Props) {
         </>
     );
 }
+
+/** Errors the editor shows beside their own field. Anything else is listed as an alert. */
+const SHOWN_ERROR_KEYS = new Set([
+    'ab_metric',
+    'ab_sample_percent',
+    'ab_subject_b',
+    'ab_wait_minutes',
+    'campaign',
+    'from_email',
+    'from_name',
+    'html',
+    'list_ids',
+    'name',
+    'preheader',
+    'provider_id',
+    'reply_to',
+    'segment_id',
+    'send_at',
+    'subject',
+]);
 
 type DraftForm = ReturnType<typeof useForm<Draft>>;
 
@@ -1130,7 +1165,16 @@ function AudienceStep({
                     </section>
                 )}
 
-                <InputError message={errors.list_ids ?? errors.segment_id} />
+                <InputError
+                    message={
+                        errors.list_ids ??
+                        Object.entries(errors).find(
+                            ([key, message]) =>
+                                key.startsWith('list_ids.') && message,
+                        )?.[1] ??
+                        errors.segment_id
+                    }
+                />
             </div>
 
             <aside className="space-y-4 rounded-xl border bg-card p-5 shadow-xs lg:sticky lg:top-[calc(var(--marketing-header-height,4rem)+5.5rem)]">
