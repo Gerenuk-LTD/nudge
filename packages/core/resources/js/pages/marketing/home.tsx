@@ -1,5 +1,14 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, CalendarClock, Plus, Workflow } from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import {
+    ArrowDownRight,
+    ArrowRight,
+    ArrowUpRight,
+    CalendarClock,
+    Check,
+    Plus,
+    Upload,
+    Workflow,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,7 +18,12 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { edit as editAutomation } from '@/routes/marketing/automations';
+import { cn } from '@/lib/utils';
+import {
+    edit as editAutomation,
+    index as automationsIndex,
+} from '@/routes/marketing/automations';
+import { create as createImport } from '@/routes/marketing/imports';
 import {
     edit as editCampaign,
     index as campaignsIndex,
@@ -19,16 +33,36 @@ import { home } from '@/routes/marketing';
 import type { DailyCount } from '@marketing/components/charts';
 import { Sparkline, TrendChart } from '@marketing/components/charts';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { Shout } from '@marketing/components/shout';
 import { useCan, useWorkspace } from '@marketing/hooks/use-workspace';
 import { formatDate, formatDateTime, percent } from '@marketing/lib/format';
 import type { CampaignSummary } from '@marketing/types';
 
+type Totals = { sent: number; opened: number; clicked: number };
+
+type Notice = {
+    key: string;
+    type: 'info' | 'warning' | 'danger';
+    heading: string;
+    body: string;
+    action: { label: string; href: string } | null;
+};
+
+type SetupStep = { key: string; label: string; done: boolean; href: string };
+
 type Props = {
     days: number;
-    audience: { subscribed: number; added: DailyCount[] } | null;
+    notices: Notice[];
+    setup: SetupStep[] | null;
+    audience: {
+        subscribed: number;
+        added: DailyCount[];
+        previous_added: number;
+    } | null;
     sending: {
         sent: DailyCount[];
-        totals: { sent: number; opened: number; clicked: number };
+        totals: Totals;
+        previous: Totals;
         next: CampaignSummary | null;
         drafts: CampaignSummary[];
         recent: CampaignSummary[];
@@ -39,9 +73,40 @@ type Props = {
 const total = (series: DailyCount[]) =>
     series.reduce((sum, day) => sum + day.count, 0);
 
-export default function Home({ days, audience, sending, automations }: Props) {
+/** A greeting for the time of day, in the viewer's own time zone. */
+function greeting(): string {
+    const hour = new Date().getHours();
+
+    return hour < 12
+        ? 'Good morning'
+        : hour < 18
+          ? 'Good afternoon'
+          : 'Good evening';
+}
+
+/** The change from the previous period as a share, or null when there is nothing to compare with. */
+function change(current: number, previous: number): number | null {
+    return previous === 0 ? null : (current - previous) / previous;
+}
+
+/** A rate as a fraction, or null without sends. */
+const rate = (count: number, sent: number) =>
+    sent === 0 ? null : count / sent;
+
+export default function Home({
+    days,
+    notices,
+    setup,
+    audience,
+    sending,
+    automations,
+}: Props) {
     const workspace = useWorkspace();
-    const canCreate = useCan()('campaigns.manage');
+    const can = useCan();
+    const canCreate = can('campaigns.manage');
+    const user = usePage<{ auth: { user: { name: string } } }>().props.auth
+        .user;
+    const firstName = user.name.split(/\s+/)[0];
 
     return (
         <>
@@ -49,9 +114,68 @@ export default function Home({ days, audience, sending, automations }: Props) {
 
             <PageBody>
                 <PageHeader
-                    title="Home"
-                    description={`${workspace?.current.name ?? 'Your workspace'} over the last ${days} days.`}
+                    title={`${greeting()}, ${firstName}`}
+                    description={`Here's how ${workspace?.current.name ?? 'your workspace'} has done over the last ${days} days.`}
+                    actions={
+                        <>
+                            {can('contacts.import') && (
+                                <Button variant="outline" asChild>
+                                    <Link href={createImport()}>
+                                        <Upload />
+                                        Import contacts
+                                    </Link>
+                                </Button>
+                            )}
+                            {canCreate && (
+                                <Button asChild>
+                                    <Link
+                                        href={campaignsIndex({
+                                            query: { new: 1 },
+                                        })}
+                                    >
+                                        <Plus />
+                                        New campaign
+                                    </Link>
+                                </Button>
+                            )}
+                        </>
+                    }
                 />
+
+                {notices.length > 0 && (
+                    <div className="space-y-2">
+                        {notices.map((notice) => (
+                            <Shout
+                                key={notice.key}
+                                type={notice.type}
+                                heading={notice.heading}
+                                dismissKey={
+                                    notice.type === 'info'
+                                        ? `home:${notice.key}`
+                                        : undefined
+                                }
+                                actions={
+                                    notice.action && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="bg-card"
+                                            asChild
+                                        >
+                                            <Link href={notice.action.href}>
+                                                {notice.action.label}
+                                            </Link>
+                                        </Button>
+                                    )
+                                }
+                            >
+                                {notice.body}
+                            </Shout>
+                        ))}
+                    </div>
+                )}
+
+                {setup && <SetupChecklist steps={setup} />}
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {audience && (
@@ -59,6 +183,11 @@ export default function Home({ days, audience, sending, automations }: Props) {
                             label="Subscribed contacts"
                             value={audience.subscribed.toLocaleString()}
                             detail={`+${total(audience.added).toLocaleString()} added`}
+                            trend={change(
+                                total(audience.added),
+                                audience.previous_added,
+                            )}
+                            trendLabel="new contacts"
                         >
                             <Sparkline
                                 data={audience.added}
@@ -73,6 +202,10 @@ export default function Home({ days, audience, sending, automations }: Props) {
                                 label="Emails sent"
                                 value={sending.totals.sent.toLocaleString()}
                                 detail={`in ${days} days`}
+                                trend={change(
+                                    sending.totals.sent,
+                                    sending.previous.sent,
+                                )}
                             >
                                 <Sparkline
                                     data={sending.sent}
@@ -87,6 +220,16 @@ export default function Home({ days, audience, sending, automations }: Props) {
                                     sending.totals.sent,
                                 )}
                                 detail={`${sending.totals.opened.toLocaleString()} opened · approximate`}
+                                points={pointsChange(
+                                    rate(
+                                        sending.totals.opened,
+                                        sending.totals.sent,
+                                    ),
+                                    rate(
+                                        sending.previous.opened,
+                                        sending.previous.sent,
+                                    ),
+                                )}
                             />
                             <Stat
                                 label="Click rate"
@@ -95,6 +238,16 @@ export default function Home({ days, audience, sending, automations }: Props) {
                                     sending.totals.sent,
                                 )}
                                 detail={`${sending.totals.clicked.toLocaleString()} clicked`}
+                                points={pointsChange(
+                                    rate(
+                                        sending.totals.clicked,
+                                        sending.totals.sent,
+                                    ),
+                                    rate(
+                                        sending.previous.clicked,
+                                        sending.previous.sent,
+                                    ),
+                                )}
                             />
                         </>
                     )}
@@ -267,7 +420,25 @@ export default function Home({ days, audience, sending, automations }: Props) {
                             </CardHeader>
                             <CardContent className="space-y-1 px-2">
                                 {automations.length === 0 ? (
-                                    <Empty message="No automations are running." />
+                                    <Empty
+                                        message="No automations are running. Welcome new subscribers or win back quiet ones on autopilot."
+                                        action={
+                                            can('automations.manage') && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={automationsIndex()}
+                                                    >
+                                                        <Workflow />
+                                                        Set one up
+                                                    </Link>
+                                                </Button>
+                                            )
+                                        }
+                                    />
                                 ) : (
                                     automations.map((automation) => (
                                         <Row
@@ -290,25 +461,145 @@ export default function Home({ days, audience, sending, automations }: Props) {
     );
 }
 
+/** The change in a rate, in percentage points, or null when either period had no sends. */
+function pointsChange(current: number | null, previous: number | null) {
+    return current === null || previous === null
+        ? null
+        : (current - previous) * 100;
+}
+
 function Stat({
     label,
     value,
     detail,
+    trend = null,
+    trendLabel,
+    points = null,
     children,
 }: {
     label: string;
     value: string;
     detail: string;
+    /** Change from the previous period, as a share. */
+    trend?: number | null;
+    trendLabel?: string;
+    /** Change from the previous period, in percentage points. */
+    points?: number | null;
     children?: ReactNode;
 }) {
+    const delta = trend ?? points;
+    const shown =
+        delta === null
+            ? null
+            : trend !== null
+              ? `${Math.abs(Math.round(trend * 100))}%`
+              : `${Math.abs(delta).toFixed(1)} pts`;
+
     return (
         <Card className="gap-3 py-4">
             <CardContent className="space-y-1 px-5">
-                <p className="text-13 text-muted-foreground">{label}</p>
+                <div className="flex items-start justify-between gap-2">
+                    <p className="text-13 text-muted-foreground">{label}</p>
+                    {shown !== null && delta !== null && (
+                        <span
+                            title={`Compared with the ${trendLabel ? `${trendLabel} in the ` : ''}previous period`}
+                            className={cn(
+                                'inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums',
+                                delta > 0 &&
+                                    'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
+                                delta < 0 &&
+                                    'bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400',
+                                delta === 0 && 'bg-muted text-muted-foreground',
+                            )}
+                        >
+                            {delta > 0 ? (
+                                <ArrowUpRight className="size-3" />
+                            ) : delta < 0 ? (
+                                <ArrowDownRight className="size-3" />
+                            ) : null}
+                            {shown}
+                        </span>
+                    )}
+                </div>
                 <p className="text-2xl font-semibold tabular-nums">{value}</p>
-                <p className="text-xs text-muted-foreground">{detail}</p>
+                <p className="text-xs text-muted-foreground">
+                    {detail}
+                    {delta !== null && ' · vs previous period'}
+                </p>
             </CardContent>
             {children && <div className="px-5">{children}</div>}
+        </Card>
+    );
+}
+
+/**
+ * The first steps for a new workspace, with how far along it is. It goes once every step is done.
+ */
+function SetupChecklist({ steps }: { steps: SetupStep[] }) {
+    const done = steps.filter((step) => step.done).length;
+    const next = steps.find((step) => !step.done);
+
+    return (
+        <Card className="gap-0 py-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+                <div className="space-y-0.5">
+                    <p className="font-semibold">Get set up</p>
+                    <p className="text-13 text-muted-foreground">
+                        {done} of {steps.length} done. A few steps and you're
+                        ready to send.
+                    </p>
+                </div>
+                <div
+                    className="h-1.5 w-40 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label="Setup progress"
+                    aria-valuenow={done}
+                    aria-valuemax={steps.length}
+                >
+                    <div
+                        className="h-full rounded-full bg-emerald-500 transition-[width]"
+                        style={{ width: `${(done / steps.length) * 100}%` }}
+                    />
+                </div>
+            </div>
+            <ol className="grid sm:grid-cols-2 lg:grid-cols-4">
+                {steps.map((step, index) => (
+                    <li
+                        key={step.key}
+                        className="border-b last:border-b-0 lg:border-r lg:border-b-0 lg:last:border-r-0 sm:[&:nth-child(odd)]:border-r"
+                    >
+                        <Link
+                            href={step.href}
+                            className={cn(
+                                'flex h-full items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/50',
+                                step.done && 'text-muted-foreground',
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    'flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-medium tabular-nums',
+                                    step.done &&
+                                        'border-emerald-600/30 bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
+                                    step === next &&
+                                        'border-foreground bg-foreground text-background',
+                                )}
+                            >
+                                {step.done ? (
+                                    <Check className="size-3.5" />
+                                ) : (
+                                    index + 1
+                                )}
+                            </span>
+                            <span className="min-w-0 flex-1 text-sm font-medium">
+                                {step.label}
+                            </span>
+                            {step === next && (
+                                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                            )}
+                        </Link>
+                    </li>
+                ))}
+            </ol>
         </Card>
     );
 }
@@ -360,7 +651,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 function Empty({ message, action }: { message: string; action?: ReactNode }) {
     return (
         <div className="flex flex-col items-center gap-3 px-3 py-6 text-center">
-            <p className="text-sm text-muted-foreground">{message}</p>
+            <p className="max-w-xs text-sm text-muted-foreground">{message}</p>
             {action}
         </div>
     );
