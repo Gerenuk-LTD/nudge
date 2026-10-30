@@ -19,7 +19,7 @@ class PickAbTestWinner implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public int $campaignId, public int $workspaceId)
+    public function __construct(public int $campaignId, public int $workspaceId, public bool $force = false)
     {
         $this->onQueue(config('marketing.sending.queue'));
     }
@@ -37,8 +37,20 @@ class PickAbTestWinner implements ShouldQueue
             $decided = false;
 
             if ($campaign->ab_winner === null) {
+                $snapshot = $results->for($campaign);
+
+                if (! $this->force && $this->shouldKeepWaiting($campaign, $snapshot)) {
+                    self::dispatch($this->campaignId, $this->workspaceId)->delay(now()->addMinutes(10));
+
+                    return;
+                }
+
                 $decided = Campaign::query()->whereKey($campaign->id)->whereNull('ab_winner')
-                    ->update(['ab_winner' => $results->leader($campaign), 'ab_decided_at' => now()]) === 1;
+                    ->update([
+                        'ab_winner' => $results->leaderOf($snapshot),
+                        'ab_decided_at' => now(),
+                        'ab_results' => json_encode($snapshot),
+                    ]) === 1;
             }
 
             $winner = Campaign::query()->whereKey($campaign->id)->value('ab_winner');
@@ -52,5 +64,27 @@ class PickAbTestWinner implements ShouldQueue
 
             SendCampaignBatch::finishIfDone($campaign);
         });
+    }
+
+    /**
+     * Whether the sample is still going out, or nothing has been sent yet, so there is no data to decide on.
+     *
+     * @param  array{a: array{sent: int, opened: int, clicked: int, rate: float}, b: array{sent: int, opened: int, clicked: int, rate: float}}  $snapshot
+     */
+    private function shouldKeepWaiting(Campaign $campaign, array $snapshot): bool
+    {
+        // Don't hold the rest of the audience forever if the sample never finishes sending.
+        $cutoff = $campaign->sending_started_at?->copy()->addMinutes($campaign->ab_wait_minutes)->addDay();
+
+        if ($cutoff !== null && now()->greaterThan($cutoff)) {
+            return false;
+        }
+
+        $sampleStillWaiting = $campaign->recipients()
+            ->whereIn('variant', ['a', 'b'])
+            ->whereIn('status', [RecipientStatus::Queued, RecipientStatus::Sending])
+            ->exists();
+
+        return $sampleStillWaiting || ($snapshot['a']['sent'] === 0 && $snapshot['b']['sent'] === 0);
     }
 }

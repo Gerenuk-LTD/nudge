@@ -231,7 +231,7 @@ class CampaignController extends Controller
     {
         abort_unless($campaign->ab_enabled && $campaign->ab_winner === null && $campaign->status === CampaignStatus::Sending, 409);
 
-        PickAbTestWinner::dispatch($campaign->id, $campaign->workspace_id);
+        PickAbTestWinner::dispatch($campaign->id, $campaign->workspace_id, force: true);
 
         return to_route('marketing.campaigns.show', $campaign);
     }

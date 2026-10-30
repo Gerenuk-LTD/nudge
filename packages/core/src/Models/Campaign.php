@@ -51,6 +51,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $ab_metric
  * @property string|null $ab_winner
  * @property CarbonInterface|null $ab_decided_at
+ * @property array{a: array{sent: int, opened: int, clicked: int, rate: float}, b: array{sent: int, opened: int, clicked: int, rate: float}}|null $ab_results
  * @property CampaignStatus $status
  * @property CarbonInterface|null $approved_at
  * @property CarbonInterface|null $scheduled_at
@@ -73,7 +74,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'audience_type', 'list_ids',
     'track_opens', 'track_clicks', 'status', 'approved_at', 'scheduled_at', 'sending_started_at', 'sent_at',
     'recipients_count', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_editor_state_b', 'ab_sample_percent', 'ab_wait_minutes',
-    'ab_metric', 'ab_winner', 'ab_decided_at',
+    'ab_metric', 'ab_winner', 'ab_decided_at', 'ab_results',
 ])]
 #[UseFactory(CampaignFactory::class)]
 class Campaign extends Model
@@ -103,6 +104,7 @@ class Campaign extends Model
             'ab_enabled' => 'boolean',
             'ab_editor_state_b' => 'array',
             'ab_decided_at' => 'datetime',
+            'ab_results' => 'array',
             'audience_type' => AudienceType::class,
             'list_ids' => 'array',
             'track_opens' => 'boolean',

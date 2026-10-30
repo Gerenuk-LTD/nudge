@@ -11,10 +11,16 @@ use Gerenuk\Marketing\Models\CampaignRecipient;
 class AbTestResults
 {
     /**
+     * Once a winner is chosen, the results from that moment are returned, so the rest of the audience doesn't blur the test.
+     *
      * @return array{a: array{sent: int, opened: int, clicked: int, rate: float}, b: array{sent: int, opened: int, clicked: int, rate: float}}
      */
     public function for(Campaign $campaign): array
     {
+        if ($campaign->ab_results !== null) {
+            return $campaign->ab_results;
+        }
+
         $rows = CampaignRecipient::query()
             ->where('campaign_id', $campaign->id)
             ->whereNotNull('sent_at')
@@ -46,8 +52,14 @@ class AbTestResults
      */
     public function leader(Campaign $campaign): string
     {
-        $results = $this->for($campaign);
+        return $this->leaderOf($this->for($campaign));
+    }
 
+    /**
+     * @param  array{a: array{sent: int, opened: int, clicked: int, rate: float}, b: array{sent: int, opened: int, clicked: int, rate: float}}  $results
+     */
+    public function leaderOf(array $results): string
+    {
         return $results['b']['rate'] > $results['a']['rate'] ? 'b' : 'a';
     }
 }

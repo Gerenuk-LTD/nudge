@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Marketing\Campaigns\AbTestResults;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Jobs\PickAbTestWinner;
@@ -99,6 +100,53 @@ test('content can be tested instead of the subject', function () {
     ksort($counts);
 
     expect($counts)->toBe([0 => 2, 1 => 2]);
+});
+
+test('the winner is not picked while the sample is still unsent', function () {
+    Queue::fake([PickAbTestWinner::class]);
+    $campaign = abCampaign($this);
+    app(ScheduleCampaign::class)->handle($campaign, $this->workspace->fresh());
+    $this->useWorkspace($this->workspace);
+
+    CampaignRecipient::whereIn('variant', ['a', 'b'])->update(['status' => RecipientStatus::Queued, 'sent_at' => null]);
+
+    app()->call([new PickAbTestWinner($campaign->id, $this->workspace->id), 'handle']);
+    $this->useWorkspace($this->workspace);
+
+    expect($campaign->fresh()->ab_winner)->toBeNull();
+
+    Queue::assertPushed(PickAbTestWinner::class, 2);
+});
+
+test('picking the winner now decides even without data', function () {
+    Queue::fake([PickAbTestWinner::class]);
+    $campaign = abCampaign($this);
+    app(ScheduleCampaign::class)->handle($campaign, $this->workspace->fresh());
+    $this->useWorkspace($this->workspace);
+
+    CampaignRecipient::whereIn('variant', ['a', 'b'])->update(['status' => RecipientStatus::Queued, 'sent_at' => null]);
+
+    app()->call([new PickAbTestWinner($campaign->id, $this->workspace->id, force: true), 'handle']);
+    $this->useWorkspace($this->workspace);
+
+    expect($campaign->fresh()->ab_winner)->toBe('a');
+});
+
+test('the test results stay as they were when the winner was chosen', function () {
+    Queue::fake([PickAbTestWinner::class]);
+    $campaign = abCampaign($this);
+    app(ScheduleCampaign::class)->handle($campaign, $this->workspace->fresh());
+    $this->useWorkspace($this->workspace);
+
+    CampaignRecipient::where('variant', 'b')->limit(1)->update(['clicked_at' => now()]);
+
+    app()->call([new PickAbTestWinner($campaign->id, $this->workspace->id), 'handle']);
+    $this->useWorkspace($this->workspace);
+
+    $campaign = $campaign->fresh();
+
+    expect($campaign->ab_winner)->toBe('b')
+        ->and(app(AbTestResults::class)->for($campaign)['b']['sent'])->toBe(2);
 });
 
 test('an A/B test without a variant B cannot be sent', function () {
