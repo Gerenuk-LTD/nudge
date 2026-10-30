@@ -41,6 +41,13 @@ export default defineConfig({
             ),
         },
     },
+    test: {
+        include: [
+            'packages/core/resources/js/**/*.test.ts',
+            'resources/js/**/*.test.ts',
+        ],
+        environment: 'node',
+    },
     server: {
         watch: {
             ignored: [
