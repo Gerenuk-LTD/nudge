@@ -1,5 +1,6 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { MailWarning } from 'lucide-react';
+import { useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import InputError from '@/components/input-error';
 import { SettingsSection } from '@marketing/components/settings-section';
@@ -23,6 +24,9 @@ export default function Profile({
     const { auth } = usePage<{ auth: Auth }>().props;
     const getInitials = useInitials();
     const unverified = mustVerifyEmail && auth.user.email_verified_at === null;
+    const [email, setEmail] = useState(auth.user.email);
+    const emailChanged =
+        email.trim().toLowerCase() !== auth.user.email.toLowerCase();
 
     return (
         <>
@@ -93,12 +97,34 @@ export default function Profile({
                                     type="email"
                                     name="email"
                                     defaultValue={auth.user.email}
+                                    onChange={(event) =>
+                                        setEmail(event.target.value)
+                                    }
                                     required
                                     autoComplete="username"
                                     placeholder="you@example.com"
                                 />
                                 <InputError message={errors.email} />
                             </div>
+
+                            {emailChanged && (
+                                <div className="grid content-start gap-2 sm:col-span-2">
+                                    <Label htmlFor="current_password">
+                                        Current password
+                                    </Label>
+                                    <Input
+                                        id="current_password"
+                                        type="password"
+                                        name="current_password"
+                                        required
+                                        autoComplete="current-password"
+                                        placeholder="Confirm your password to change your email"
+                                    />
+                                    <InputError
+                                        message={errors.current_password}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {unverified && (

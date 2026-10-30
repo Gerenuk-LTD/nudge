@@ -12,7 +12,7 @@ Route::middleware(['auth', 'marketing.workspace:optional'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'marketing.workspace:optional'])->group(function () {
-    Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('settings/profile', [ProfileController::class, 'destroy'])->middleware('throttle:6,1')->name('profile.destroy');
 
     // No password gate on the page itself: changing the password asks for the current one, and two-factor and
     // passkey changes ask for it in a dialog when Fortify needs a fresh confirmation.

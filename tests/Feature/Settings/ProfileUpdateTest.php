@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\User;
+use App\Notifications\EmailAddressChanged;
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 
 test('profile page is displayed', function () {
@@ -45,6 +48,7 @@ test('profile information can be updated', function () {
         ->patch(route('profile.update'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'current_password' => 'password',
         ]);
 
     $response
@@ -107,4 +111,40 @@ test('correct password must be provided to delete account', function () {
         ->assertRedirect(route('profile.edit'));
 
     expect($user->fresh())->not->toBeNull();
+});
+
+test('changing the email needs the current password', function () {
+    $user = User::factory()->create(['email' => 'old@example.com']);
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
+        ->assertSessionHasErrors('current_password');
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com', 'current_password' => 'wrong'])
+        ->assertSessionHasErrors('current_password');
+
+    expect($user->fresh()->email)->toBe('old@example.com');
+});
+
+test('changing the email verifies the new address and tells the old one', function () {
+    Notification::fake();
+    $user = User::factory()->create(['email' => 'old@example.com']);
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com', 'current_password' => 'password'])
+        ->assertSessionHasNoErrors();
+
+    Notification::assertSentTo($user, VerifyEmail::class);
+    Notification::assertSentOnDemand(EmailAddressChanged::class, fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === 'old@example.com');
+});
+
+test('changing only the name needs no password', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => 'Renamed', 'email' => $user->email])
+        ->assertSessionHasNoErrors();
+
+    expect($user->fresh()->name)->toBe('Renamed');
 });

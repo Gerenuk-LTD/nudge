@@ -8,6 +8,7 @@ use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -61,17 +62,29 @@ class SecurityController extends Controller
     {
         $request->validate(['password' => ['required', 'current_password']]);
 
-        if (config('session.driver') === 'database') {
-            DB::connection(config('session.connection'))
-                ->table(config('session.table', 'sessions'))
-                ->where('user_id', $request->user()->getAuthIdentifier())
-                ->where('id', '!=', $request->session()->getId())
-                ->delete();
-        }
+        Auth::logoutOtherDevices($request->string('password')->toString());
+
+        $this->forgetOtherSessionRows($request);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Signed out of your other sessions.')]);
 
         return back();
+    }
+
+    /**
+     * Delete the user's other session rows when sessions are stored in the database.
+     */
+    private function forgetOtherSessionRows(Request $request): void
+    {
+        if (config('session.driver') !== 'database') {
+            return;
+        }
+
+        DB::connection(config('session.connection'))
+            ->table(config('session.table', 'sessions'))
+            ->where('user_id', $request->user()->getAuthIdentifier())
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
     }
 
     /**
@@ -89,6 +102,7 @@ class SecurityController extends Controller
         return array_values(DB::connection(config('session.connection'))
             ->table(config('session.table', 'sessions'))
             ->where('user_id', $request->user()->getAuthIdentifier())
+            ->where('last_activity', '>=', now()->subMinutes((int) config('session.lifetime'))->getTimestamp())
             ->orderByDesc('last_activity')
             ->limit(20)
             ->get(['id', 'ip_address', 'user_agent', 'last_activity'])
@@ -126,6 +140,9 @@ class SecurityController extends Controller
         $request->user()->update([
             'password' => $request->password,
         ]);
+
+        // AuthenticateSession signs out other sessions and remember cookies because the password hash changed.
+        $this->forgetOtherSessionRows($request);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

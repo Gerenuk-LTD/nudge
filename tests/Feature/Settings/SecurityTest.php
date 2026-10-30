@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Auth\Events\OtherDeviceLogout;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -144,4 +146,54 @@ test('correct password must be provided to update password', function () {
     $response
         ->assertSessionHasErrors('current_password')
         ->assertRedirect(route('security.edit'));
+});
+
+test('signing out other devices invalidates every other session, including remembered ones', function () {
+    Event::fake([OtherDeviceLogout::class]);
+    $user = User::factory()->create();
+    $old = $user->password;
+
+    $this->actingAs($user)->delete(route('sessions.destroy-others'), ['password' => 'password'])
+        ->assertSessionHasNoErrors();
+
+    expect($user->fresh()->password)->not->toBe($old)
+        ->and(Hash::check('password', $user->fresh()->password))->toBeTrue();
+    Event::assertDispatched(OtherDeviceLogout::class);
+});
+
+test('a session from before a password change is signed out', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->withSession(['password_hash_web' => 'stale'])
+        ->get(route('security.edit'))
+        ->assertRedirect(route('login'));
+
+    $this->assertGuest();
+});
+
+test('expired sessions are not listed', function () {
+    config(['session.driver' => 'database']);
+    $user = User::factory()->create();
+    $base = ['user_id' => $user->id, 'payload' => ''];
+    DB::table('sessions')->insert([
+        $base + ['id' => 'stale-session', 'last_activity' => now()->subMinutes((int) config('session.lifetime') + 5)->timestamp],
+        $base + ['id' => 'recent-session', 'last_activity' => now()->subMinutes(5)->timestamp],
+    ]);
+
+    $this->actingAs($user)->get(route('security.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('sessions', 1)
+            ->where('sessions.0.id', hash('sha256', 'recent-session')));
+});
+
+test('password confirmation is rate limited', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 6) as $attempt) {
+        $this->actingAs($user)->post(route('password.confirm.store'), ['password' => 'wrong'])
+            ->assertStatus(302);
+    }
+
+    $this->actingAs($user)->post(route('password.confirm.store'), ['password' => 'wrong'])
+        ->assertStatus(429);
 });
