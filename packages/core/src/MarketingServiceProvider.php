@@ -16,7 +16,10 @@ use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Router;
@@ -24,6 +27,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class MarketingServiceProvider extends ServiceProvider
 {
@@ -50,8 +54,29 @@ class MarketingServiceProvider extends ServiceProvider
         $this->registerMiddleware();
         $this->registerGates();
         $this->registerRateLimiting();
+        $this->registerApiErrors();
         $this->registerRoutes();
         $this->registerSchedule();
+    }
+
+    /**
+     * Missing records on API routes answer with a plain message, not the internal model name.
+     */
+    private function registerApiErrors(): void
+    {
+        $this->callAfterResolving(ExceptionHandler::class, function (ExceptionHandler $handler): void {
+            if (! $handler instanceof Handler) {
+                return;
+            }
+
+            $handler->renderable(function (NotFoundHttpException $e, Request $request): ?JsonResponse {
+                if (! $request->is(trim((string) config('marketing.api_prefix'), '/').'/*')) {
+                    return null;
+                }
+
+                return response()->json(['message' => 'Not found.'], 404);
+            });
+        });
     }
 
     private function registerSchedule(): void

@@ -25,6 +25,14 @@ test('requests without a valid token are rejected', function () {
     $this->withToken('gmk_nope')->getJson(route('marketing.api.contacts.index'))->assertUnauthorized();
 });
 
+test('a missing record returns a plain not found message', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.contacts.show', 'nobody@example.com'))
+        ->assertNotFound()
+        ->assertExactJson(['message' => 'Not found.']);
+});
+
 test('expired tokens are rejected', function () {
     $token = apiToken($this->workspace, $this->owner);
     ApiToken::query()->update(['expires_at' => now()->subMinute()]);
