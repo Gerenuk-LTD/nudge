@@ -1,7 +1,7 @@
 import type { RequestPayload } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/react';
 import { CircleAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import AutomationController from '@/actions/Gerenuk/Marketing/Http/Controllers/AutomationController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -78,6 +78,7 @@ export default function EditAutomation(props: Props) {
     );
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [dirty, setDirty] = useState(false);
+    const version = useRef(0);
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -85,6 +86,7 @@ export default function EditAutomation(props: Props) {
         <T,>(setter: (value: T) => void) =>
         (value: T) => {
             setter(value);
+            version.current += 1;
             setDirty(true);
         };
 
@@ -99,6 +101,8 @@ export default function EditAutomation(props: Props) {
     ];
 
     const save = (then?: () => void) => {
+        const savedVersion = version.current;
+
         setSaving(true);
         router.put(
             AutomationController.update.url(automation.id),
@@ -114,7 +118,7 @@ export default function EditAutomation(props: Props) {
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: () => {
-                    setDirty(false);
+                    setDirty(version.current !== savedVersion);
                     setErrors({});
                     then?.();
                 },
@@ -125,7 +129,7 @@ export default function EditAutomation(props: Props) {
     };
 
     useSaveShortcut(() => dirty && !saving && save(), !readOnly);
-    useUnsavedChangesGuard(dirty && !saving);
+    useUnsavedChangesGuard(dirty || saving);
 
     const activate = () =>
         save(() =>

@@ -111,6 +111,8 @@ export default function SegmentForm({
             return;
         }
 
+        const sent = structuredClone(form.data);
+
         form.transform((data) => ({ ...data, definition }));
         form.submit(
             segment
@@ -119,7 +121,7 @@ export default function SegmentForm({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    form.setDefaults();
+                    form.setDefaults(sent);
                     setSavedDefinition(JSON.stringify(definition));
                 },
             },

@@ -158,9 +158,11 @@ export default function ContactShow({
     // Subscription changes straight away from its own button, so saving sends whatever it is now.
     const save = () => {
         form.transform((data) => ({ ...data, status: contact.status }));
+        const sent = structuredClone(form.data);
+
         form.submit(ContactController.update(contact.id), {
             preserveScroll: true,
-            onSuccess: () => form.setDefaults(),
+            onSuccess: () => form.setDefaults(sent),
         });
     };
 

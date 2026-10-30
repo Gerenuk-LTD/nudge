@@ -74,13 +74,15 @@ export default function TemplateForm({
             return;
         }
 
+        const sent = structuredClone(form.data);
+
         form.submit(
             template
                 ? EmailTemplateController.update(template.id)
                 : EmailTemplateController.store(),
             {
                 preserveScroll: true,
-                onSuccess: () => form.setDefaults(),
+                onSuccess: () => form.setDefaults(sent),
             },
         );
     };
