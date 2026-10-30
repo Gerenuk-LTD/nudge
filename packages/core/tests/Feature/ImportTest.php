@@ -172,3 +172,11 @@ test('a retried import resumes after the rows it already processed', function ()
         ->and($import->fresh()->processed_rows)->toBe(3)
         ->and(Contact::pluck('email')->all())->toBe(['three@example.com']);
 });
+
+test('a windows-1252 file imports names with accents', function () {
+    $import = uploadAndStart($this, "email,first\njose@example.com,Jos\xE9\n", ['email', 'first_name']);
+
+    expect($import->status)->toBe(ImportStatus::Completed)
+        ->and($import->failed_count)->toBe(0)
+        ->and(Contact::forEmail('jose@example.com')->first()->first_name)->toBe('José');
+});

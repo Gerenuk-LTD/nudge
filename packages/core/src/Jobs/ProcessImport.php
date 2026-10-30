@@ -15,6 +15,7 @@ use Gerenuk\Marketing\Support\ContactData;
 use Gerenuk\Marketing\Support\ContactRules;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
@@ -100,11 +101,25 @@ class ProcessImport implements ShouldQueue
                     $data = $data->withList($import->contact_list_id);
                 }
 
-                ['contact' => $contact, 'created' => $created] = $upsert->handle($data, ContactSource::Import);
-                $created ? $counts['created_count']++ : $counts['updated_count']++;
+                try {
+                    ['contact' => $contact, 'created' => $created] = $upsert->handle($data, ContactSource::Import);
+                    $created ? $counts['created_count']++ : $counts['updated_count']++;
 
-                if ($tagIds !== []) {
-                    $triggers->tagsAdded($contact, $contact->tags()->syncWithoutDetaching($tagIds)['attached']);
+                    if ($tagIds !== []) {
+                        $triggers->tagsAdded($contact, $contact->tags()->syncWithoutDetaching($tagIds)['attached']);
+                    }
+                } catch (QueryException $exception) {
+                    report($exception);
+
+                    $counts['failed_count']++;
+                    $errors[] = [
+                        'workspace_id' => $import->workspace_id,
+                        'import_id' => $import->id,
+                        'row_number' => $line,
+                        'email' => mb_substr($data->email, 0, 255),
+                        'message' => __('This row could not be saved.'),
+                        'created_at' => now(),
+                    ];
                 }
             }
 

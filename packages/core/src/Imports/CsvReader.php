@@ -70,6 +70,14 @@ class CsvReader
                     $first = false;
                 }
 
+                // Excel on Windows exports Windows-1252, and every byte is valid in it.
+                $row = array_map(
+                    fn (?string $cell) => $cell !== null && ! mb_check_encoding($cell, 'UTF-8')
+                        ? mb_convert_encoding($cell, 'UTF-8', 'Windows-1252')
+                        : $cell,
+                    $row,
+                );
+
                 yield $row;
             }
         } finally {
