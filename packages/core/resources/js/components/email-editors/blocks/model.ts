@@ -10,6 +10,8 @@ export type EmailSettings = {
     font: string;
     text: string;
     link: string;
+    /** Markup from an imported HTML email's <head>, such as its styles, kept so editing it in the builder doesn't lose them. */
+    head?: string;
 };
 
 /** How a columns block divides its width, as relative shares. */
@@ -227,12 +229,22 @@ export function asDocument(state: unknown): EmailDocument | null {
 export function documentFromHtml(html: string): EmailDocument {
     const body = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? html;
 
+    const head = (/<head[^>]*>([\s\S]*)<\/head>/i.exec(html)?.[1] ?? '')
+        .replace(/<meta\s+charset[^>]*>/gi, '')
+        .replace(/<meta\s+name=["']?viewport["']?[^>]*>/gi, '')
+        .replace(
+            /<style[^>]*>(?:(?!<\/style>)[\s\S])*\.email-container(?:(?!<\/style>)[\s\S])*<\/style>/gi,
+            '',
+        )
+        .trim();
+
     return {
         version: 1,
         settings: {
             ...defaultSettings,
             backdrop: '#ffffff',
             canvas: '#ffffff',
+            ...(head === '' ? {} : { head }),
         },
         blocks: [{ id: newId(), type: 'html', html: body.trim() }],
     };

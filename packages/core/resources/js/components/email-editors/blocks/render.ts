@@ -244,6 +244,7 @@ export function renderEmail(document: EmailDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>@media (max-width: ${settings.width + 32}px) { .email-container { width: 100% !important; } .email-column { display: block !important; width: 100% !important; box-sizing: border-box; } }</style>
+${settings.head ?? ''}
 </head>
 <body style="margin:0;padding:0;background:${settings.backdrop}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${settings.backdrop}">
