@@ -9,29 +9,45 @@ import { realpathSync } from 'node:fs';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
 export default defineConfig({
-    plugins: lazyPlugins(() => [
-        laravel({
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
-            refresh: true,
-            fonts: [
-                bunny('Geist', {
-                    weights: [400, 500, 600],
-                }),
-                bunny('Geist Mono', {
-                    weights: [400, 500],
-                }),
-            ],
-        }),
-        inertia(),
-        react(),
-        babel({
-            presets: [reactCompilerPreset()],
-        }),
-        tailwindcss(),
-        wayfinder({
-            formVariants: true,
-        }),
-    ]),
+    plugins: lazyPlugins(() => {
+        // Vitest only runs pure modules; the Laravel and Wayfinder plugins expect a dev server or build and refuse to run under CI.
+        const testing = Boolean(process.env.VITEST);
+
+        return [
+            ...(testing
+                ? []
+                : [
+                      laravel({
+                          input: [
+                              'resources/css/app.css',
+                              'resources/js/app.tsx',
+                          ],
+                          refresh: true,
+                          fonts: [
+                              bunny('Geist', {
+                                  weights: [400, 500, 600],
+                              }),
+                              bunny('Geist Mono', {
+                                  weights: [400, 500],
+                              }),
+                          ],
+                      }),
+                  ]),
+            inertia(),
+            react(),
+            babel({
+                presets: [reactCompilerPreset()],
+            }),
+            tailwindcss(),
+            ...(testing
+                ? []
+                : [
+                      wayfinder({
+                          formVariants: true,
+                      }),
+                  ]),
+        ];
+    }),
     resolve: {
         alias: {
             // The core package's frontend: pages, layouts and components. Resolved through
