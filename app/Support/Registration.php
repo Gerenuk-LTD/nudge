@@ -49,7 +49,7 @@ final class Registration
     public function refusal(): string
     {
         return $this->mode() === 'closed'
-            ? 'Sign-up is closed on this installation.'
-            : 'Sign-up is by invitation. Use the email address your invitation was sent to.';
+            ? __('Sign-up is closed on this installation.')
+            : __('Sign-up is by invitation. Use the email address your invitation was sent to.');
     }
 }
