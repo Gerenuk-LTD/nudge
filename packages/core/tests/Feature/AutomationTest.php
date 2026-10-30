@@ -286,6 +286,23 @@ test('webhook steps refuse private addresses', function () {
     Http::assertNothingSent();
 });
 
+test('webhook steps refuse private IPv6 literals', function () {
+    Http::fake();
+
+    expect(fn () => app(WebhookCaller::class)->post('https://[::1]/hook', []))->toThrow(RuntimeException::class)
+        ->and(fn () => app(WebhookCaller::class)->post('https://[fd00::1]/hook', []))->toThrow(RuntimeException::class);
+
+    Http::assertNothingSent();
+});
+
+test('webhook steps still post to a public address', function () {
+    Http::fake(['*' => Http::response([], 202)]);
+
+    expect(app(WebhookCaller::class)->post('https://8.8.8.8/hook', []))->toBe(202);
+
+    Http::assertSentCount(1);
+});
+
 test('custom events land on the contact timeline', function () {
     apiEvent($this, 'ann@example.com', 'order_placed');
     $contact = Contact::first();
