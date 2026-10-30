@@ -47,6 +47,7 @@ import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDate } from '@marketing/lib/format';
 import type { Paginated } from '@marketing/types';
+import { Shout } from '@marketing/components/shout';
 
 type Reason = 'bounce' | 'complaint' | 'manual';
 
@@ -461,19 +462,19 @@ function RemoveConfirm({
                             and automations can reach it again.
                         </DialogDescription>
                         {risky && (
-                            <div className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-                                <p className="font-medium">
-                                    {suppression.reason === 'bounce'
+                            <Shout
+                                type="warning"
+                                heading={
+                                    suppression.reason === 'bounce'
                                         ? 'This address bounced'
-                                        : 'This person marked you as spam'}
-                                </p>
-                                <p className="mt-0.5 text-13">
-                                    Sending to it again can hurt your sender
-                                    reputation and land your emails in spam for
-                                    everyone. Only do this if you know the
-                                    problem is fixed.
-                                </p>
-                            </div>
+                                        : 'This person marked you as spam'
+                                }
+                            >
+                                Sending to it again can hurt your sender
+                                reputation and land your emails in spam for
+                                everyone. Only do this if you know the problem
+                                is fixed.
+                            </Shout>
                         )}
                         <DialogFooter>
                             <DialogClose asChild>

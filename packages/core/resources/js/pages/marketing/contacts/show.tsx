@@ -57,6 +57,7 @@ import {
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDate, formatDateTime } from '@marketing/lib/format';
 import type { ContactStatus, CustomField, Option } from '@marketing/types';
+import { Shout } from '@marketing/components/shout';
 
 type Contact = {
     id: number;
@@ -270,31 +271,33 @@ export default function ContactShow({
                 </header>
 
                 {contact.archived_at && (
-                    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-                        <Archive className="size-4 shrink-0" />
-                        <p className="flex-1">
-                            Archived {formatDate(contact.archived_at)}. Archived
-                            contacts are hidden from your lists and never
-                            emailed.
-                        </p>
-                        {canEdit && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="bg-card"
-                                onClick={() =>
-                                    router.post(
-                                        ContactController.restore.url(
-                                            contact.id,
-                                        ),
-                                    )
-                                }
-                            >
-                                <ArchiveRestore />
-                                Restore
-                            </Button>
-                        )}
-                    </div>
+                    <Shout
+                        type="warning"
+                        icon={Archive}
+                        heading={`Archived ${formatDate(contact.archived_at)}`}
+                        actions={
+                            canEdit && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-card"
+                                    onClick={() =>
+                                        router.post(
+                                            ContactController.restore.url(
+                                                contact.id,
+                                            ),
+                                        )
+                                    }
+                                >
+                                    <ArchiveRestore />
+                                    Restore
+                                </Button>
+                            )
+                        }
+                    >
+                        Archived contacts are hidden from your lists and never
+                        emailed.
+                    </Shout>
                 )}
 
                 <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">

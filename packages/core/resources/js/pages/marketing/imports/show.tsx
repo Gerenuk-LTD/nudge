@@ -30,6 +30,7 @@ import { PageBody } from '@marketing/components/page-header';
 import { SettingsSection } from '@marketing/components/settings-section';
 import { TagInput } from '@marketing/components/tag-input';
 import type { ImportSummary, Option } from '@marketing/types';
+import { Shout } from '@marketing/components/shout';
 
 type FailedRow = {
     id: number;
@@ -340,7 +341,7 @@ function Results({ import: item, destination, failedRows }: Props) {
     usePoll(2000, { only: ['import', 'failedRows'] }, { autoStart: running });
 
     return (
-        <div className="max-w-4xl space-y-6">
+        <div className="space-y-6">
             {running ? (
                 <div className="space-y-3 rounded-xl border bg-card p-5 shadow-xs">
                     <div className="flex items-center justify-between gap-3 text-sm">
@@ -366,21 +367,14 @@ function Results({ import: item, destination, failedRows }: Props) {
                     </p>
                 </div>
             ) : item.status === 'failed' ? (
-                <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200">
-                    <CircleAlert className="mt-0.5 size-4 shrink-0" />
-                    <div>
-                        <p className="font-medium">
-                            The import stopped after{' '}
-                            {item.processed_rows.toLocaleString()} of{' '}
-                            {item.total_rows.toLocaleString()} rows
-                        </p>
-                        <p className="text-13">
-                            Rows before that were saved. Upload the file again
-                            to bring in the rest; contacts already imported are
-                            updated, not duplicated.
-                        </p>
-                    </div>
-                </div>
+                <Shout
+                    type="danger"
+                    heading={`The import stopped after ${item.processed_rows.toLocaleString()} of ${item.total_rows.toLocaleString()} rows`}
+                >
+                    Rows before that were saved. Upload the file again to bring
+                    in the rest; contacts already imported are updated, not
+                    duplicated.
+                </Shout>
             ) : (
                 <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs">
                     <span className="flex size-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400">

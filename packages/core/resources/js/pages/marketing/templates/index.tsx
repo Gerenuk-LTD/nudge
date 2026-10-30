@@ -23,6 +23,8 @@ type SavedTemplate = {
     name: string;
     description: string | null;
     subject: string | null;
+    editor: string;
+    editor_state: unknown;
     html: string;
     updated_at: string | null;
 };
@@ -88,7 +90,7 @@ export default function TemplatesIndex({
                             {templates.map((template) => (
                                 <TemplateCard
                                     key={template.id}
-                                    html={template.html}
+                                    html={templateHtml(template)}
                                     title={template.name}
                                     detail={
                                         template.description ??

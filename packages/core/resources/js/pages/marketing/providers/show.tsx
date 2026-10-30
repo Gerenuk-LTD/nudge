@@ -54,6 +54,7 @@ import {
 import { StatusBadge } from '@marketing/components/status-badge';
 import { formatDateTime } from '@marketing/lib/format';
 import type { ProviderTypeDefinition } from '@marketing/types';
+import { Shout } from '@marketing/components/shout';
 
 type Provider = {
     id: number;
@@ -430,16 +431,24 @@ function WebhookCard({ provider }: { provider: Provider }) {
                         </div>
                         {verification === 'signing_secret' &&
                             !provider.has_webhook_secret && (
-                                <p className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-2.5 text-13 text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                                <Shout
+                                    type="warning"
+                                    actions={
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="bg-card"
+                                            asChild
+                                        >
+                                            <Link href={edit(provider.id)}>
+                                                Add it
+                                            </Link>
+                                        </Button>
+                                    }
+                                >
                                     No signing secret saved yet, so webhooks are
-                                    rejected.{' '}
-                                    <Link
-                                        href={edit(provider.id)}
-                                        className="font-medium underline underline-offset-2"
-                                    >
-                                        Add it
-                                    </Link>
-                                </p>
+                                    rejected.
+                                </Shout>
                             )}
                     </>
                 )}

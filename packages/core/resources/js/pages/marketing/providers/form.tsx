@@ -266,7 +266,7 @@ export default function ProviderForm({
                         <form
                             id="provider-form"
                             onSubmit={submit}
-                            className="max-w-3xl space-y-6"
+                            className="space-y-6"
                         >
                             <SettingsSection
                                 title={`${type.label} credentials`}
@@ -312,35 +312,37 @@ export default function ProviderForm({
                                             : 'You get the webhook URL after connecting. You can add the secret then.'
                                     }
                                 >
-                                    <div className="grid max-w-md content-start gap-2">
-                                        <Label htmlFor="webhook_secret">
-                                            {type.webhook_secret_label}
-                                        </Label>
-                                        <Input
-                                            id="webhook_secret"
-                                            type="password"
-                                            autoComplete="off"
-                                            placeholder={
-                                                provider?.has_webhook_secret
-                                                    ? 'Saved. Leave blank to keep.'
-                                                    : 'Optional for now'
-                                            }
-                                            value={form.data.webhook_secret}
-                                            onChange={(event) =>
-                                                form.setData(
-                                                    'webhook_secret',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Found in {type.label}'s webhook
-                                            settings. Without it, delivery
-                                            events are rejected.
-                                        </p>
-                                        <InputError
-                                            message={errors.webhook_secret}
-                                        />
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="grid content-start gap-2">
+                                            <Label htmlFor="webhook_secret">
+                                                {type.webhook_secret_label}
+                                            </Label>
+                                            <Input
+                                                id="webhook_secret"
+                                                type="password"
+                                                autoComplete="off"
+                                                placeholder={
+                                                    provider?.has_webhook_secret
+                                                        ? 'Saved. Leave blank to keep.'
+                                                        : 'Optional for now'
+                                                }
+                                                value={form.data.webhook_secret}
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'webhook_secret',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Found in {type.label}'s webhook
+                                                settings. Without it, delivery
+                                                events are rejected.
+                                            </p>
+                                            <InputError
+                                                message={errors.webhook_secret}
+                                            />
+                                        </div>
                                     </div>
                                 </SettingsSection>
                             )}

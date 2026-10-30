@@ -24,6 +24,8 @@ class EmailTemplateController extends Controller
                 'name' => $template->name,
                 'description' => $template->description,
                 'subject' => $template->subject,
+                'editor' => $template->editor,
+                'editor_state' => $template->editor_state,
                 'html' => $template->html,
                 'updated_at' => $template->updated_at?->toIso8601String(),
             ]),

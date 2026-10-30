@@ -101,7 +101,7 @@ function SettingsForm({
                     </Button>
                 }
             >
-                <div className="grid max-w-xl content-start gap-2">
+                <div className="grid content-start gap-2">
                     <Label htmlFor="postal_address">Postal address</Label>
                     <Textarea
                         id="postal_address"

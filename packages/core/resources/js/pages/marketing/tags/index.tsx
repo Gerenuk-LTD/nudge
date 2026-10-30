@@ -42,6 +42,7 @@ import { index as tagsIndex } from '@/routes/marketing/tags';
 import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { useCan } from '@marketing/hooks/use-workspace';
+import { Shout } from '@marketing/components/shout';
 
 type Usage = { type: 'segment' | 'automation'; id: number; name: string };
 
@@ -524,14 +525,11 @@ function DeleteConfirm({ tag, onClose }: { tag: TagRow; onClose: () => void }) {
                 . The contacts themselves are kept.
             </DialogDescription>
             {tag.used_by.length > 0 && (
-                <div className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-                    <p className="font-medium">Still in use</p>
-                    <p className="mt-0.5 text-13">
-                        These stop matching anyone on this tag:{' '}
-                        {tag.used_by.map((item) => item.name).join(', ')}.
-                        Merging it into another tag keeps them working.
-                    </p>
-                </div>
+                <Shout type="warning" heading="Still in use">
+                    These stop matching anyone on this tag:{' '}
+                    {tag.used_by.map((item) => item.name).join(', ')}. Merging
+                    it into another tag keeps them working.
+                </Shout>
             )}
             <DialogFooter>
                 <DialogClose asChild>

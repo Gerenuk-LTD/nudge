@@ -95,7 +95,7 @@ export default function ImportsIndex({
                         </Button>
                     </div>
                 ) : (
-                    <div className="max-w-3xl space-y-8">
+                    <div className="space-y-8">
                         {days.map(([day, items]) => (
                             <section key={day} className="space-y-3">
                                 <h2 className="text-13 font-medium text-muted-foreground">

@@ -461,7 +461,7 @@ export default function ShowCampaign({
                         <h2 className="text-base font-semibold">
                             What was sent
                         </h2>
-                        <div className="max-w-3xl overflow-hidden rounded-xl border bg-card shadow-xs">
+                        <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
                             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-b px-5 py-4 text-13">
                                 <dt className="text-muted-foreground">From</dt>
                                 <dd className="min-w-0 truncate">

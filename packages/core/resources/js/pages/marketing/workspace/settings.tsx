@@ -53,7 +53,7 @@ export default function WorkspaceSettings({
                                 workspace={{ name: name || '?' }}
                                 className="mt-6 size-10 rounded-lg text-sm"
                             />
-                            <div className="grid flex-1 gap-2 sm:max-w-sm">
+                            <div className="grid flex-1 gap-2">
                                 <Label htmlFor="name">Workspace name</Label>
                                 <Input
                                     id="name"

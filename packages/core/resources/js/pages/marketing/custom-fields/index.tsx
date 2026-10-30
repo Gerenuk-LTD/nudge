@@ -49,6 +49,7 @@ import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { CustomFieldType } from '@marketing/types';
+import { Shout } from '@marketing/components/shout';
 
 type Usage = { type: 'segment' | 'automation'; id: number; name: string };
 
@@ -621,13 +622,10 @@ function DeleteConfirm({
                     ` The ${field.filled_count.toLocaleString()} values already stored stay on contacts, and come back if you add a field with the key ${field.key} again.`}
             </DialogDescription>
             {field.used_by.length > 0 && (
-                <div className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-                    <p className="font-medium">Still in use</p>
-                    <p className="mt-0.5 text-13">
-                        These rely on it and will stop working as expected:{' '}
-                        {field.used_by.map((item) => item.name).join(', ')}.
-                    </p>
-                </div>
+                <Shout type="warning" heading="Still in use">
+                    These rely on it and will stop working as expected:{' '}
+                    {field.used_by.map((item) => item.name).join(', ')}.
+                </Shout>
             )}
             <DialogFooter>
                 <DialogClose asChild>
