@@ -101,6 +101,14 @@ class Contact extends Model
     }
 
     /**
+     * @return HasMany<CampaignRecipient, $this>
+     */
+    public function campaignRecipients(): HasMany
+    {
+        return $this->hasMany(CampaignRecipient::class);
+    }
+
+    /**
      * @return HasMany<ActivityEvent, $this>
      */
     public function events(): HasMany

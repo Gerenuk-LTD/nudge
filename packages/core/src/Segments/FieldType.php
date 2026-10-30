@@ -11,6 +11,7 @@ enum FieldType: string
     case Choice = 'choice';
     case Tag = 'tag';
     case ContactList = 'list';
+    case Activity = 'activity';
 
     /**
      * @return list<string>
@@ -25,11 +26,12 @@ enum FieldType: string
             self::Choice => ['is', 'is_not'],
             self::Tag => ['has', 'has_not'],
             self::ContactList => ['in', 'not_in'],
+            self::Activity => ['in_last_days', 'not_in_last_days', 'never'],
         };
     }
 
     public static function operatorNeedsValue(string $operator): bool
     {
-        return ! in_array($operator, ['is_empty', 'is_not_empty', 'is_true', 'is_false'], true);
+        return ! in_array($operator, ['is_empty', 'is_not_empty', 'is_true', 'is_false', 'never'], true);
     }
 }

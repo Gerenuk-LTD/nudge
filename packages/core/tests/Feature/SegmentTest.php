@@ -2,12 +2,16 @@
 
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Enums\ContactSource;
+use Gerenuk\Marketing\Enums\RecipientStatus;
+use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
+use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
 use Gerenuk\Marketing\Segments\SegmentQuery;
 use Gerenuk\Marketing\Support\ContactData;
 use Illuminate\Validation\ValidationException;
@@ -125,6 +129,8 @@ test('invalid definitions are rejected with a reason', function (array $definiti
     'wrong operator for type' => [['match' => 'all', 'conditions' => [condition('custom:seats', 'contains', '1')]]],
     'non-numeric number' => [['match' => 'all', 'conditions' => [condition('custom:seats', 'greater_than', 'lots')]]],
     'bad date' => [['match' => 'all', 'conditions' => [condition('custom:renewal', 'before', '2026-02-31')]]],
+    'zero days of activity' => [['match' => 'all', 'conditions' => [condition('activity:opened', 'in_last_days', 0)]]],
+    'non-numeric days of activity' => [['match' => 'all', 'conditions' => [condition('activity:opened', 'in_last_days', 'abc')]]],
     'missing match' => [['conditions' => []]],
     'too deep' => [['match' => 'all', 'conditions' => [['type' => 'group', 'match' => 'all', 'conditions' => [['type' => 'group', 'match' => 'all', 'conditions' => [['type' => 'group', 'match' => 'all', 'conditions' => []]]]]]]]],
 ]);
@@ -160,4 +166,51 @@ test('the segment list shows each segment\'s rules and its share of active conta
             ->where('segments.0.contacts_count', 1)
             ->where('activeContacts', 3)
             ->has('fields'));
+});
+
+function recordEngagement(string $email, ?int $sentDaysAgo, ?int $openedDaysAgo = null, ?int $clickedDaysAgo = null): void
+{
+    CampaignRecipient::create([
+        'campaign_id' => Campaign::factory()->create()->id,
+        'contact_id' => Contact::query()->where('email', $email)->firstOrFail()->id,
+        'email' => $email,
+        'status' => RecipientStatus::Sent,
+        'sent_at' => $sentDaysAgo === null ? null : now()->subDays($sentDaysAgo),
+        'opened_at' => $openedDaysAgo === null ? null : now()->subDays($openedDaysAgo),
+        'clicked_at' => $clickedDaysAgo === null ? null : now()->subDays($clickedDaysAgo),
+    ]);
+}
+
+test('engagement conditions find who opened, clicked or received recently', function () {
+    recordEngagement('ann@example.com', 10, 9, 9);
+    recordEngagement('bob@example.com', 200, 199);
+
+    expect(matchingEmails([condition('activity:opened', 'in_last_days', 30)]))->toBe(['ann@example.com'])
+        ->and(matchingEmails([condition('activity:opened', 'in_last_days', 365)]))->toBe(['ann@example.com', 'bob@example.com'])
+        ->and(matchingEmails([condition('activity:clicked', 'in_last_days', 365)]))->toBe(['ann@example.com'])
+        ->and(matchingEmails([condition('activity:received', 'in_last_days', 30)]))->toBe(['ann@example.com']);
+});
+
+test('engagement conditions find who has gone quiet or never engaged', function () {
+    recordEngagement('ann@example.com', 10, 9, 9);
+    recordEngagement('bob@example.com', 200, 199);
+
+    expect(matchingEmails([condition('activity:opened', 'not_in_last_days', 30)]))->toBe(['bob@example.com', 'cat@test.org'])
+        ->and(matchingEmails([condition('activity:clicked', 'never')]))->toBe(['bob@example.com', 'cat@test.org'])
+        ->and(matchingEmails([condition('activity:received', 'never')]))->toBe(['cat@test.org']);
+});
+
+test('engagement combines with other conditions', function () {
+    recordEngagement('ann@example.com', 10, 9, 9);
+    recordEngagement('bob@example.com', 200, 199);
+
+    expect(matchingEmails([
+        condition('activity:opened', 'in_last_days', 365),
+        condition('status', 'is', 'subscribed'),
+    ]))->toBe(['ann@example.com', 'bob@example.com']);
+});
+
+test('the field catalog offers the engagement fields with their operators', function () {
+    expect(app(SegmentFieldCatalog::class)->find('activity:clicked')->toArray()['operators'])
+        ->toBe(['in_last_days', 'not_in_last_days', 'never']);
 });

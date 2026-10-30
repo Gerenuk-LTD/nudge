@@ -43,6 +43,9 @@ class SegmentFieldCatalog
             new SegmentField('status', 'Subscription status', FieldType::Choice, 'status', self::enumOptions(ContactStatus::cases())),
             new SegmentField('source', 'Signup source', FieldType::Choice, 'source', self::enumOptions(ContactSource::cases())),
             new SegmentField('created_at', 'Date added', FieldType::Date, 'created_at'),
+            new SegmentField('activity:opened', 'Opened an email', FieldType::Activity, 'opened_at'),
+            new SegmentField('activity:clicked', 'Clicked a link', FieldType::Activity, 'clicked_at'),
+            new SegmentField('activity:received', 'Received an email', FieldType::Activity, 'sent_at'),
             new SegmentField('tag', 'Tag', FieldType::Tag, null, array_values(Tag::query()->orderBy('name')->get()
                 ->map(fn (Tag $tag) => ['value' => $tag->id, 'label' => $tag->name])->all())),
             new SegmentField('list', 'List', FieldType::ContactList, null, array_values(ContactList::query()->orderBy('name')->get()

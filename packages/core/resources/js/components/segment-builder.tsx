@@ -35,9 +35,20 @@ const operatorLabels: Record<string, string> = {
     has_not: 'does not have',
     in: 'is on',
     not_in: 'is not on',
+    in_last_days: 'in the last',
+    not_in_last_days: 'not in the last',
+    never: 'never',
 };
 
-const valuelessOperators = ['is_empty', 'is_not_empty', 'is_true', 'is_false'];
+const valuelessOperators = [
+    'is_empty',
+    'is_not_empty',
+    'is_true',
+    'is_false',
+    'never',
+];
+
+const activityOperators = ['in_last_days', 'not_in_last_days'];
 
 export function emptyCondition(fields: SegmentField[]): SegmentCondition {
     const field = fields[0];
@@ -59,6 +70,10 @@ function defaultValue(field: SegmentField, operator: string) {
         return 30;
     }
 
+    if (activityOperators.includes(operator)) {
+        return 90;
+    }
+
     return field.options[0]?.value ?? '';
 }
 
@@ -76,6 +91,10 @@ export function describeCondition(
     }
 
     if (condition.operator === 'within_last_days') {
+        return `${label} ${operator} ${condition.value} days`;
+    }
+
+    if (activityOperators.includes(condition.operator)) {
         return `${label} ${operator} ${condition.value} days`;
     }
 
@@ -144,6 +163,16 @@ export function segmentStarters(fields: SegmentField[]): SegmentStarter[] {
             operator: 'within_last_days',
             value: 30,
         }),
+        starter(
+            'engaged',
+            'Engaged recently',
+            'Opened an email in the last 90 days',
+            {
+                field: 'activity:opened',
+                operator: 'in_last_days',
+                value: 90,
+            },
+        ),
         ...(tag
             ? [
                   starter(
@@ -406,7 +435,9 @@ function ConditionEditor({
             ...condition,
             operator,
             value:
-                field.type === 'date' || valuelessOperators.includes(operator)
+                field.type === 'date' ||
+                field.type === 'activity' ||
+                valuelessOperators.includes(operator)
                     ? defaultValue(field, operator)
                     : condition.value,
         });
@@ -481,7 +512,13 @@ function ValueInput({
         return null;
     }
 
-    if (['within_last_days', 'more_than_days_ago'].includes(operator)) {
+    if (
+        [
+            'within_last_days',
+            'more_than_days_ago',
+            ...activityOperators,
+        ].includes(operator)
+    ) {
         return (
             <div className="flex items-center gap-2 text-sm">
                 <Input
@@ -492,7 +529,7 @@ function ValueInput({
                     value={value ?? ''}
                     onChange={(event) => onChange(Number(event.target.value))}
                 />
-                {operator === 'within_last_days' ? 'days' : 'days ago'}
+                {operator === 'more_than_days_ago' ? 'days ago' : 'days'}
             </div>
         );
     }

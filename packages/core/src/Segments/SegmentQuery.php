@@ -78,6 +78,7 @@ class SegmentQuery
             FieldType::ContactList => $operator === 'in'
                 ? $query->whereHas('lists', fn (Builder $lists) => $lists->whereKey($value))
                 : $query->whereDoesntHave('lists', fn (Builder $lists) => $lists->whereKey($value)),
+            FieldType::Activity => $this->applyActivity($query, $field->column, $operator, $value),
             FieldType::Text => $this->applyText($query, $field->column, $operator, (string) $value),
             FieldType::Number => $this->applyNumber($query, $field->column, $operator, $value),
             FieldType::Date => $this->applyDate($query, $field->column, $operator, $value),
@@ -152,6 +153,21 @@ class SegmentQuery
             'is_empty' => $query->whereNull($column),
             'is_not_empty' => $query->whereNotNull($column),
             default => throw new InvalidArgumentException("Unknown date operator [{$operator}]."),
+        };
+    }
+
+    /**
+     * Whether the contact did something across all their campaign emails: an open, a click or a send, by whole day.
+     *
+     * @param  Builder<Contact>  $query
+     */
+    private function applyActivity(Builder $query, string $column, string $operator, mixed $value): void
+    {
+        match ($operator) {
+            'in_last_days' => $query->whereHas('campaignRecipients', fn (Builder $recipients) => $recipients->where($column, '>=', now()->subDays((int) $value)->startOfDay())),
+            'not_in_last_days' => $query->whereDoesntHave('campaignRecipients', fn (Builder $recipients) => $recipients->where($column, '>=', now()->subDays((int) $value)->startOfDay())),
+            'never' => $query->whereDoesntHave('campaignRecipients', fn (Builder $recipients) => $recipients->whereNotNull($column)),
+            default => throw new InvalidArgumentException("Unknown activity operator [{$operator}]."),
         };
     }
 

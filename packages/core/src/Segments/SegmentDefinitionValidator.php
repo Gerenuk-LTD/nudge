@@ -94,7 +94,7 @@ class SegmentDefinitionValidator
 
     private function valueIsValid(SegmentField $field, string $operator, mixed $value): bool
     {
-        if (in_array($operator, ['within_last_days', 'more_than_days_ago'], true)) {
+        if (in_array($operator, ['within_last_days', 'more_than_days_ago', 'in_last_days', 'not_in_last_days'], true)) {
             return filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 36500]]) !== false;
         }
 
@@ -108,6 +108,7 @@ class SegmentDefinitionValidator
                 true,
             ),
             FieldType::Boolean => true,
+            FieldType::Activity => false,
         };
     }
 

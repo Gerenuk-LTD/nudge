@@ -56,7 +56,8 @@ export type SegmentFieldType =
     | 'boolean'
     | 'choice'
     | 'tag'
-    | 'list';
+    | 'list'
+    | 'activity';
 
 export type SegmentField = {
     key: string;
