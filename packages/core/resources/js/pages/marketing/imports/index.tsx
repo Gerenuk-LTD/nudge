@@ -1,6 +1,6 @@
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import { Ellipsis, FileSpreadsheet, Trash2, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,7 +45,19 @@ export default function ImportsIndex({
         ['queued', 'processing'].includes(item.status),
     );
 
-    usePoll(3000, { only: ['imports'] }, { autoStart: running });
+    const { start, stop } = usePoll(
+        3000,
+        { only: ['imports'] },
+        { autoStart: false },
+    );
+
+    useEffect(() => {
+        if (running) {
+            start();
+        } else {
+            stop();
+        }
+    }, [running, start, stop]);
 
     const days = Object.entries(
         Object.groupBy(

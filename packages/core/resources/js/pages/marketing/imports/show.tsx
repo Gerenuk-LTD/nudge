@@ -12,6 +12,7 @@ import {
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useEffect } from 'react';
 import type { FormEvent } from 'react';
 import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
 import InputError from '@/components/input-error';
@@ -338,7 +339,19 @@ function Results({ import: item, destination, failedRows }: Props) {
             : 100;
     const imported = item.created_count + item.updated_count;
 
-    usePoll(2000, { only: ['import', 'failedRows'] }, { autoStart: running });
+    const { start, stop } = usePoll(
+        2000,
+        { only: ['import', 'failedRows'] },
+        { autoStart: false },
+    );
+
+    useEffect(() => {
+        if (running) {
+            start();
+        } else {
+            stop();
+        }
+    }, [running, start, stop]);
 
     return (
         <div className="space-y-6">
