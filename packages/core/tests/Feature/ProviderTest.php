@@ -122,3 +122,20 @@ test('the provider list shows each provider\'s sends and bounces from the last w
             ->where('providers.1.id', $quiet->id)
             ->where('providers.1.sent_7d', 0));
 });
+
+test('private smtp hosts can be refused by config', function () {
+    $payload = [
+        'name' => 'Relay', 'type' => 'smtp', 'max_per_second' => 5,
+        'credentials' => ['host' => '127.0.0.1', 'port' => '25', 'encryption' => 'starttls'],
+    ];
+
+    config(['marketing.sending.allow_private_smtp_hosts' => false]);
+    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload)
+        ->assertSessionHasErrors('credentials.host');
+    expect(Provider::count())->toBe(0);
+
+    config(['marketing.sending.allow_private_smtp_hosts' => true]);
+    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload)
+        ->assertSessionHasNoErrors();
+    expect(Provider::count())->toBe(1);
+});

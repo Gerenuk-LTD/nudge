@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Http\Requests;
 
+use Closure;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
@@ -41,8 +42,46 @@ class ProviderRequest extends FormRequest
                 'max:1000',
                 ...($field->options === [] ? [] : [Rule::in(array_column($field->options, 'value'))]),
             ];
+
+            if ($type === ProviderType::Smtp && $field->key === 'host' && ! config('marketing.sending.allow_private_smtp_hosts')) {
+                $rules['credentials.host'][] = function (string $attribute, mixed $value, Closure $fail): void {
+                    if (is_string($value) && ! $this->resolvesToPublicAddresses($value)) {
+                        $fail("This host is on a private network, which this installation doesn't allow.");
+                    }
+                };
+            }
         }
 
         return $rules;
+    }
+
+    /**
+     * Whether the host resolves, and every address it resolves to is public.
+     */
+    private function resolvesToPublicAddresses(string $host): bool
+    {
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            $addresses = [$host];
+        } else {
+            $addresses = gethostbynamel($host) ?: [];
+
+            foreach (dns_get_record($host, DNS_AAAA) ?: [] as $record) {
+                if (isset($record['ipv6'])) {
+                    $addresses[] = $record['ipv6'];
+                }
+            }
+        }
+
+        if ($addresses === []) {
+            return false;
+        }
+
+        foreach ($addresses as $address) {
+            if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

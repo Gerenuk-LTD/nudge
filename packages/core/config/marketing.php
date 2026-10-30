@@ -75,6 +75,11 @@ return [
 
     'sending' => [
         'queue' => env('MARKETING_SENDING_QUEUE', 'default'),
+
+        // Self-hosted installs often relay through a local mail server. On a shared, multi-tenant
+        // install, set this to false so workspace owners can't point SMTP at internal services.
+        'allow_private_smtp_hosts' => (bool) env('MARKETING_ALLOW_PRIVATE_SMTP_HOSTS', true),
+
         'auto_pause' => [
             'minimum_sends' => 200,
             'bounce_rate' => 0.05,
