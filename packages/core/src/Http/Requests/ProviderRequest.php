@@ -46,7 +46,7 @@ class ProviderRequest extends FormRequest
             if ($type === ProviderType::Smtp && $field->key === 'host' && ! config('marketing.sending.allow_private_smtp_hosts')) {
                 $rules['credentials.host'][] = function (string $attribute, mixed $value, Closure $fail): void {
                     if (is_string($value) && ! $this->resolvesToPublicAddresses($value)) {
-                        $fail("This host is on a private network, which this installation doesn't allow.");
+                        $fail(__('This host is on a private network, which this installation doesn\'t allow.'));
                     }
                 };
             }
