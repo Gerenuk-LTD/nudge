@@ -39,6 +39,14 @@ test('the list counts each reason and links addresses that belong to contacts', 
             ->where('suppressions.data.0.contact', ['id' => $contact->id, 'name' => 'Jane']));
 });
 
+test('exports neutralise spreadsheet formulas', function () {
+    Suppression::suppress('jane@example.com', SuppressionReason::Bounce, '=HYPERLINK("http://x")');
+
+    $download = $this->actingAs($this->owner)->get(route('marketing.suppressions.export'));
+
+    expect($download->streamedContent())->toContain("'=HYPERLINK");
+});
+
 test('the whole list can be exported as a CSV', function () {
     Suppression::suppress('jane@example.com', SuppressionReason::Bounce, 'Mailbox does not exist');
 

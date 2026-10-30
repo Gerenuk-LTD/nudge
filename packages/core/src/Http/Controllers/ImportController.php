@@ -12,6 +12,7 @@ use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Import;
 use Gerenuk\Marketing\Models\ImportError;
 use Gerenuk\Marketing\Models\Tag;
+use Gerenuk\Marketing\Support\CsvCell;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -163,7 +164,7 @@ class ImportController extends Controller
             fputcsv($out, ['row', 'email', 'error'], escape: '');
 
             $import->errors()->lazyById(1000)->each(function (ImportError $error) use ($out): void {
-                fputcsv($out, [$error->row_number, $error->email, $error->message], escape: '');
+                fputcsv($out, array_map(CsvCell::safe(...), [$error->row_number, $error->email, $error->message]), escape: '');
             });
 
             fclose($out);

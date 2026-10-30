@@ -80,6 +80,14 @@ test('a mapped import creates and updates contacts, adds them to a list and tags
         ->and(Contact::whereHas('tags', fn ($q) => $q->where('name', 'Imported'))->count())->toBe(2);
 });
 
+test('the errors download neutralises spreadsheet formulas', function () {
+    $import = uploadAndStart($this, "email\n=1+1\n", ['email']);
+
+    $download = $this->actingAs($this->owner)->get(route('marketing.imports.errors', $import));
+
+    expect($download->streamedContent())->toContain("'=1+1");
+});
+
 test('invalid rows are skipped and reported with their line number', function () {
     $import = uploadAndStart($this, "email\ngood@example.com\nnot-an-email\n\nalso-good@example.com\n", ['email']);
 

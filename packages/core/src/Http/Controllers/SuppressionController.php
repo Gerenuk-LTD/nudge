@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing\Http\Controllers;
 use Gerenuk\Marketing\Enums\SuppressionReason;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Suppression;
+use Gerenuk\Marketing\Support\CsvCell;
 use Gerenuk\Marketing\Support\TableQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -114,7 +115,7 @@ class SuppressionController extends Controller
             fputcsv($out, ['email', 'reason', 'detail', 'since'], escape: '');
 
             Suppression::query()->lazyById(1000)->each(function (Suppression $suppression) use ($out): void {
-                fputcsv($out, [$suppression->email, $suppression->reason->value, $suppression->detail, $suppression->created_at?->toDateString()], escape: '');
+                fputcsv($out, array_map(CsvCell::safe(...), [$suppression->email, $suppression->reason->value, $suppression->detail, $suppression->created_at?->toDateString()]), escape: '');
             });
 
             fclose($out);
