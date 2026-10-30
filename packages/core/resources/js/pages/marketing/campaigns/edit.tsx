@@ -773,7 +773,49 @@ function AbTestPanel({
     errors: Record<string, string | undefined>;
     mergeTags: MergeTag[];
 }) {
-    const testsContent = form.data.ab_html_b !== '';
+    const [testsContent, setTestsContent] = useState(
+        form.data.ab_html_b !== '',
+    );
+    const [discarding, setDiscarding] = useState(false);
+
+    const discardContent = () => {
+        form.setData((data) => ({
+            ...data,
+            ab_html_b: '',
+            ab_editor_state_b: '',
+        }));
+        setTestsContent(false);
+        setDiscarding(false);
+    };
+
+    const choose = (content: boolean) => {
+        if (content === testsContent) {
+            return;
+        }
+
+        if (content) {
+            setTestsContent(true);
+
+            if (form.data.ab_html_b === '') {
+                // Version B's content starts as a copy of A, ready to change.
+                form.setData((data) => ({
+                    ...data,
+                    ab_html_b: data.html,
+                    ab_editor_state_b: data.editor_state,
+                }));
+            }
+
+            return;
+        }
+
+        if (form.data.ab_html_b !== '') {
+            setDiscarding(true);
+
+            return;
+        }
+
+        setTestsContent(false);
+    };
 
     return (
         <div className="space-y-5 rounded-lg border bg-muted/30 p-4">
@@ -790,16 +832,7 @@ function AbTestPanel({
                             key={label}
                             type="button"
                             aria-pressed={testsContent === content}
-                            onClick={() =>
-                                form.setData((data) => ({
-                                    ...data,
-                                    // Version B's content starts as a copy of A, ready to change.
-                                    ab_html_b: content ? data.html : '',
-                                    ab_editor_state_b: content
-                                        ? data.editor_state
-                                        : '',
-                                }))
-                            }
+                            onClick={() => choose(content)}
                             className={cn(
                                 'h-7 rounded-md px-3 text-13 font-medium text-muted-foreground',
                                 testsContent === content &&
@@ -914,6 +947,22 @@ function AbTestPanel({
                     </NativeSelect>
                 </Field>
             </div>
+
+            <Dialog open={discarding} onOpenChange={setDiscarding}>
+                <DialogContent>
+                    <DialogTitle>Discard version B's content?</DialogTitle>
+                    <DialogDescription>
+                        Testing the subject line sends version A's content to
+                        everyone. Version B's content will be deleted.
+                    </DialogDescription>
+                    <DialogFooter className="gap-2">
+                        <DialogClose asChild>
+                            <Button variant="secondary">Keep it</Button>
+                        </DialogClose>
+                        <Button onClick={discardContent}>Discard</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
