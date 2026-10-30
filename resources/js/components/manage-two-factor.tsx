@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { SettingsSection } from '@marketing/components/settings-section';
@@ -6,6 +6,7 @@ import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePasswordConfirmation } from '@/hooks/use-password-confirmation';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
 import { disable, enable } from '@/routes/two-factor';
 
@@ -31,6 +32,21 @@ export default function ManageTwoFactor(props: Props) {
         errors,
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
+    const [processing, setProcessing] = useState(false);
+    const { requirePassword, dialog } = usePasswordConfirmation();
+
+    const visit = (method: 'post' | 'delete', url: string, then?: () => void) =>
+        requirePassword(() =>
+            router.visit(url, {
+                method,
+                preserveScroll: true,
+                // Keeps the setup modal's open state across the redirect back to this page.
+                preserveState: true,
+                onStart: () => setProcessing(true),
+                onFinish: () => setProcessing(false),
+                onSuccess: then,
+            }),
+        );
     const prevTwoFactorEnabled = useRef(twoFactorEnabled);
 
     useEffect(() => {
@@ -65,41 +81,30 @@ export default function ManageTwoFactor(props: Props) {
             }
             actions={
                 twoFactorEnabled ? (
-                    <Form
-                        {...disable.form()}
-                        options={{ preserveScroll: true }}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={processing}
+                        onClick={() => visit('delete', disable.url())}
                     >
-                        {({ processing }) => (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                type="submit"
-                                disabled={processing}
-                            >
-                                Turn off
-                            </Button>
-                        )}
-                    </Form>
+                        Turn off
+                    </Button>
                 ) : hasSetupData ? (
                     <Button size="sm" onClick={() => setShowSetupModal(true)}>
                         Continue setup
                     </Button>
                 ) : (
-                    <Form
-                        {...enable.form()}
-                        options={{ preserveScroll: true }}
-                        onSuccess={() => setShowSetupModal(true)}
+                    <Button
+                        size="sm"
+                        disabled={processing}
+                        onClick={() =>
+                            visit('post', enable.url(), () =>
+                                setShowSetupModal(true),
+                            )
+                        }
                     >
-                        {({ processing }) => (
-                            <Button
-                                size="sm"
-                                type="submit"
-                                disabled={processing}
-                            >
-                                Turn on
-                            </Button>
-                        )}
-                    </Form>
+                        Turn on
+                    </Button>
                 )
             }
         >
@@ -107,6 +112,7 @@ export default function ManageTwoFactor(props: Props) {
                 <TwoFactorRecoveryCodes
                     recoveryCodesList={recoveryCodesList}
                     fetchRecoveryCodes={fetchRecoveryCodes}
+                    requirePassword={requirePassword}
                     errors={errors}
                 />
             )}
@@ -122,6 +128,8 @@ export default function ManageTwoFactor(props: Props) {
                 fetchSetupData={fetchSetupData}
                 errors={errors}
             />
+
+            {dialog}
         </SettingsSection>
     );
 }

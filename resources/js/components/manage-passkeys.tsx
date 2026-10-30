@@ -3,6 +3,7 @@ import { KeyRound } from 'lucide-react';
 import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegistrationController';
 import PasskeyItem from '@/components/passkey-item';
 import PasskeyRegistration from '@/components/passkey-register';
+import { usePasswordConfirmation } from '@/hooks/use-password-confirmation';
 import { SettingsSection } from '@marketing/components/settings-section';
 import type { Passkey } from '@/types/auth';
 
@@ -27,13 +28,15 @@ const EmptyState = () => {
 
 export default function ManagePasskeys(props: Props) {
     const passkeys = props.passkeys ?? [];
+    const { requirePassword, dialog } = usePasswordConfirmation();
 
-    const handleDelete = (id: number, onError: () => void) => {
-        router.delete(destroy.url(id), {
-            preserveScroll: true,
-            onError,
-        });
-    };
+    const handleDelete = (id: number, onError: () => void) =>
+        requirePassword(() =>
+            router.delete(destroy.url(id), {
+                preserveScroll: true,
+                onError,
+            }),
+        );
 
     const handleRegisterSuccess = () => {
         router.reload();
@@ -62,7 +65,12 @@ export default function ManagePasskeys(props: Props) {
                 )}
             </div>
 
-            <PasskeyRegistration onSuccess={handleRegisterSuccess} />
+            <PasskeyRegistration
+                onSuccess={handleRegisterSuccess}
+                requirePassword={requirePassword}
+            />
+
+            {dialog}
         </SettingsSection>
     );
 }

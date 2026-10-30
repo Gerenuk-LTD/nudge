@@ -1,7 +1,6 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { MailWarning } from 'lucide-react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import DeleteUser from '@/components/delete-user';
 import InputError from '@/components/input-error';
 import { SettingsSection } from '@marketing/components/settings-section';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -133,8 +132,6 @@ export default function Profile({
                     </SettingsSection>
                 )}
             </Form>
-
-            <DeleteUser />
         </>
     );
 }

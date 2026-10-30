@@ -11,10 +11,14 @@ import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys'
 import ManagePasskeys from '@/components/manage-passkeys';
 import type { Props as ManageTwoFactorProps } from '@/components/manage-two-factor';
 import ManageTwoFactor from '@/components/manage-two-factor';
+import ActiveSessions from '@/components/active-sessions';
+import type { Session } from '@/components/active-sessions';
+import DeleteUser from '@/components/delete-user';
 
 // oxfmt-ignore
 type Props = {
     passwordRules: string;
+    sessions: Session[] | null;
 } & ManagePasskeysProps &
     ManageTwoFactorProps;
 
@@ -64,17 +68,19 @@ export default function Security(props: Props) {
                             </Button>
                         }
                     >
-                        <div className="grid gap-2 sm:max-w-sm">
-                            <Label htmlFor="current_password">
-                                Current password
-                            </Label>
-                            <PasswordInput
-                                id="current_password"
-                                ref={currentPasswordInput}
-                                name="current_password"
-                                autoComplete="current-password"
-                            />
-                            <InputError message={errors.current_password} />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid content-start gap-2">
+                                <Label htmlFor="current_password">
+                                    Current password
+                                </Label>
+                                <PasswordInput
+                                    id="current_password"
+                                    ref={currentPasswordInput}
+                                    name="current_password"
+                                    autoComplete="current-password"
+                                />
+                                <InputError message={errors.current_password} />
+                            </div>
                         </div>
 
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -119,6 +125,10 @@ export default function Security(props: Props) {
                 canManagePasskeys={props.canManagePasskeys}
                 passkeys={props.passkeys}
             />
+
+            {props.sessions && <ActiveSessions sessions={props.sessions} />}
+
+            <DeleteUser />
         </>
     );
 }

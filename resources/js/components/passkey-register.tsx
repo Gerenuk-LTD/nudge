@@ -8,9 +8,14 @@ import { Label } from '@/components/ui/label';
 
 type Props = {
     onSuccess: () => void;
+    /** Runs the action once the password is confirmed, as adding a passkey needs. */
+    requirePassword: (action: () => void) => void;
 };
 
-export default function PasskeyRegistration({ onSuccess }: Props) {
+export default function PasskeyRegistration({
+    onSuccess,
+    requirePassword,
+}: Props) {
     const [name, setName] = useState(() => {
         const ua = navigator.userAgent;
 
@@ -49,7 +54,7 @@ export default function PasskeyRegistration({ onSuccess }: Props) {
             return;
         }
 
-        await register(name);
+        requirePassword(() => void register(name));
     };
 
     const handleCancel = () => {

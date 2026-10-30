@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -30,7 +31,7 @@ test('security page is displayed', function () {
         );
 });
 
-test('security page requires password confirmation when enabled', function () {
+test('security page opens without a separate password page, while two factor changes still need a confirmed password', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     $user = User::factory()->create();
@@ -40,10 +41,52 @@ test('security page requires password confirmation when enabled', function () {
         'confirmPassword' => true,
     ]);
 
-    $response = $this->actingAs($user)
-        ->get(route('security.edit'));
+    $this->actingAs($user)->get(route('security.edit'))->assertOk();
 
-    $response->assertRedirect(route('password.confirm'));
+    $this->actingAs($user)
+        ->postJson(route('two-factor.enable'))
+        ->assertStatus(423);
+
+    expect($user->fresh()->two_factor_secret)->toBeNull();
+});
+
+test('the security page lists where the user is signed in', function () {
+    config(['session.driver' => 'database']);
+    $user = User::factory()->create();
+    DB::table('sessions')->insert([
+        'id' => 'other-session',
+        'user_id' => $user->id,
+        'ip_address' => '203.0.113.9',
+        'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+        'payload' => '',
+        'last_activity' => now()->subHour()->timestamp,
+    ]);
+
+    $this->actingAs($user)->get(route('security.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('sessions', 1)
+            ->where('sessions.0.browser', 'Safari')
+            ->where('sessions.0.platform', 'iPhone')
+            ->where('sessions.0.ip_address', '203.0.113.9')
+            ->where('sessions.0.current', false));
+});
+
+test('other sessions can be signed out after confirming the password', function () {
+    config(['session.driver' => 'database']);
+    $user = User::factory()->create();
+    $someoneElse = User::factory()->create();
+    foreach ([[$user->id, 'mine'], [$someoneElse->id, 'theirs']] as [$userId, $id]) {
+        DB::table('sessions')->insert(['id' => $id, 'user_id' => $userId, 'payload' => '', 'last_activity' => now()->timestamp]);
+    }
+
+    $this->actingAs($user)->delete(route('sessions.destroy-others'), ['password' => 'wrong'])
+        ->assertSessionHasErrors('password');
+    expect(DB::table('sessions')->where('id', 'mine')->exists())->toBeTrue();
+
+    $this->actingAs($user)->delete(route('sessions.destroy-others'), ['password' => 'password'])
+        ->assertSessionHasNoErrors();
+
+    expect(DB::table('sessions')->pluck('id')->all())->toBe(['theirs']);
 });
 
 test('security page renders without two factor when feature is disabled', function () {

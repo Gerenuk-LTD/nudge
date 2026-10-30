@@ -1,6 +1,6 @@
-import { Form } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import AlertError from '@/components/alert-error';
 import { Button } from '@/components/ui/button';
 import { regenerateRecoveryCodes } from '@/routes/two-factor';
@@ -8,40 +8,40 @@ import { regenerateRecoveryCodes } from '@/routes/two-factor';
 type Props = {
     recoveryCodesList: string[];
     fetchRecoveryCodes: () => Promise<void>;
+    /** Runs the action once the password is confirmed, as reading or replacing codes needs. */
+    requirePassword: (action: () => void) => void;
     errors: string[];
 };
 
 export default function TwoFactorRecoveryCodes({
     recoveryCodesList,
     fetchRecoveryCodes,
+    requirePassword,
     errors,
 }: Props) {
     const [codesAreVisible, setCodesAreVisible] = useState<boolean>(false);
     const codesSectionRef = useRef<HTMLDivElement | null>(null);
     const canRegenerateCodes = recoveryCodesList.length > 0 && codesAreVisible;
 
-    const toggleCodesVisibility = useCallback(async () => {
-        if (!codesAreVisible && !recoveryCodesList.length) {
+    const show = useCallback(async () => {
+        if (!recoveryCodesList.length) {
             await fetchRecoveryCodes();
         }
 
-        setCodesAreVisible(!codesAreVisible);
-
-        if (!codesAreVisible) {
-            setTimeout(() => {
-                codesSectionRef.current?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest',
-                });
+        setCodesAreVisible(true);
+        setTimeout(() => {
+            codesSectionRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
             });
-        }
-    }, [codesAreVisible, recoveryCodesList.length, fetchRecoveryCodes]);
-
-    useEffect(() => {
-        if (!recoveryCodesList.length) {
-            void fetchRecoveryCodes();
-        }
+        });
     }, [recoveryCodesList.length, fetchRecoveryCodes]);
+
+    // Codes are only fetched when asked for, since reading them needs a recent password confirmation.
+    const toggleCodesVisibility = () =>
+        codesAreVisible
+            ? setCodesAreVisible(false)
+            : requirePassword(() => void show());
 
     const RecoveryCodeIconComponent = codesAreVisible ? EyeOff : Eye;
 
@@ -78,23 +78,26 @@ export default function TwoFactorRecoveryCodes({
                     </Button>
 
                     {canRegenerateCodes && (
-                        <Form
-                            {...regenerateRecoveryCodes.form()}
-                            options={{ preserveScroll: true }}
-                            onSuccess={fetchRecoveryCodes}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            aria-describedby="regenerate-warning"
+                            onClick={() =>
+                                requirePassword(() =>
+                                    router.post(
+                                        regenerateRecoveryCodes.url(),
+                                        {},
+                                        {
+                                            preserveScroll: true,
+                                            onSuccess: () =>
+                                                void fetchRecoveryCodes(),
+                                        },
+                                    ),
+                                )
+                            }
                         >
-                            {({ processing }) => (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    type="submit"
-                                    disabled={processing}
-                                    aria-describedby="regenerate-warning"
-                                >
-                                    <RefreshCw /> Regenerate
-                                </Button>
-                            )}
-                        </Form>
+                            <RefreshCw /> Regenerate
+                        </Button>
                     )}
                 </div>
             </div>
