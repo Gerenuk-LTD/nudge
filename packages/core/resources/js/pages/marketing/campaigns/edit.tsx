@@ -54,6 +54,7 @@ import type { SaveState } from '@marketing/components/editor-bar';
 import { EditorBar, Stepper } from '@marketing/components/editor-bar';
 import { PageBody } from '@marketing/components/page-header';
 import { ToggleSwitch } from '@marketing/components/toggle-switch';
+import { useUnsavedChangesGuard } from '@marketing/hooks/use-editor';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDateTime } from '@marketing/lib/format';
 import type { ChecklistItem, Option } from '@marketing/types';
@@ -225,6 +226,7 @@ export default function EditCampaign(props: Props) {
                 : JSON.parse(data.ab_editor_state_b),
     }));
     useAutosave(form, campaign.id, scheduled);
+    useUnsavedChangesGuard(!scheduled && (form.isDirty || form.processing));
 
     const saveState: SaveState = form.processing
         ? 'saving'
@@ -353,6 +355,7 @@ type DraftForm = ReturnType<typeof useForm<Draft>>;
 function useAutosave(form: DraftForm, campaignId: number, disabled: boolean) {
     const serialized = JSON.stringify(form.data);
     const first = useRef(true);
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
         if (first.current) {
@@ -366,11 +369,15 @@ function useAutosave(form: DraftForm, campaignId: number, disabled: boolean) {
         }
 
         const timer = setTimeout(() => {
+            const sent = structuredClone(form.data);
+
             form.submit(CampaignController.update(campaignId), {
                 preserveScroll: true,
                 preserveState: true,
+                async: true,
+                onCancel: () => setRetry((n) => n + 1),
                 onSuccess: () => {
-                    form.setDefaults();
+                    form.setDefaults(sent);
                     router.reload({ only: ['checklist', 'audienceCount'] });
                 },
             });
@@ -378,7 +385,7 @@ function useAutosave(form: DraftForm, campaignId: number, disabled: boolean) {
 
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [serialized, disabled]);
+    }, [serialized, disabled, retry]);
 }
 
 function ContentStep({
