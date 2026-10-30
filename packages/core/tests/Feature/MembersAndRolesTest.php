@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Marketing\Actions\Workspaces\RemoveUserFromWorkspaces;
 use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Invitation;
 use Gerenuk\Marketing\Models\Membership;
@@ -9,6 +10,7 @@ use Gerenuk\Marketing\Notifications\WorkspaceInvitation;
 use Gerenuk\Marketing\Tests\Fixtures\User;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 function roleNamed(string $name): Role
 {
@@ -235,4 +237,20 @@ test('demoting a member narrows their API tokens', function () {
     $this->actingAs($owner)->put(route('marketing.members.update', $membership), ['role_id' => roleNamed('Viewer')->id])->assertRedirect();
 
     expect(ApiToken::withoutGlobalScopes()->where('created_by', $admin->id)->first()->permissions)->toBe(['contacts.view']);
+});
+
+test('the last owner of a workspace cannot be removed by deleting their user', function () {
+    [$original, $workspace] = $this->createOwner();
+    $user = $this->addMember($workspace, 'Owner');
+    Membership::where('user_id', $original->id)->delete();
+
+    expect(fn () => app(RemoveUserFromWorkspaces::class)->handle($user))->toThrow(ValidationException::class);
+
+    try {
+        app(RemoveUserFromWorkspaces::class)->handle($user);
+    } catch (ValidationException $exception) {
+        expect($exception->errors())->toHaveKey('account');
+    }
+
+    expect(Membership::where('user_id', $user->id)->exists())->toBeTrue();
 });

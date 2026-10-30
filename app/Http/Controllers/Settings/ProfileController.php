@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Notifications\EmailAddressChanged;
+use Gerenuk\Marketing\Actions\Workspaces\RemoveUserFromWorkspaces;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,14 +59,21 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's profile.
+     *
+     * Users are first removed from their workspaces through the core's rules. Anyone who owns a workspace, or is the
+     * only owner of one, is refused with a validation error and stays signed in.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, RemoveUserFromWorkspaces $removeFromWorkspaces): RedirectResponse
     {
         $user = $request->user();
 
-        Auth::logout();
-
-        $user->delete();
+        // The workspace check runs first, so a refused user stays signed in with nothing changed. Logging out happens
+        // before the delete because logout saves a fresh remember token, which would re-create a deleted user.
+        DB::transaction(function () use ($user, $removeFromWorkspaces): void {
+            $removeFromWorkspaces->handle($user);
+            Auth::logout();
+            $user->delete();
+        });
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

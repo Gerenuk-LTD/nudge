@@ -2,9 +2,15 @@
 
 use App\Models\User;
 use App\Notifications\EmailAddressChanged;
+use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Marketing\Models\ApiToken;
+use Gerenuk\Marketing\Models\Membership;
+use Gerenuk\Marketing\Models\Role;
+use Gerenuk\Marketing\Models\Workspace;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 
 test('profile page is displayed', function () {
@@ -147,4 +153,66 @@ test('changing only the name needs no password', function () {
         ->assertSessionHasNoErrors();
 
     expect($user->fresh()->name)->toBe('Renamed');
+});
+
+function addWorkspaceMember(User $user, Workspace $workspace, string $roleName): void
+{
+    Membership::create([
+        'workspace_id' => $workspace->id,
+        'user_id' => $user->id,
+        'role_id' => Role::withoutGlobalScopes()->where('workspace_id', $workspace->id)->where('name', $roleName)->value('id'),
+    ]);
+}
+
+test('a workspace owner is told why their account cannot be deleted, and stays signed in', function () {
+    $user = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($user, 'Acme');
+    addWorkspaceMember(User::factory()->create(), $workspace, 'Owner');
+
+    $this->actingAs($user->refresh())
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasErrors('account');
+
+    $this->assertAuthenticated();
+    expect($user->fresh())->not->toBeNull();
+});
+
+test('a member who owns nothing is removed from their workspaces and their tokens are revoked', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Acme');
+    $member = User::factory()->create();
+    addWorkspaceMember($member, $workspace, 'Editor');
+    app(CreateApiToken::class)->handle($workspace, $member, 'x', ['contacts.view']);
+
+    $this->actingAs($member->refresh())
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertRedirect(route('home'));
+
+    $this->assertGuest();
+    expect(User::find($member->id))->toBeNull()
+        ->and(Membership::where('user_id', $member->id)->count())->toBe(0)
+        ->and(ApiToken::withoutGlobalScopes()->where('created_by', $member->id)->count())->toBe(0);
+});
+
+test('a second owner can delete their account when another owner remains', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Acme');
+    $second = User::factory()->create();
+    addWorkspaceMember($second, $workspace, 'Owner');
+
+    $this->actingAs($second->refresh())
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('home'));
+
+    expect(User::find($second->id))->toBeNull();
+});
+
+test('a user with a remember token is really deleted', function () {
+    $user = User::factory()->create();
+    $user->forceFill(['remember_token' => Str::random(60)])->save();
+
+    $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password']);
+
+    expect(User::find($user->id))->toBeNull();
 });
