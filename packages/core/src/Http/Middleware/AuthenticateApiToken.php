@@ -7,6 +7,7 @@ use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -18,10 +19,18 @@ class AuthenticateApiToken
 
     public function handle(Request $request, Closure $next): Response
     {
+        $failureKey = 'marketing-api-auth:'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($failureKey, 30)) {
+            return response()->json(['message' => 'Too many attempts.'], 429);
+        }
+
         $plainToken = $request->bearerToken();
         $token = $plainToken !== null ? ApiToken::findByPlainToken($plainToken) : null;
 
         if ($token === null || $token->isExpired()) {
+            RateLimiter::hit($failureKey, 60);
+
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 

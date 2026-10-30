@@ -7,6 +7,7 @@ use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Workspace;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -31,6 +32,14 @@ test('a missing record returns a plain not found message', function () {
     $this->withToken($token)->getJson(route('marketing.api.contacts.show', 'nobody@example.com'))
         ->assertNotFound()
         ->assertExactJson(['message' => 'Not found.']);
+});
+
+test('repeated bad tokens from one address are rate limited', function () {
+    foreach (range(1, 30) as $attempt) {
+        $this->withToken('gmk_'.Str::random(40))->getJson(route('marketing.api.me'))->assertUnauthorized();
+    }
+
+    $this->withToken('gmk_'.Str::random(40))->getJson(route('marketing.api.me'))->assertStatus(429);
 });
 
 test('expired tokens are rejected', function () {
