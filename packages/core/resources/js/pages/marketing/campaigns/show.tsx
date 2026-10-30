@@ -1,9 +1,18 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/CampaignController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { show as showContact } from '@/routes/marketing/contacts';
 import { index as campaignsIndex } from '@/routes/marketing/campaigns';
@@ -133,7 +142,22 @@ export default function ShowCampaign({
     const active =
         campaign.status === 'sending' || campaign.status === 'scheduled';
 
-    usePoll(4000, { only: ['campaign', 'links'] }, { autoStart: active });
+    const { start, stop } = usePoll(
+        4000,
+        { only: ['campaign', 'links'] },
+        { autoStart: false },
+    );
+
+    useEffect(() => {
+        if (active) {
+            start();
+        } else {
+            stop();
+        }
+    }, [active, start, stop]);
+
+    const [confirmingStop, setConfirmingStop] = useState(false);
+    const [confirmingWinner, setConfirmingWinner] = useState(false);
 
     const abRows: AbRow[] = abTest
         ? (['a', 'b'] as const).map((variant) => ({
@@ -294,13 +318,7 @@ export default function ShowCampaign({
                                 campaign.status === 'sending' && (
                                     <Button
                                         variant="destructive"
-                                        onClick={() =>
-                                            router.post(
-                                                CampaignController.cancel.url(
-                                                    campaign.id,
-                                                ),
-                                            )
-                                        }
+                                        onClick={() => setConfirmingStop(true)}
                                     >
                                         Stop sending
                                     </Button>
@@ -381,11 +399,7 @@ export default function ShowCampaign({
                                         variant="outline"
                                         size="sm"
                                         onClick={() =>
-                                            router.post(
-                                                CampaignController.pickWinner.url(
-                                                    campaign.id,
-                                                ),
-                                            )
+                                            setConfirmingWinner(true)
                                         }
                                     >
                                         Pick the winner now
@@ -504,6 +518,66 @@ export default function ShowCampaign({
                         </div>
                     </section>
                 )}
+
+                <Dialog
+                    open={confirmingWinner}
+                    onOpenChange={setConfirmingWinner}
+                >
+                    <DialogContent>
+                        <DialogTitle>
+                            Send the leading version to everyone else now?
+                        </DialogTitle>
+                        <DialogDescription>
+                            The remaining audience gets the version that's ahead
+                            right now. This can't be undone.
+                        </DialogDescription>
+                        <DialogFooter className="gap-2">
+                            <DialogClose asChild>
+                                <Button variant="secondary">Not yet</Button>
+                            </DialogClose>
+                            <Button
+                                onClick={() => {
+                                    setConfirmingWinner(false);
+                                    router.post(
+                                        CampaignController.pickWinner.url(
+                                            campaign.id,
+                                        ),
+                                    );
+                                }}
+                            >
+                                Pick the winner
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={confirmingStop} onOpenChange={setConfirmingStop}>
+                    <DialogContent>
+                        <DialogTitle>Stop sending this campaign?</DialogTitle>
+                        <DialogDescription>
+                            Anyone who hasn't been sent it yet won't get it.
+                            Emails already sent can't be recalled.
+                        </DialogDescription>
+                        <DialogFooter className="gap-2">
+                            <DialogClose asChild>
+                                <Button variant="secondary">Not yet</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    setConfirmingStop(false);
+                                    router.post(
+                                        CampaignController.cancel.url(
+                                            campaign.id,
+                                        ),
+                                    );
+                                }}
+                            >
+                                Stop sending
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </PageBody>
         </>
     );
