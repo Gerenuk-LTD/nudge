@@ -8,7 +8,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import WorkspaceSettingsLayout from '@marketing/layouts/workspace-settings-layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Nudge';
 
 // Pages come from this app and from the core package, whose pages are all under `marketing/`.
 const pages = {

@@ -33,6 +33,7 @@
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="manifest" href="/site.webmanifest">
 
         @fonts
 
@@ -40,7 +41,7 @@
         {{-- Core package pages live outside resources/js/pages; app.tsx loads them itself. --}}
         @vite(['resources/css/app.css', 'resources/js/app.tsx', ...(str_starts_with($page['component'], 'marketing/') ? [] : ["resources/js/pages/{$page['component']}.tsx"])])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ config('app.name', 'Nudge') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">
