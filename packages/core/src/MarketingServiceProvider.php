@@ -11,6 +11,7 @@ use Gerenuk\Marketing\Http\Middleware\SetCurrentWorkspace;
 use Gerenuk\Marketing\Jobs\AdvanceDueAutomationRuns;
 use Gerenuk\Marketing\Jobs\DispatchDueCampaigns;
 use Gerenuk\Marketing\Jobs\EnrollScheduledTriggers;
+use Gerenuk\Marketing\Jobs\PruneStaleImports;
 use Gerenuk\Marketing\Jobs\RecoverStalledSends;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
@@ -83,6 +84,7 @@ class MarketingServiceProvider extends ServiceProvider
     {
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->call(new DispatchDueCampaigns)->everyMinute()->name('marketing:dispatch-due-campaigns')->withoutOverlapping(10);
+            $schedule->call(new PruneStaleImports)->daily()->name('marketing:prune-stale-imports')->withoutOverlapping(60);
             $schedule->call(new AdvanceDueAutomationRuns)->everyMinute()->name('marketing:advance-automation-runs')->withoutOverlapping(10);
             $schedule->job(new EnrollScheduledTriggers([AutomationTrigger::SegmentEntered]))->everyFiveMinutes()->name('marketing:segment-triggers')->withoutOverlapping(30);
             $schedule->job(new EnrollScheduledTriggers([AutomationTrigger::DateField, AutomationTrigger::Inactivity]))->dailyAt('08:00')->name('marketing:daily-triggers')->withoutOverlapping(120);

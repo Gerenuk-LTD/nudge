@@ -18,6 +18,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
@@ -50,6 +51,21 @@ class ProcessImport implements ShouldQueue
             'status' => ImportStatus::Failed,
             'finished_at' => now(),
         ]);
+
+        self::deleteUpload($this->import);
+    }
+
+    /**
+     * Delete an import's uploaded spreadsheet. Once processed, it's only a copy of contact data, often with columns
+     * that were never mapped, so it isn't kept. A file that's already gone is fine.
+     */
+    public static function deleteUpload(Import $import): void
+    {
+        try {
+            Storage::disk(config('marketing.imports.disk'))->delete($import->file_path);
+        } catch (Throwable $exception) {
+            Log::warning('Import upload could not be deleted', ['import' => $import->id, 'exception' => $exception::class]);
+        }
     }
 
     private function process(): void
@@ -138,6 +154,8 @@ class ProcessImport implements ShouldQueue
         $this->saveProgress($import, $counts, $errors);
 
         $import->update(['status' => ImportStatus::Completed, 'finished_at' => now()]);
+
+        self::deleteUpload($import);
     }
 
     /**

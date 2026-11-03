@@ -6,6 +6,7 @@ use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Enums\ImportStatus;
 use Gerenuk\Marketing\Jobs\ProcessImport;
+use Gerenuk\Marketing\Jobs\PruneStaleImports;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
@@ -214,4 +215,30 @@ test('a failed import row does not put contact data in the log', function () {
         fn (array $context) => array_keys($context) === ['import', 'row', 'sqlstate'] && ! str_contains(json_encode($context), 'secret.person'),
     ));
     Log::shouldNotHaveReceived('error');
+});
+
+test('a completed import deletes its uploaded file', function () {
+    $import = uploadAndStart($this, "email\nann@example.com\n", ['email']);
+
+    expect($import->status)->toBe(ImportStatus::Completed);
+    Storage::disk('local')->assertMissing($import->file_path);
+});
+
+test('stale unstarted imports are pruned', function () {
+    $this->actingAs($this->owner)->post(route('marketing.imports.store'), ['file' => csvUpload("email\nold@example.com\n", 'old.csv')]);
+    $stale = Import::latest('id')->first();
+    $stale->forceFill(['created_at' => now()->subDays(8)])->save();
+
+    $this->actingAs($this->owner)->post(route('marketing.imports.store'), ['file' => csvUpload("email\nnew@example.com\n", 'new.csv')]);
+    $recent = Import::latest('id')->first();
+    $recent->forceFill(['created_at' => now()->subDay()])->save();
+
+    Storage::disk('local')->assertExists([$stale->file_path, $recent->file_path]);
+
+    (new PruneStaleImports)();
+
+    expect(Import::find($stale->id))->toBeNull()
+        ->and(Import::find($recent->id))->not->toBeNull();
+    Storage::disk('local')->assertMissing($stale->file_path);
+    Storage::disk('local')->assertExists($recent->file_path);
 });
