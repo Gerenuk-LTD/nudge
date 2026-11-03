@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\URL;
 /**
  * Signed URLs for click tracking, the open pixel and unsubscribing. The signature stops anyone
  * guessing another recipient's links; it is short because it appears in every email.
+ * Links signed with a previous APP_KEY keep working after key rotation, as long as that key is listed in APP_PREVIOUS_KEYS.
  */
 class TrackingUrls
 {
@@ -39,12 +40,21 @@ class TrackingUrls
 
     public function verify(string $payload, string $signature): bool
     {
-        return hash_equals($this->sign($payload), $signature);
+        foreach ([config('app.key'), ...config('app.previous_keys', [])] as $key) {
+            if (is_string($key) && $key !== '' && hash_equals($this->sign($payload, $key), $signature)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    private function sign(string $payload): string
+    /**
+     * New links are always signed with the current key.
+     */
+    private function sign(string $payload, ?string $key = null): string
     {
-        return substr(hash_hmac('sha256', $payload, 'marketing-tracking|'.config('app.key')), 0, 24);
+        return substr(hash_hmac('sha256', $payload, 'marketing-tracking|'.($key ?? config('app.key'))), 0, 24);
     }
 
     /**

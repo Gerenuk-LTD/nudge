@@ -106,3 +106,21 @@ test('a tracking link signed for one recipient does not work for another', funct
 
     $this->post("/u/{$other}/{$signature}")->assertNotFound();
 });
+
+test('links signed with a previous app key still work after rotation', function () {
+    $url = pathOf($this->urls->unsubscribe($this->recipient));
+    $oldKey = config('app.key');
+
+    config(['app.previous_keys' => [$oldKey], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+
+    $this->get($url)->assertOk();
+    $this->post($url, ['List-Unsubscribe' => 'One-Click'])->assertOk();
+});
+
+test('links signed with an unknown key are rejected', function () {
+    $url = pathOf($this->urls->unsubscribe($this->recipient));
+
+    config(['app.previous_keys' => [], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+
+    $this->get($url)->assertNotFound();
+});
