@@ -38,7 +38,10 @@ class ProfileController extends Controller
 
         $request->user()->fill($request->safe()->except('current_password'));
 
-        $emailChanged = $request->user()->isDirty('email');
+        // Stored lowercased, as login looks it up. A change of case alone isn't a new address, so it needs no
+        // password (the request compares lowercased) and keeps the address verified.
+        $request->user()->email = mb_strtolower(trim($request->user()->email));
+        $emailChanged = $request->user()->email !== mb_strtolower(trim((string) $previousEmail));
 
         if ($emailChanged) {
             $request->user()->email_verified_at = null;

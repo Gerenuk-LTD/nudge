@@ -233,3 +233,29 @@ test('changing the email is rate limited', function () {
 
     expect($user->fresh()->email)->not->toBe('new@example.com');
 });
+
+test('changing only the case of the email is not a change', function () {
+    Notification::fake();
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => ' Ann@Example.COM '])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->fresh()->email)->toBe('ann@example.com')
+        ->and($user->fresh()->email_verified_at)->not->toBeNull();
+    Notification::assertNothingSent();
+});
+
+test('a new email is stored lowercased', function () {
+    Notification::fake();
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'New.Ann@Example.com', 'current_password' => 'password'])
+        ->assertSessionHasNoErrors();
+
+    expect($user->fresh()->email)->toBe('new.ann@example.com')
+        ->and($user->fresh()->email_verified_at)->toBeNull();
+});
