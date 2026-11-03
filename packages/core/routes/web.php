@@ -104,7 +104,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::put('campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');
         Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
         Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
-        Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test');
+        Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test')->middleware('throttle:marketing-test-sends');
         Route::post('campaigns/{campaign}/template', [EmailTemplateController::class, 'storeFromCampaign'])->name('campaigns.template');
 
         Route::get('templates/create', [EmailTemplateController::class, 'create'])->name('templates.create');
@@ -144,7 +144,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::get('providers/{provider}/edit', [ProviderController::class, 'edit'])->name('providers.edit');
         Route::put('providers/{provider}', [ProviderController::class, 'update'])->name('providers.update');
         Route::delete('providers/{provider}', [ProviderController::class, 'destroy'])->name('providers.destroy');
-        Route::post('providers/{provider}/test', [ProviderController::class, 'test'])->name('providers.test');
+        Route::post('providers/{provider}/test', [ProviderController::class, 'test'])->name('providers.test')->middleware('throttle:marketing-test-sends');
     });
 
     Route::prefix('workspace')->group(function () {

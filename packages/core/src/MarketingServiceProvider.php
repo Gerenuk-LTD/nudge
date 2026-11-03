@@ -126,6 +126,10 @@ class MarketingServiceProvider extends ServiceProvider
             return Limit::perMinute(config('marketing.api_requests_per_minute'))
                 ->by($token !== null ? 'token:'.hash('sha256', $token) : 'ip:'.$request->ip());
         });
+
+        // Test sends go through the real provider to any address, so a compromised account could spam with them.
+        RateLimiter::for('marketing-test-sends', fn (Request $request): Limit => Limit::perHour(20)
+            ->by('test-send:'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
     }
 
     private function registerRoutes(): void

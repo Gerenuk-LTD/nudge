@@ -201,6 +201,50 @@ test('test emails go to the given address without tracking', function () {
         ->and((string) $email->getHtmlBody())->not->toContain('/t/o/');
 });
 
+test('test sends are refused while sending is paused', function () {
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+    $this->workspace->update(['sending_paused_at' => now(), 'sending_paused_reason' => 'Bounce rate']);
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+        ->assertSessionHasErrors('emails');
+
+    expect($this->transports->sent)->toBeEmpty();
+});
+
+test('test sends skip suppressed addresses and count against the daily limit', function () {
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+    Suppression::suppress('bounced@example.com', SuppressionReason::Bounce);
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['Bounced@example.com']])
+        ->assertSessionHasErrors('emails');
+    expect($this->transports->sent)->toBeEmpty();
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['bounced@example.com', 'me@example.com']])
+        ->assertSessionHasNoErrors();
+    expect($this->transports->recipients())->toBe(['me@example.com']);
+
+    $this->provider->update(['daily_limit' => 2]);
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+        ->assertSessionHasNoErrors();
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+        ->assertSessionHasErrors('emails');
+    expect($this->transports->sent)->toHaveCount(2);
+});
+
+test('test sends are rate limited', function () {
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    foreach (range(1, 20) as $attempt) {
+        $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ["me{$attempt}@example.com"]])
+            ->assertSessionHasNoErrors();
+    }
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me21@example.com']])
+        ->assertTooManyRequests();
+    expect($this->transports->sent)->toHaveCount(20);
+});
+
 test('sent campaigns cannot be edited', function () {
     Contact::factory()->create();
     $campaign = sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id]));
