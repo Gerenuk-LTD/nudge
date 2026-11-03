@@ -50,9 +50,28 @@ class ProviderRequest extends FormRequest
                     }
                 };
             }
+
+            // Region codes end up in the API hostname, so free text could point sending at any host.
+            if ($field->key === 'region' && $type === ProviderType::AmazonSes) {
+                $rules['credentials.region'][] = 'regex:/^[a-z]{2}(-[a-z]+)+-\d+$/';
+            }
+
+            if ($field->key === 'region' && $type === ProviderType::Scaleway) {
+                $rules['credentials.region'][] = Rule::in(['fr-par', 'nl-ams', 'pl-waw']);
+            }
         }
 
         return $rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'credentials.region.regex' => __('Enter a region code such as eu-west-1.'),
+        ];
     }
 
     /**
