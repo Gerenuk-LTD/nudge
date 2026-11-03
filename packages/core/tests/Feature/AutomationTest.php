@@ -362,3 +362,15 @@ test('triggers from a rolled back save are dropped', function () {
     expect(AutomationRun::count())->toBe(0)
         ->and(Contact::count())->toBe(0);
 });
+
+test('automation emails cannot be deleted or cancelled as campaigns', function () {
+    liveAutomation($this, AutomationTrigger::ApiEvent, ['event' => 'signed_up'], [emailStep('e1', 'Welcome', $this->provider->id)]);
+    $stepCampaign = Campaign::where('automation_step_id', 'e1')->firstOrFail();
+
+    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $stepCampaign))->assertNotFound();
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.cancel', $stepCampaign))->assertNotFound();
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.unschedule', $stepCampaign))->assertNotFound();
+
+    expect($stepCampaign->fresh())->not->toBeNull()
+        ->and($stepCampaign->fresh()->status)->toBe($stepCampaign->status);
+});

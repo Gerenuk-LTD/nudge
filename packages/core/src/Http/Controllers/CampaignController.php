@@ -156,6 +156,8 @@ class CampaignController extends Controller
 
     public function destroy(Campaign $campaign): RedirectResponse
     {
+        abort_if($campaign->kind === CampaignKind::Automation, 404);
+
         abort_unless(in_array($campaign->status, [CampaignStatus::Draft, CampaignStatus::Cancelled], true), 403, __('Only drafts and cancelled campaigns can be deleted.'));
 
         $campaign->delete();
@@ -229,6 +231,8 @@ class CampaignController extends Controller
      */
     public function pickWinner(Campaign $campaign): RedirectResponse
     {
+        abort_if($campaign->kind === CampaignKind::Automation, 404);
+
         abort_unless($campaign->ab_enabled && $campaign->ab_winner === null && $campaign->status === CampaignStatus::Sending, 409);
 
         PickAbTestWinner::dispatch($campaign->id, $campaign->workspace_id, force: true);
@@ -238,6 +242,8 @@ class CampaignController extends Controller
 
     public function unschedule(Campaign $campaign): RedirectResponse
     {
+        abort_if($campaign->kind === CampaignKind::Automation, 404);
+
         $updated = Campaign::query()->whereKey($campaign->id)->where('status', CampaignStatus::Scheduled)
             ->update(['status' => CampaignStatus::Draft, 'scheduled_at' => null]);
 
@@ -250,6 +256,8 @@ class CampaignController extends Controller
 
     public function cancel(Campaign $campaign): RedirectResponse
     {
+        abort_if($campaign->kind === CampaignKind::Automation, 404);
+
         $cancelled = Campaign::query()->whereKey($campaign->id)->where('status', CampaignStatus::Sending)
             ->update(['status' => CampaignStatus::Cancelled]) === 1;
 
