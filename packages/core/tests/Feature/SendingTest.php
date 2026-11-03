@@ -303,3 +303,23 @@ test('the campaign editor shows how many people each audience choice reaches', f
                 ->where('audienceSizes.lists', [$newsletter->id => 1, $empty->id => 0])
                 ->where('audienceSizes.segments', [$segment->id => 1])));
 });
+
+test('only approvers can switch campaign approval', function () {
+    $this->actingAs($this->owner)->post(route('marketing.roles.store'), ['name' => 'Deliverability', 'permissions' => ['providers.manage']])
+        ->assertRedirect();
+    $manager = $this->addMember($this->workspace, 'Deliverability');
+    $settings = ['postal_address' => "1 High Street\nLondon", 'requires_campaign_approval' => true];
+
+    $this->actingAs($manager)->get(route('marketing.sending.edit'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('canChangeApproval', false));
+    $this->actingAs($manager)->put(route('marketing.sending.update'), $settings)
+        ->assertSessionHasErrors('requires_campaign_approval');
+    expect($this->workspace->fresh()->requires_campaign_approval)->toBeFalse();
+
+    $this->actingAs($manager)->put(route('marketing.sending.update'), [...$settings, 'requires_campaign_approval' => false, 'postal_address' => 'New address'])
+        ->assertSessionHasNoErrors();
+    expect($this->workspace->fresh()->postal_address)->toBe('New address');
+
+    $this->actingAs($this->owner)->put(route('marketing.sending.update'), $settings)->assertSessionHasNoErrors();
+    expect($this->workspace->fresh()->requires_campaign_approval)->toBeTrue();
+});

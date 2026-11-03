@@ -14,12 +14,14 @@ import { formatDateTime } from '@marketing/lib/format';
 export default function SendingSettings({
     postal_address,
     requires_campaign_approval,
+    canChangeApproval,
     paused_at,
     paused_reason,
     thresholds,
 }: {
     postal_address: string | null;
     requires_campaign_approval: boolean;
+    canChangeApproval: boolean;
     paused_at: string | null;
     paused_reason: string | null;
     thresholds: {
@@ -60,6 +62,7 @@ export default function SendingSettings({
             <SettingsForm
                 postalAddress={postal_address}
                 requiresApproval={requires_campaign_approval}
+                canChangeApproval={canChangeApproval}
             />
 
             <SettingsSection
@@ -73,9 +76,11 @@ export default function SendingSettings({
 function SettingsForm({
     postalAddress,
     requiresApproval,
+    canChangeApproval,
 }: {
     postalAddress: string | null;
     requiresApproval: boolean;
+    canChangeApproval: boolean;
 }) {
     const form = useForm({
         postal_address: postalAddress ?? '',
@@ -129,11 +134,21 @@ function SettingsForm({
                             each campaign. Editing a campaign withdraws its
                             approval.
                         </p>
+                        {!canChangeApproval && (
+                            <p className="text-xs text-muted-foreground">
+                                Only people who can approve campaigns can change
+                                this.
+                            </p>
+                        )}
+                        <InputError
+                            message={form.errors.requires_campaign_approval}
+                        />
                     </div>
                     <span className="pt-0.5">
                         <ToggleSwitch
                             id="requires_approval"
                             checked={form.data.requires_campaign_approval}
+                            disabled={!canChangeApproval}
                             onCheckedChange={(checked) =>
                                 form.setData(
                                     'requires_campaign_approval',
