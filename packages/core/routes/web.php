@@ -104,6 +104,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::put('campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');
         Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
         Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
+        Route::post('campaigns/{campaign}/resend', [CampaignController::class, 'resendToNonOpeners'])->name('campaigns.resend');
         Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test')->middleware('throttle:marketing-test-sends');
         Route::post('campaigns/{campaign}/template', [EmailTemplateController::class, 'storeFromCampaign'])->name('campaigns.template');
 

@@ -79,6 +79,7 @@ class SegmentQuery
                 ? $query->whereHas('lists', fn (Builder $lists) => $lists->whereKey($value))
                 : $query->whereDoesntHave('lists', fn (Builder $lists) => $lists->whereKey($value)),
             FieldType::Activity => $this->applyActivity($query, $field->column, $operator, $value),
+            FieldType::Campaign => $this->applyCampaign($query, $operator, $value),
             FieldType::Text => $this->applyText($query, $field->column, $operator, (string) $value),
             FieldType::Number => $this->applyNumber($query, $field->column, $operator, $value),
             FieldType::Date => $this->applyDate($query, $field->column, $operator, $value),
@@ -169,6 +170,27 @@ class SegmentQuery
             'never' => $query->whereDoesntHave('campaignRecipients', fn (Builder $recipients) => $recipients->whereNotNull($column)),
             default => throw new InvalidArgumentException("Unknown activity operator [{$operator}]."),
         };
+    }
+
+    /**
+     * Whether the contact received, opened or clicked one campaign. The "not_" forms also match people the campaign
+     * never reached, so "didn't open" needs pairing with "received" to find who missed it.
+     *
+     * @param  Builder<Contact>  $query
+     */
+    private function applyCampaign(Builder $query, string $operator, mixed $value): void
+    {
+        $column = match ($operator) {
+            'received', 'not_received' => 'sent_at',
+            'opened', 'not_opened' => 'opened_at',
+            'clicked', 'not_clicked' => 'clicked_at',
+            default => throw new InvalidArgumentException("Unknown campaign operator [{$operator}]."),
+        };
+        $did = fn (Builder $recipients) => $recipients->where('campaign_id', $value)->whereNotNull($column);
+
+        str_starts_with($operator, 'not_')
+            ? $query->whereDoesntHave('campaignRecipients', $did)
+            : $query->whereHas('campaignRecipients', $did);
     }
 
     /**

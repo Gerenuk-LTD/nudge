@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
+use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Models\Campaign;
@@ -214,3 +215,45 @@ test('the field catalog offers the engagement fields with their operators', func
     expect(app(SegmentFieldCatalog::class)->find('activity:clicked')->toArray()['operators'])
         ->toBe(['in_last_days', 'not_in_last_days', 'never']);
 });
+
+function sentCampaign(string $name = 'November news'): Campaign
+{
+    return Campaign::factory()->create(['name' => $name, 'status' => CampaignStatus::Sent, 'sent_at' => now()]);
+}
+
+function recordRecipient(Campaign $campaign, string $email, bool $opened = false, bool $clicked = false): void
+{
+    CampaignRecipient::create([
+        'campaign_id' => $campaign->id,
+        'contact_id' => Contact::query()->where('email', $email)->firstOrFail()->id,
+        'email' => $email,
+        'status' => RecipientStatus::Sent,
+        'sent_at' => now()->subDay(),
+        'opened_at' => $opened ? now() : null,
+        'clicked_at' => $clicked ? now() : null,
+    ]);
+}
+
+test('campaign conditions find who received, opened or clicked a given campaign', function () {
+    $first = sentCampaign();
+    $second = sentCampaign('December news');
+    recordRecipient($first, 'ann@example.com', opened: true, clicked: true);
+    recordRecipient($first, 'bob@example.com');
+    recordRecipient($second, 'cat@test.org', opened: true);
+
+    expect(matchingEmails([condition('campaign', 'received', $first->id)]))->toBe(['ann@example.com', 'bob@example.com'])
+        ->and(matchingEmails([condition('campaign', 'opened', $first->id)]))->toBe(['ann@example.com'])
+        ->and(matchingEmails([condition('campaign', 'clicked', $first->id)]))->toBe(['ann@example.com'])
+        ->and(matchingEmails([condition('campaign', 'received', $first->id), condition('campaign', 'not_opened', $first->id)]))->toBe(['bob@example.com'])
+        ->and(matchingEmails([condition('campaign', 'not_received', $first->id)]))->toBe(['cat@test.org'])
+        ->and(matchingEmails([condition('campaign', 'not_clicked', $first->id)]))->toBe(['bob@example.com', 'cat@test.org']);
+});
+
+test('campaign conditions only accept sent campaigns from this workspace', function (string $which) {
+    $draft = Campaign::factory()->create(['status' => CampaignStatus::Draft]);
+    $this->createOwner('Globex');
+    $foreign = sentCampaign('Foreign');
+    $this->useWorkspace($this->workspace);
+
+    matchingEmails([condition('campaign', 'opened', $which === 'draft' ? $draft->id : $foreign->id)]);
+})->throws(ValidationException::class)->with(['draft', 'another workspace']);

@@ -157,6 +157,7 @@ export default function ShowCampaign({
     }, [active, start, stop]);
 
     const [confirmingStop, setConfirmingStop] = useState(false);
+    const [confirmingResend, setConfirmingResend] = useState(false);
     const [confirmingWinner, setConfirmingWinner] = useState(false);
 
     const abRows: AbRow[] = abTest
@@ -290,6 +291,18 @@ export default function ShowCampaign({
                                         }
                                     >
                                         Duplicate
+                                    </Button>
+                                )}
+                            {can('campaigns.manage') &&
+                                campaign.kind === 'broadcast' &&
+                                campaign.status === 'sent' && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            setConfirmingResend(true)
+                                        }
+                                    >
+                                        Resend to non-openers
                                     </Button>
                                 )}
                             {can('campaigns.manage') &&
@@ -546,6 +559,41 @@ export default function ShowCampaign({
                                 }}
                             >
                                 Pick the winner
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    open={confirmingResend}
+                    onOpenChange={setConfirmingResend}
+                >
+                    <DialogContent>
+                        <DialogTitle>
+                            Resend to people who didn't open?
+                        </DialogTitle>
+                        <DialogDescription>
+                            This creates a segment of everyone who received this
+                            campaign but hasn't opened it, and a draft copy of
+                            the campaign aimed at that segment. Nothing is sent
+                            until you schedule the copy, so you can change its
+                            subject line first.
+                        </DialogDescription>
+                        <DialogFooter className="gap-2">
+                            <DialogClose asChild>
+                                <Button variant="secondary">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                                onClick={() => {
+                                    setConfirmingResend(false);
+                                    router.post(
+                                        CampaignController.resendToNonOpeners.url(
+                                            campaign.id,
+                                        ),
+                                    );
+                                }}
+                            >
+                                Draft the resend
                             </Button>
                         </DialogFooter>
                     </DialogContent>

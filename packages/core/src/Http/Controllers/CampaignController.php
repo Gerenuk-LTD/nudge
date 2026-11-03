@@ -8,6 +8,7 @@ use Gerenuk\Marketing\Campaigns\AbTestResults;
 use Gerenuk\Marketing\Campaigns\CampaignAudience;
 use Gerenuk\Marketing\Campaigns\CampaignChecklist;
 use Gerenuk\Marketing\Campaigns\ChecklistItem;
+use Gerenuk\Marketing\Enums\AudienceType;
 use Gerenuk\Marketing\Enums\CampaignKind;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\RecipientStatus;
@@ -19,6 +20,7 @@ use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
 use Gerenuk\Marketing\Support\CampaignSummary;
 use Gerenuk\Marketing\Support\MergeTagOptions;
 use Gerenuk\Marketing\Support\TableQuery;
@@ -29,6 +31,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -169,9 +172,71 @@ class CampaignController extends Controller
     {
         abort_if($campaign->kind === CampaignKind::Automation, 404);
 
+        $copy = $this->copyOf($request, $campaign, __(':name (copy)', ['name' => $campaign->name]));
+
+        return to_route('marketing.campaigns.edit', $copy);
+    }
+
+    /**
+     * Draft a "second chance" copy of a sent campaign for the people who received it but didn't open it, through a
+     * segment that says so, ready for a new subject line.
+     */
+    public function resendToNonOpeners(Request $request, Campaign $campaign, SegmentDefinitionValidator $validator): RedirectResponse
+    {
+        abort_unless($campaign->kind === CampaignKind::Broadcast && $campaign->status === CampaignStatus::Sent, 404);
+
+        $definition = ['match' => 'all', 'conditions' => [
+            ['type' => 'condition', 'field' => 'campaign', 'operator' => 'received', 'value' => $campaign->id],
+            ['type' => 'condition', 'field' => 'campaign', 'operator' => 'not_opened', 'value' => $campaign->id],
+        ]];
+        $validator->validate($definition);
+
+        $copy = DB::transaction(function () use ($request, $campaign, $definition): Campaign {
+            $segment = $this->segmentNamed(__("Didn't open: :name", ['name' => $campaign->name]), $definition);
+
+            $copy = $this->copyOf($request, $campaign, __(':name (resend)', ['name' => $campaign->name]));
+            $copy->update(['audience_type' => AudienceType::Segment, 'segment_id' => $segment->id]);
+
+            return $copy;
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __("Resend drafted for people who didn't open. Change the subject line before sending.")]);
+
+        return to_route('marketing.campaigns.edit', $copy);
+    }
+
+    /**
+     * The segment with this name and definition, reused if it already exists. Names are unique, so a different
+     * segment that took the name gets a numbered one instead.
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    private function segmentNamed(string $name, array $definition): Segment
+    {
+        $base = Str::limit($name, 90, '…');
+
+        for ($attempt = 1; ; $attempt++) {
+            $candidate = $attempt === 1 ? $base : "{$base} ({$attempt})";
+            $existing = Segment::query()->where('name', $candidate)->first();
+
+            if ($existing === null) {
+                return Segment::create(['name' => $candidate, 'definition' => $definition]);
+            }
+
+            if ($existing->definition == $definition) {
+                return $existing;
+            }
+        }
+    }
+
+    /**
+     * A draft copy of the campaign, without its sending history. Sent campaigns are copied from what actually went out.
+     */
+    private function copyOf(Request $request, Campaign $campaign, string $name): Campaign
+    {
         $copy = $campaign->replicate(['status', 'approved_at', 'approved_by', 'scheduled_at', 'sending_started_at', 'sent_at', 'recipients_count', 'ab_winner', 'ab_decided_at', 'ab_results']);
         $copy->fill([
-            'name' => __(':name (copy)', ['name' => $campaign->name]),
+            'name' => $name,
             'status' => CampaignStatus::Draft,
             'created_by' => $this->user($request)->getAuthIdentifier(),
         ]);
@@ -183,7 +248,7 @@ class CampaignController extends Controller
 
         $copy->forceFill(array_fill_keys(['sent_count', 'failed_count', 'delivered_count', 'bounced_count', 'complained_count', 'opened_count', 'clicked_count', 'unsubscribed_count'], 0))->save();
 
-        return to_route('marketing.campaigns.edit', $copy);
+        return $copy;
     }
 
     public function test(Request $request, Campaign $campaign, SendTestEmail $sendTestEmail): RedirectResponse

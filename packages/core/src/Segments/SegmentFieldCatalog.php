@@ -2,9 +2,11 @@
 
 namespace Gerenuk\Marketing\Segments;
 
+use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Enums\CustomFieldType;
+use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Tag;
@@ -46,6 +48,10 @@ class SegmentFieldCatalog
             new SegmentField('activity:opened', 'Opened an email', FieldType::Activity, 'opened_at'),
             new SegmentField('activity:clicked', 'Clicked a link', FieldType::Activity, 'clicked_at'),
             new SegmentField('activity:received', 'Received an email', FieldType::Activity, 'sent_at'),
+            // Only broadcasts that have gone out, most recent first.
+            new SegmentField('campaign', 'Campaign', FieldType::Campaign, null, array_values(Campaign::query()->broadcasts()
+                ->whereIn('status', [CampaignStatus::Sending, CampaignStatus::Sent])->latest('sent_at')->limit(100)->get(['id', 'name'])
+                ->map(fn (Campaign $campaign) => ['value' => $campaign->id, 'label' => $campaign->name])->all())),
             new SegmentField('tag', 'Tag', FieldType::Tag, null, array_values(Tag::query()->orderBy('name')->get()
                 ->map(fn (Tag $tag) => ['value' => $tag->id, 'label' => $tag->name])->all())),
             new SegmentField('list', 'List', FieldType::ContactList, null, array_values(ContactList::query()->orderBy('name')->get()

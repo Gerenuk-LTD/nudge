@@ -12,6 +12,7 @@ enum FieldType: string
     case Tag = 'tag';
     case ContactList = 'list';
     case Activity = 'activity';
+    case Campaign = 'campaign';
 
     /**
      * @return list<string>
@@ -27,6 +28,7 @@ enum FieldType: string
             self::Tag => ['has', 'has_not'],
             self::ContactList => ['in', 'not_in'],
             self::Activity => ['in_last_days', 'not_in_last_days', 'never'],
+            self::Campaign => ['received', 'not_received', 'opened', 'not_opened', 'clicked', 'not_clicked'],
         };
     }
 

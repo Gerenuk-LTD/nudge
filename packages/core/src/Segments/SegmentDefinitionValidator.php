@@ -102,7 +102,7 @@ class SegmentDefinitionValidator
             FieldType::Text => is_string($value) && $value !== '' && mb_strlen($value) <= 255,
             FieldType::Number => is_numeric($value),
             FieldType::Date => is_string($value) && self::isDate($value),
-            FieldType::Choice, FieldType::Tag, FieldType::ContactList => in_array(
+            FieldType::Choice, FieldType::Tag, FieldType::ContactList, FieldType::Campaign => in_array(
                 (string) $value,
                 array_map(fn (array $option) => (string) $option['value'], $field->options),
                 true,

@@ -38,6 +38,12 @@ const operatorLabels: Record<string, string> = {
     in_last_days: 'in the last',
     not_in_last_days: 'not in the last',
     never: 'never',
+    received: 'received',
+    not_received: "didn't receive",
+    opened: 'opened',
+    not_opened: "didn't open",
+    clicked: 'clicked',
+    not_clicked: "didn't click",
 };
 
 const valuelessOperators = [
@@ -107,7 +113,9 @@ export function describeCondition(
     );
 
     const value = option
-        ? option.label
+        ? field?.type === 'campaign'
+            ? `“${option.label}”`
+            : option.label
         : field?.type === 'number' || field?.type === 'date'
           ? String(condition.value ?? '')
           : `“${condition.value ?? ''}”`;

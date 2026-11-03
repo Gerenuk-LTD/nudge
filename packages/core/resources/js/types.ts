@@ -58,7 +58,8 @@ export type SegmentFieldType =
     | 'choice'
     | 'tag'
     | 'list'
-    | 'activity';
+    | 'activity'
+    | 'campaign';
 
 export type SegmentField = {
     key: string;
