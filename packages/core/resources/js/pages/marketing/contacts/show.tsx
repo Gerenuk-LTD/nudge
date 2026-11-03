@@ -70,6 +70,7 @@ type Contact = {
     tags: string[];
     lists: number[];
     unsubscribed_at: string | null;
+    paused_until: string | null;
     archived_at: string | null;
     created_at: string;
 };
@@ -215,6 +216,13 @@ export default function ContactShow({
                                         since{' '}
                                         {formatDate(contact.unsubscribed_at)}
                                     </span>
+                                )}
+                            {contact.paused_until &&
+                                contact.status === 'subscribed' && (
+                                    <StatusBadge tone="warning">
+                                        Paused until{' '}
+                                        {formatDate(contact.paused_until)}
+                                    </StatusBadge>
                                 )}
                             <span>
                                 Added {formatDate(contact.created_at)}{' '}

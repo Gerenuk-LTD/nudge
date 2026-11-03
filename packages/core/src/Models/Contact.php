@@ -30,11 +30,12 @@ use Illuminate\Support\Str;
  * @property ContactStatus $status
  * @property ContactSource $source
  * @property CarbonInterface|null $unsubscribed_at
+ * @property CarbonInterface|null $paused_until
  * @property CarbonInterface|null $archived_at
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
-#[Fillable(['workspace_id', 'email', 'first_name', 'last_name', 'custom_fields', 'status', 'source', 'unsubscribed_at', 'archived_at'])]
+#[Fillable(['workspace_id', 'email', 'first_name', 'last_name', 'custom_fields', 'status', 'source', 'unsubscribed_at', 'paused_until', 'archived_at'])]
 #[UseFactory(ContactFactory::class)]
 class Contact extends Model
 {
@@ -58,8 +59,15 @@ class Contact extends Model
             'status' => ContactStatus::class,
             'source' => ContactSource::class,
             'unsubscribed_at' => 'datetime',
+            'paused_until' => 'datetime',
             'archived_at' => 'datetime',
         ];
+    }
+
+    /** Whether the contact asked for a break from emails that hasn't ended yet. */
+    public function isPaused(): bool
+    {
+        return $this->paused_until !== null && $this->paused_until->isFuture();
     }
 
     public static function normalizeEmail(string $email): string

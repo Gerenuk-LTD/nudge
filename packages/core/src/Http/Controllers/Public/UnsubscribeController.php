@@ -4,7 +4,9 @@ namespace Gerenuk\Marketing\Http\Controllers\Public;
 
 use Gerenuk\Marketing\Actions\Campaigns\RecordEngagement;
 use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Http\Controllers\Controller;
+use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Sending\TrackingUrls;
@@ -12,11 +14,13 @@ use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The unsubscribe page, plus the one-click POST mailbox providers send (RFC 8058).
+ * The unsubscribe page, plus the one-click POST mailbox providers send (RFC 8058). The page also lets recipients pause
+ * emails for a while instead; a pause isn't a consent change, so one-click and "Unsubscribe" always unsubscribe.
  */
 class UnsubscribeController extends Controller
 {
@@ -34,8 +38,34 @@ class UnsubscribeController extends Controller
             'workspace' => $workspace->name,
             'email' => $model->email,
             'unsubscribed' => $model->contact->status === ContactStatus::Unsubscribed,
+            'pausedUntil' => $model->contact->isPaused() ? $model->contact->paused_until?->toIso8601String() : null,
             'action' => $this->urls->unsubscribe($model),
+            'pauseAction' => $this->urls->pause($model),
         ]));
+    }
+
+    /**
+     * Pause emails to a subscribed contact for 30 or 90 days. Pausing never subscribes anyone again.
+     */
+    public function pause(Request $request, int $recipient, string $signature): RedirectResponse
+    {
+        $model = $this->recipient($recipient, $signature);
+        $days = (int) $request->validate(['days' => ['required', 'integer', 'in:30,90']])['days'];
+
+        $this->currentWorkspace->runAs(Workspace::findOrFail($model->workspace_id), function () use ($model, $days): void {
+            DB::transaction(function () use ($model, $days): void {
+                $contact = $model->contact;
+
+                if ($contact->status !== ContactStatus::Subscribed) {
+                    return;
+                }
+
+                $contact->update(['paused_until' => now()->addDays($days)]);
+                ActivityEvent::recordFor($model, EventType::Paused, ['days' => $days]);
+            });
+        });
+
+        return redirect()->to($this->urls->unsubscribe($model));
     }
 
     public function store(Request $request, int $recipient, string $signature, RecordEngagement $engagement): RedirectResponse|HttpResponse

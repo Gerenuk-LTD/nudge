@@ -47,6 +47,7 @@ class ContactTimeline
                     isset($data['via']) => __('Via :via', ['via' => $data['via']]),
                     default => null,
                 }],
+                EventType::Paused => [__('Paused emails'), isset($data['days']) ? __('For :days days', ['days' => $data['days']]) : null],
                 EventType::Custom => [__('Event: :name', ['name' => $data['name'] ?? '']), empty($data['properties']) ? null : json_encode($data['properties'], JSON_UNESCAPED_SLASHES)],
                 EventType::AutomationEntered => [__('Started automation :name', ['name' => $data['automation'] ?? '']), null],
                 EventType::AutomationCompleted => [__('Finished automation :name', ['name' => $data['automation'] ?? '']), null],

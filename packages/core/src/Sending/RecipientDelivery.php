@@ -49,7 +49,7 @@ class RecipientDelivery
 
         $contact = $recipient->contact;
 
-        if ($contact->archived_at !== null || $contact->status !== ContactStatus::Subscribed || Suppression::where('email', $recipient->email)->exists()) {
+        if ($contact->archived_at !== null || $contact->status !== ContactStatus::Subscribed || $contact->isPaused() || Suppression::where('email', $recipient->email)->exists()) {
             $recipient->update(['status' => RecipientStatus::Skipped]);
 
             return DeliveryOutcome::Skipped;

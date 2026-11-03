@@ -38,6 +38,17 @@ class TrackingUrls
         ]);
     }
 
+    /**
+     * Where the unsubscribe page sends a request to pause emails. It shares the unsubscribe link's signature.
+     */
+    public function pause(CampaignRecipient $recipient): string
+    {
+        return $this->url('marketing.unsubscribe.pause', [
+            'recipient' => $recipient->id,
+            'signature' => $this->sign("unsubscribe:{$recipient->id}"),
+        ]);
+    }
+
     public function verify(string $payload, string $signature): bool
     {
         foreach ([config('app.key'), ...config('app.previous_keys', [])] as $key) {

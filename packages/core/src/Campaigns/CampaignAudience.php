@@ -13,7 +13,7 @@ use Gerenuk\Marketing\Segments\SegmentQuery;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * The contacts a campaign will go to: its audience, minus anyone unsubscribed, archived or suppressed.
+ * The contacts a campaign will go to: its audience, minus anyone unsubscribed, paused, archived or suppressed.
  */
 class CampaignAudience
 {
@@ -41,16 +41,16 @@ class CampaignAudience
     }
 
     /**
-     * Everyone a campaign could reach at all: subscribed, not archived and not suppressed.
+     * Everyone a campaign could reach at all: subscribed, not paused, not archived and not suppressed.
      *
      * @return Builder<Contact>
      */
     public function reachable(): Builder
     {
-        return Contact::query()
-            ->active()
-            ->where('status', ContactStatus::Subscribed)
-            ->whereNotIn('email', Suppression::query()->select('email'));
+        $query = Contact::query();
+        $this->reachableContacts($query);
+
+        return $query;
     }
 
     /**
@@ -61,6 +61,7 @@ class CampaignAudience
         $contacts
             ->active()
             ->where('status', ContactStatus::Subscribed)
+            ->where(fn (Builder $query) => $query->whereNull('paused_until')->orWhere('paused_until', '<=', now()))
             ->whereNotIn('email', Suppression::query()->select('email'));
     }
 

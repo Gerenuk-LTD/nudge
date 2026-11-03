@@ -15,5 +15,7 @@ Route::get('t/o/{recipient}/{signature}', [TrackingController::class, 'open'])
     ->whereNumber('recipient')->name('track.open');
 Route::post('u/{recipient}/{signature}', [UnsubscribeController::class, 'store'])
     ->whereNumber('recipient')->name('unsubscribe.store');
+Route::post('u/{recipient}/{signature}/pause', [UnsubscribeController::class, 'pause'])
+    ->whereNumber('recipient')->name('unsubscribe.pause');
 Route::post('webhooks/providers/{token}', WebhookController::class)
     ->middleware('throttle:3000,1')->name('webhooks.provider');

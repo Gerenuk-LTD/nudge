@@ -100,6 +100,8 @@ class ContactController extends Controller
                 'tags' => $contact->tags->pluck('name'),
                 'lists' => $contact->lists->pluck('id'),
                 'unsubscribed_at' => $contact->unsubscribed_at?->toIso8601String(),
+                // Only while it's running: an ended pause is just history on the timeline.
+                'paused_until' => $contact->isPaused() ? $contact->paused_until?->toIso8601String() : null,
                 'archived_at' => $contact->archived_at?->toIso8601String(),
                 'created_at' => $contact->created_at->toIso8601String(),
             ],
