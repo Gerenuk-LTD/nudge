@@ -154,3 +154,19 @@ test('an A/B test without a variant B cannot be sent', function () {
 
     $this->actingAs($this->owner)->post(route('marketing.campaigns.schedule', $campaign))->assertSessionHasErrors('campaign');
 });
+
+test('duplicating a campaign does not copy its frozen a/b results', function () {
+    $campaign = abCampaign($this, [
+        'status' => CampaignStatus::Sent,
+        'ab_winner' => 'a',
+        'ab_results' => ['a' => ['sent' => 2, 'opened' => 1, 'clicked' => 0, 'rate' => 0.5], 'b' => ['sent' => 2, 'opened' => 0, 'clicked' => 0, 'rate' => 0.0]],
+    ]);
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.duplicate', $campaign))->assertRedirect();
+
+    $copy = Campaign::query()->whereKeyNot($campaign->id)->sole();
+
+    expect($copy->ab_results)->toBeNull()
+        ->and($copy->ab_winner)->toBeNull()
+        ->and($campaign->fresh()->ab_results)->not->toBeNull();
+});

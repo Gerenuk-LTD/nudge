@@ -169,7 +169,7 @@ class CampaignController extends Controller
     {
         abort_if($campaign->kind === CampaignKind::Automation, 404);
 
-        $copy = $campaign->replicate(['status', 'approved_at', 'approved_by', 'scheduled_at', 'sending_started_at', 'sent_at', 'recipients_count', 'ab_winner', 'ab_decided_at']);
+        $copy = $campaign->replicate(['status', 'approved_at', 'approved_by', 'scheduled_at', 'sending_started_at', 'sent_at', 'recipients_count', 'ab_winner', 'ab_decided_at', 'ab_results']);
         $copy->fill([
             'name' => __(':name (copy)', ['name' => $campaign->name]),
             'status' => CampaignStatus::Draft,
