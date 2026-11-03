@@ -23,6 +23,7 @@ export type WorkspaceSharedProps = {
     permissions: Permission[];
     /** The most pressing reason campaigns can't go out, or null when sending is healthy. */
     sendingIssue: 'paused' | 'no_provider' | 'no_postal_address' | null;
+    canCreateWorkspace: boolean;
 };
 
 export type Option = { id: number; name: string };

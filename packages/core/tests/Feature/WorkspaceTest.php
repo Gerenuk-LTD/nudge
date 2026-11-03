@@ -101,3 +101,36 @@ test('pages share the signed-in user\'s role in the current workspace', function
 
     expect($response->inertiaProps('workspace.role'))->toBe('Owner');
 });
+
+test('a member who doesn\'t own an account cannot create a workspace', function () {
+    [, $acme] = $this->createOwner('Acme');
+    $editor = $this->addMember($acme, 'Editor');
+
+    $this->actingAs($editor)->get(route('marketing.workspaces.create'))->assertForbidden();
+    $this->actingAs($editor)->post(route('marketing.workspaces.store'), ['name' => 'Side project'])->assertForbidden();
+    $this->actingAs($editor)->get(route('marketing.home'))
+        ->assertInertia(fn ($page) => $page->where('workspace.canCreateWorkspace', false));
+
+    expect($editor->fresh()->workspaces()->count())->toBe(1);
+});
+
+test('an account owner\'s new workspace joins their own account', function () {
+    [$owner, $own] = $this->createOwner('Own');
+    [, $other] = $this->createOwner('Other');
+    Membership::create([
+        'workspace_id' => $other->id,
+        'user_id' => $owner->id,
+        'role_id' => Role::withoutGlobalScopes()->where('workspace_id', $other->id)->where('name', 'Editor')->firstOrFail()->id,
+    ]);
+    $owner->switchWorkspace($other);
+
+    $this->actingAs($owner)->get(route('marketing.home'))
+        ->assertInertia(fn ($page) => $page->where('workspace.current.id', $other->id)->where('workspace.canCreateWorkspace', true));
+    $this->actingAs($owner)->post(route('marketing.workspaces.store'), ['name' => 'Third'])->assertRedirect();
+
+    $third = $owner->fresh()->currentWorkspace;
+
+    expect($third->name)->toBe('Third')
+        ->and($third->account_id)->toBe($own->account_id)
+        ->and($third->account_id)->not->toBe($other->account_id);
+});

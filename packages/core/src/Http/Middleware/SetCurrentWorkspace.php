@@ -4,6 +4,7 @@ namespace Gerenuk\Marketing\Http\Middleware;
 
 use Closure;
 use Gerenuk\Marketing\Enums\Permission;
+use Gerenuk\Marketing\Models\Account;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
@@ -43,6 +44,7 @@ class SetCurrentWorkspace
                 ->values()
                 ->all(),
             'sendingIssue' => $this->sendingIssue($workspace),
+            'canCreateWorkspace' => Account::query()->where('owner_id', $user->getAuthIdentifier())->exists(),
         ]);
 
         return $next($request);

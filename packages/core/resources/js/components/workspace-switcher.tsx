@@ -84,12 +84,14 @@ export function WorkspaceSwitcher() {
                                 Workspace settings
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href={createWorkspace()}>
-                                <Plus className="size-4" />
-                                New workspace
-                            </Link>
-                        </DropdownMenuItem>
+                        {workspace.canCreateWorkspace && (
+                            <DropdownMenuItem asChild>
+                                <Link href={createWorkspace()}>
+                                    <Plus className="size-4" />
+                                    New workspace
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>
