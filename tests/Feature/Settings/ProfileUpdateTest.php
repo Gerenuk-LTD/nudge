@@ -216,3 +216,20 @@ test('a user with a remember token is really deleted', function () {
 
     expect(User::find($user->id))->toBeNull();
 });
+
+test('changing the email is rate limited', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 6) as $attempt) {
+        $this->actingAs($user)
+            ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com', 'current_password' => 'wrong'])
+            ->assertRedirect()
+            ->assertSessionHasErrors('current_password');
+    }
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com', 'current_password' => 'wrong'])
+        ->assertTooManyRequests();
+
+    expect($user->fresh()->email)->not->toBe('new@example.com');
+});

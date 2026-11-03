@@ -33,3 +33,21 @@ test('two factor challenge can be rendered', function () {
             ->component('auth/two-factor-challenge'),
         );
 });
+
+test('two factor attempts are capped per day', function () {
+    $user = User::factory()->withTwoFactor()->create();
+
+    $this->post(route('login'), ['email' => $user->email, 'password' => 'password']);
+
+    foreach (range(1, 50) as $attempt) {
+        $this->post(route('two-factor.login.store'), ['recovery_code' => 'not-a-real-code'])->assertRedirect();
+
+        // Stay under the per-minute limit so only the daily cap can trip.
+        if ($attempt % 5 === 0) {
+            $this->travel(61)->seconds();
+        }
+    }
+
+    $this->post(route('two-factor.login.store'), ['recovery_code' => 'not-a-real-code'])->assertTooManyRequests();
+    $this->assertGuest();
+});

@@ -3,6 +3,7 @@
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {
@@ -75,4 +76,27 @@ test('password cannot be reset with invalid token', function () {
     ]);
 
     $response->assertSessionHasErrors('email');
+});
+
+test('forgot password does not reveal whether an account exists', function () {
+    Notification::fake();
+    $user = User::factory()->create();
+
+    $known = $this->post(route('password.email'), ['email' => $user->email]);
+    $unknown = $this->post(route('password.email'), ['email' => 'nobody@example.com']);
+
+    $known->assertSessionHasNoErrors();
+    $unknown->assertSessionHasNoErrors();
+
+    expect($unknown->getSession()->get('status'))
+        ->toBe($known->getSession()->get('status'))
+        ->toBe(__(Password::RESET_LINK_SENT));
+});
+
+test('forgot password is rate limited', function () {
+    foreach (range(1, 5) as $attempt) {
+        $this->post(route('password.email'), ['email' => "nobody{$attempt}@example.com"])->assertRedirect();
+    }
+
+    $this->post(route('password.email'), ['email' => 'nobody6@example.com'])->assertTooManyRequests();
 });

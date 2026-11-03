@@ -115,3 +115,14 @@ test('open sign-up allows anyone', function () {
 
     $this->assertAuthenticated();
 });
+
+test('registration is rate limited', function () {
+    User::factory()->create();
+
+    foreach (range(1, 5) as $attempt) {
+        $this->post(route('register.store'), registrationData("uninvited{$attempt}@example.com"))->assertRedirect();
+    }
+
+    $this->post(route('register.store'), registrationData('uninvited6@example.com'))->assertTooManyRequests();
+    $this->assertGuest();
+});
