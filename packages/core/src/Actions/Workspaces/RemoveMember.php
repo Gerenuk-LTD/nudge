@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Actions\Workspaces;
 
 use Gerenuk\Marketing\Models\ApiToken;
+use Gerenuk\Marketing\Models\Invitation;
 use Gerenuk\Marketing\Models\Membership;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +20,12 @@ class RemoveMember
             ApiToken::withoutGlobalScopes()
                 ->where('workspace_id', $membership->workspace_id)
                 ->where('created_by', $membership->user_id)
+                ->delete();
+
+            // So someone being removed can't invite a second address and come back through it.
+            Invitation::withoutGlobalScopes()
+                ->where('workspace_id', $membership->workspace_id)
+                ->where('invited_by', $membership->user_id)
                 ->delete();
 
             $membership->delete();

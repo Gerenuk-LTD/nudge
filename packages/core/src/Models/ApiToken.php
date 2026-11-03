@@ -57,4 +57,18 @@ class ApiToken extends Model
     {
         return static::withoutGlobalScopes()->where('token_hash', hash('sha256', $plainToken))->first();
     }
+
+    /**
+     * Cut a user's tokens in a workspace down to the given permissions, so a token never outlives its creator's access.
+     *
+     * @param  list<string>  $permissions
+     */
+    public static function narrowForUser(int $workspaceId, int $userId, array $permissions): void
+    {
+        static::withoutGlobalScopes()
+            ->where('workspace_id', $workspaceId)
+            ->where('created_by', $userId)
+            ->get()
+            ->each(fn (self $token) => $token->update(['permissions' => array_values(array_intersect($token->permissions, $permissions))]));
+    }
 }

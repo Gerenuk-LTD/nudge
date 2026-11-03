@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing\Actions\Workspaces;
 use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Models\Account;
 use Gerenuk\Marketing\Models\ApiToken;
+use Gerenuk\Marketing\Models\Invitation;
 use Gerenuk\Marketing\Models\Membership;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -41,6 +42,7 @@ class RemoveUserFromWorkspaces
 
         DB::transaction(function () use ($userId): void {
             ApiToken::withoutGlobalScopes()->where('created_by', $userId)->delete();
+            Invitation::withoutGlobalScopes()->where('invited_by', $userId)->delete();
             Membership::query()->where('user_id', $userId)->delete();
         });
     }

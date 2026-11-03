@@ -254,3 +254,44 @@ test('the last owner of a workspace cannot be removed by deleting their user', f
 
     expect(Membership::where('user_id', $user->id)->exists())->toBeTrue();
 });
+
+test('removing a member revokes the invitations they sent', function () {
+    Notification::fake();
+    [$owner, $workspace] = $this->createOwner();
+    $admin = $this->addMember($workspace, 'Admin');
+
+    $this->actingAs($admin)->post(route('marketing.members.invite'), ['email' => 'x@example.com', 'role_id' => roleNamed('Admin')->id])->assertRedirect();
+    expect(Invitation::count())->toBe(1);
+
+    $this->actingAs($owner)->delete(route('marketing.members.destroy', Membership::where('user_id', $admin->id)->first()))->assertRedirect();
+
+    expect(Invitation::withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('demoting a member revokes invitations above their new role', function () {
+    Notification::fake();
+    [$owner, $workspace] = $this->createOwner();
+    $admin = $this->addMember($workspace, 'Admin');
+
+    $this->actingAs($admin)->post(route('marketing.members.invite'), ['email' => 'admin@example.com', 'role_id' => roleNamed('Admin')->id]);
+    $this->actingAs($admin)->post(route('marketing.members.invite'), ['email' => 'viewer@example.com', 'role_id' => roleNamed('Viewer')->id]);
+    expect(Invitation::count())->toBe(2);
+
+    $this->actingAs($owner)->put(route('marketing.members.update', Membership::where('user_id', $admin->id)->first()), ['role_id' => roleNamed('Editor')->id])
+        ->assertRedirect();
+
+    expect(Invitation::withoutGlobalScopes()->pluck('email')->all())->toBe(['viewer@example.com']);
+});
+
+test('revoking an owner invitation needs the owner', function () {
+    Notification::fake();
+    [$owner, $workspace] = $this->createOwner();
+    $manager = memberWithCustomRole($owner, $workspace, 'People', ['members.manage', 'contacts.view']);
+
+    $this->actingAs($owner)->post(route('marketing.members.invite'), ['email' => 'co-owner@example.com', 'role_id' => roleNamed('Owner')->id]);
+    $invitation = Invitation::firstOrFail();
+
+    $this->actingAs($manager)->delete(route('marketing.members.invitations.destroy', $invitation))->assertForbidden();
+
+    expect($invitation->fresh())->not->toBeNull();
+});

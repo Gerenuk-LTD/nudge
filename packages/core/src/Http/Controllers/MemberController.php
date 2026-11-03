@@ -74,8 +74,10 @@ class MemberController extends Controller
         return to_route('marketing.members.index');
     }
 
-    public function revokeInvitation(Invitation $invitation): RedirectResponse
+    public function revokeInvitation(Request $request, Invitation $invitation): RedirectResponse
     {
+        $this->ensureCanAssign($request, $invitation->role);
+
         $invitation->delete();
 
         return to_route('marketing.members.index');
