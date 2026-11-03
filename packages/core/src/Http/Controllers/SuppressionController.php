@@ -9,6 +9,7 @@ use Gerenuk\Marketing\Support\CsvCell;
 use Gerenuk\Marketing\Support\TableQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -96,9 +97,17 @@ class SuppressionController extends Controller
     /**
      * Removing a bounce or complaint suppression lets the address be emailed again, so it is deliberate.
      */
-    public function destroy(Suppression $suppression): RedirectResponse
+    public function destroy(Request $request, Suppression $suppression): RedirectResponse
     {
         $suppression->delete();
+
+        // A suppression may have no contact, so its removal can't go on a timeline. No email address in the log.
+        Log::notice('Suppression removed', [
+            'workspace' => $suppression->workspace_id,
+            'suppression' => $suppression->id,
+            'reason' => $suppression->reason->value,
+            'by' => $this->user($request)->getAuthIdentifier(),
+        ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __(':email can be emailed again.', ['email' => $suppression->email])]);
 

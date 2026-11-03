@@ -111,7 +111,7 @@ class ContactController extends Controller
 
     public function update(ContactRequest $request, Contact $contact, UpdateContact $updateContact): RedirectResponse
     {
-        $updateContact->handle($contact, ContactData::fromValidated($request->validated()));
+        $updateContact->handle($contact, ContactData::fromValidated($request->validated()), $request->user()->name);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact saved.')]);
 
@@ -144,11 +144,7 @@ class ContactController extends Controller
                 (new ChangeContactStatus)->apply($contact, ContactStatus::Unsubscribed);
                 $contact->save();
 
-                $contact->events()->create([
-                    'type' => EventType::Unsubscribed,
-                    'data' => ['by' => $request->user()->name],
-                    'occurred_at' => now(),
-                ]);
+                ChangeContactStatus::record($contact, ContactStatus::Unsubscribed, ['by' => $request->user()->name, 'via' => 'dashboard']);
             });
         }
 
@@ -157,10 +153,16 @@ class ContactController extends Controller
         return back();
     }
 
-    public function resubscribe(Contact $contact): RedirectResponse
+    public function resubscribe(Request $request, Contact $contact): RedirectResponse
     {
-        (new ChangeContactStatus)->apply($contact, ContactStatus::Subscribed);
-        $contact->save();
+        if ($contact->status !== ContactStatus::Subscribed) {
+            DB::transaction(function () use ($request, $contact): void {
+                (new ChangeContactStatus)->apply($contact, ContactStatus::Subscribed);
+                $contact->save();
+
+                ChangeContactStatus::record($contact, ContactStatus::Subscribed, ['by' => $request->user()->name, 'via' => 'dashboard']);
+            });
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Subscribed :email again.', ['email' => $contact->email])]);
 

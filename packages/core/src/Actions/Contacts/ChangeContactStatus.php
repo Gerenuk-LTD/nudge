@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Actions\Contacts;
 
 use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Models\Contact;
 
 class ChangeContactStatus
@@ -18,5 +19,20 @@ class ChangeContactStatus
 
         $contact->status = $status;
         $contact->unsubscribed_at = $status === ContactStatus::Unsubscribed ? now() : null;
+    }
+
+    /**
+     * Note a subscription change on the contact's timeline, so there is always a record of who opted someone in or out,
+     * how and when. Call it only when the status really changed, after the contact is saved.
+     *
+     * @param  array<string, mixed>  $context  who or what made the change, such as the person's name and the route it came by
+     */
+    public static function record(Contact $contact, ContactStatus $to, array $context): void
+    {
+        $contact->events()->create([
+            'type' => $to === ContactStatus::Unsubscribed ? EventType::Unsubscribed : EventType::Resubscribed,
+            'data' => array_filter($context, fn (mixed $value) => $value !== null),
+            'occurred_at' => now(),
+        ]);
     }
 }

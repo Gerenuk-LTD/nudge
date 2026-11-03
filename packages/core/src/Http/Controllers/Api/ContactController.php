@@ -55,7 +55,12 @@ class ContactController extends Controller
         $data = ['email' => Contact::normalizeEmail($email), ...$request->except('email')];
         $validated = Validator::make($data, [...$contactRules->rules(), 'resubscribe' => ['sometimes', 'boolean']])->validate();
 
-        ['contact' => $contact, 'created' => $created] = $upsertContact->handle(ContactData::fromValidated($validated), ContactSource::Api, (bool) ($validated['resubscribe'] ?? false));
+        ['contact' => $contact, 'created' => $created] = $upsertContact->handle(
+            ContactData::fromValidated($validated),
+            ContactSource::Api,
+            (bool) ($validated['resubscribe'] ?? false),
+            ['token_id' => $request->attributes->get('marketing_api_token')?->id],
+        );
 
         return (new ContactResource($contact->load(['tags:id,name', 'lists:id'])))
             ->response()

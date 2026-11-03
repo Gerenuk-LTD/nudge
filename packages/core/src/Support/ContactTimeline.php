@@ -38,6 +38,13 @@ class ContactTimeline
                 EventType::Unsubscribed => [__('Unsubscribed'), match (true) {
                     $campaign !== null => __('From :campaign', ['campaign' => $campaign]),
                     isset($data['by']) => __('By :name', ['name' => $data['by']]),
+                    isset($data['via']) => __('Via :via', ['via' => $data['via']]),
+                    default => null,
+                }],
+                EventType::Resubscribed => [__('Subscribed again'), match (true) {
+                    isset($data['by'], $data['via']) => __('By :name via :via', ['name' => $data['by'], 'via' => $data['via']]),
+                    isset($data['by']) => __('By :name', ['name' => $data['by']]),
+                    isset($data['via']) => __('Via :via', ['via' => $data['via']]),
                     default => null,
                 }],
                 EventType::Custom => [__('Event: :name', ['name' => $data['name'] ?? '']), empty($data['properties']) ? null : json_encode($data['properties'], JSON_UNESCAPED_SLASHES)],

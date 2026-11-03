@@ -3,6 +3,7 @@
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Enums\ImportStatus;
 use Gerenuk\Marketing\Jobs\ProcessImport;
 use Gerenuk\Marketing\Models\Contact;
@@ -179,4 +180,16 @@ test('a windows-1252 file imports names with accents', function () {
     expect($import->status)->toBe(ImportStatus::Completed)
         ->and($import->failed_count)->toBe(0)
         ->and(Contact::forEmail('jose@example.com')->first()->first_name)->toBe('José');
+});
+
+test('an import that unsubscribes people records it', function () {
+    $contact = Contact::factory()->create(['email' => 'leaving@example.com']);
+
+    uploadAndStart($this, "email,status\nleaving@example.com,unsubscribed\nnew@example.com,unsubscribed\n", ['email', 'status']);
+
+    $event = $contact->events()->sole();
+
+    expect($event->type)->toBe(EventType::Unsubscribed)
+        ->and($event->data)->toBe(['via' => 'import'])
+        ->and(Contact::query()->forEmail('new@example.com')->firstOrFail()->events()->count())->toBe(0);
 });

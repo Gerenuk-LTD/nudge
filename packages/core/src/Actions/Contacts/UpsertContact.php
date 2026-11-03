@@ -25,24 +25,28 @@ class UpsertContact
      * custom fields are merged, and tags and lists are added, never removed.
      * An existing contact who unsubscribed stays unsubscribed unless `$allowResubscribe` is true, so an integration cannot quietly opt people back in.
      *
+     * A status change to an existing contact is recorded on their timeline with the source and `$context`.
+     *
+     * @param  array<string, mixed>  $context  extra detail for that record, such as the API token's ID
      * @return array{contact: Contact, created: bool}
      */
-    public function handle(ContactData $data, ContactSource $source, bool $allowResubscribe = false): array
+    public function handle(ContactData $data, ContactSource $source, bool $allowResubscribe = false, array $context = []): array
     {
         try {
-            return $this->upsert($data, $source, $allowResubscribe);
+            return $this->upsert($data, $source, $allowResubscribe, $context);
         } catch (UniqueConstraintViolationException) {
             // Another request created the same email between our read and insert; it now exists, so update it.
-            return $this->upsert($data, $source, $allowResubscribe);
+            return $this->upsert($data, $source, $allowResubscribe, $context);
         }
     }
 
     /**
+     * @param  array<string, mixed>  $context
      * @return array{contact: Contact, created: bool}
      */
-    private function upsert(ContactData $data, ContactSource $source, bool $allowResubscribe): array
+    private function upsert(ContactData $data, ContactSource $source, bool $allowResubscribe, array $context): array
     {
-        return DB::transaction(function () use ($data, $source, $allowResubscribe): array {
+        return DB::transaction(function () use ($data, $source, $allowResubscribe, $context): array {
             $contact = Contact::query()->forEmail($data->email)->lockForUpdate()->first();
             $created = $contact === null;
 
@@ -70,11 +74,18 @@ class UpsertContact
                 && $contact->status === ContactStatus::Unsubscribed
                 && $data->status === ContactStatus::Subscribed;
 
+            $before = $contact->status;
+
             if ($data->status !== null && (! $resubscribing || $allowResubscribe)) {
                 (new ChangeContactStatus)->apply($contact, $data->status);
             }
 
             $contact->save();
+
+            // A new contact's creation is its own record; only changes to existing ones are noted.
+            if (! $created && $before !== $contact->status) {
+                ChangeContactStatus::record($contact, $contact->status, ['via' => $source->value, ...$context]);
+            }
 
             if ($data->tags !== []) {
                 $this->triggers->tagsAdded($contact, $contact->tags()->syncWithoutDetaching(self::resolveTagIds($data->tags))['attached']);

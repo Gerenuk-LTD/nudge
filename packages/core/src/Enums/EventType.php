@@ -13,6 +13,8 @@ enum EventType: string
     case Opened = 'opened';
     case Clicked = 'clicked';
     case Unsubscribed = 'unsubscribed';
+    /** Someone who had unsubscribed was subscribed again, by staff, an import or the API. */
+    case Resubscribed = 'resubscribed';
     /** A named event a customer's app sent through the API. */
     case Custom = 'custom';
     case AutomationEntered = 'automation_entered';

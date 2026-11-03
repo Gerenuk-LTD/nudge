@@ -18,10 +18,11 @@ class UpdateContact
 
     /**
      * Replace a contact's details from the edit form: custom fields, tags and lists are set to exactly what is given.
+     * A status change is recorded on the timeline with `$by`, the person who made it.
      */
-    public function handle(Contact $contact, ContactData $data): Contact
+    public function handle(Contact $contact, ContactData $data, ?string $by = null): Contact
     {
-        return DB::transaction(function () use ($contact, $data): Contact {
+        return DB::transaction(function () use ($contact, $data, $by): Contact {
             $customFields = array_filter(
                 $this->rules->castCustomFields($data->customFields ?? []),
                 fn (mixed $value) => $value !== null,
@@ -34,9 +35,15 @@ class UpdateContact
                 'custom_fields' => $customFields === [] ? null : $customFields,
             ]);
 
-            (new ChangeContactStatus)->apply($contact, $data->status ?? ContactStatus::Subscribed);
+            $before = $contact->status;
+            $status = $data->status ?? ContactStatus::Subscribed;
+            (new ChangeContactStatus)->apply($contact, $status);
 
             $contact->save();
+
+            if ($before !== $status) {
+                ChangeContactStatus::record($contact, $status, ['by' => $by, 'via' => 'contact form']);
+            }
 
             $this->triggers->tagsAdded($contact, $contact->tags()->sync(UpsertContact::resolveTagIds($data->tags))['attached']);
             $this->triggers->listsJoined($contact, $contact->lists()->sync(UpsertContact::listPivot($data->lists))['attached']);

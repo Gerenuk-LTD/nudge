@@ -345,3 +345,39 @@ test('the side panel cannot preview a contact from another workspace', function 
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->reloadOnly('preview', fn (AssertableInertia $reload) => $reload->where('preview', null)));
 });
+
+test('subscribing someone again from the dashboard is recorded with who did it', function () {
+    $contact = Contact::factory()->unsubscribed()->create();
+
+    $this->actingAs($this->owner)->post(route('marketing.contacts.resubscribe', $contact))->assertRedirect();
+
+    $event = $contact->events()->where('type', EventType::Resubscribed)->sole();
+
+    expect($event->data)->toBe(['by' => $this->owner->name, 'via' => 'dashboard'])
+        ->and(app(ContactTimeline::class)->for($contact)[0])
+        ->toMatchArray(['title' => 'Subscribed again', 'detail' => "By {$this->owner->name} via dashboard"]);
+});
+
+test('changing status on the contact form is recorded', function () {
+    $contact = Contact::factory()->create();
+
+    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), ['email' => $contact->email, 'status' => 'unsubscribed'])
+        ->assertRedirect();
+    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), ['email' => $contact->email, 'status' => 'subscribed'])
+        ->assertRedirect();
+
+    expect($contact->events()->orderBy('id')->get()->map(fn (ActivityEvent $event) => [$event->type, $event->data])->all())->toBe([
+        [EventType::Unsubscribed, ['by' => $this->owner->name, 'via' => 'contact form']],
+        [EventType::Resubscribed, ['by' => $this->owner->name, 'via' => 'contact form']],
+    ]);
+});
+
+test('no event is recorded when nothing changed', function () {
+    $contact = Contact::factory()->create();
+
+    $this->actingAs($this->owner)->post(route('marketing.contacts.resubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), ['email' => $contact->email, 'status' => 'subscribed'])
+        ->assertRedirect();
+
+    expect($contact->events()->count())->toBe(0);
+});

@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Marketing\Enums\EventType;
 use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
@@ -216,4 +217,18 @@ test('an api upsert can still unsubscribe and create subscribed contacts', funct
     $this->withToken($token)->putJson($url, ['status' => 'unsubscribed'])
         ->assertOk()
         ->assertJsonPath('data.status', 'unsubscribed');
+});
+
+test('an api resubscribe is recorded with the token', function () {
+    $contact = Contact::factory()->unsubscribed()->create(['email' => 'ann@example.com']);
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)
+        ->putJson(route('marketing.api.contacts.upsert', 'ann@example.com'), ['status' => 'subscribed', 'resubscribe' => true])
+        ->assertOk();
+
+    $event = $contact->events()->sole();
+
+    expect($event->type)->toBe(EventType::Resubscribed)
+        ->and($event->data)->toBe(['via' => 'api', 'token_id' => ApiToken::firstOrFail()->id]);
 });
