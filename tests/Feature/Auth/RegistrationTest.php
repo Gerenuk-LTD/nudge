@@ -98,14 +98,19 @@ test('an expired invitation does not allow sign-up', function () {
     $this->assertGuest();
 });
 
-test('closed sign-up refuses everyone after the first user, and hides the page', function () {
+test('closed sign-up sends every request to register to the login page', function () {
     User::factory()->create();
     config(['registration.mode' => 'closed']);
 
-    $this->get(route('register'))->assertNotFound();
+    $this->get(route('register'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'Sign-up is closed on this installation.');
 
     $this->post(route('register.store'), registrationData('stranger@example.com'))
-        ->assertSessionHasErrors('email');
+        ->assertRedirect(route('login'));
+
+    $this->assertGuest();
+    expect(User::query()->where('email', 'stranger@example.com')->exists())->toBeFalse();
 
     $this->get(route('login'))->assertInertia(fn ($page) => $page->where('canRegister', false));
 });
