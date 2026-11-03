@@ -3,10 +3,12 @@
 namespace Gerenuk\Marketing\Http\Controllers;
 
 use Gerenuk\Marketing\Enums\Permission;
+use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Role;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -49,7 +51,16 @@ class RoleController extends Controller
 
         abort_unless($role->isWithin($actor), 403);
 
-        $role->update($this->validated($request, $actor, $role));
+        $validated = $this->validated($request, $actor, $role);
+
+        DB::transaction(function () use ($role, $validated): void {
+            $role->update($validated);
+
+            // Members' API tokens can't keep permissions the role no longer grants.
+            foreach ($role->memberships()->pluck('user_id') as $userId) {
+                ApiToken::narrowForUser($role->workspace_id, (int) $userId, $role->permissions);
+            }
+        });
 
         return to_route('marketing.roles.index');
     }

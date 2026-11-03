@@ -295,3 +295,15 @@ test('revoking an owner invitation needs the owner', function () {
 
     expect($invitation->fresh())->not->toBeNull();
 });
+
+test('removing permissions from a role narrows its members\' tokens', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $editor = $this->addMember($workspace, 'Editor');
+    app(CreateApiToken::class)->handle($workspace, $editor, 'sync', ['contacts.view', 'contacts.manage']);
+    $permissions = array_values(array_diff(roleNamed('Editor')->permissions, ['contacts.manage']));
+
+    $this->actingAs($owner)->put(route('marketing.roles.update', roleNamed('Editor')), ['name' => 'Editor', 'permissions' => $permissions])
+        ->assertRedirect();
+
+    expect(ApiToken::withoutGlobalScopes()->where('created_by', $editor->id)->first()->permissions)->toBe(['contacts.view']);
+});
