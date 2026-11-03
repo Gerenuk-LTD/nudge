@@ -12,9 +12,14 @@ import { store } from '@/routes/register';
 type Props = {
     passwordRules: string;
     byInvitation: boolean;
+    needsSetupToken: boolean;
 };
 
-export default function Register({ passwordRules, byInvitation }: Props) {
+export default function Register({
+    passwordRules,
+    byInvitation,
+    needsSetupToken,
+}: Props) {
     return (
         <>
             <Head title="Register" />
@@ -94,10 +99,32 @@ export default function Register({ passwordRules, byInvitation }: Props) {
                                 />
                             </div>
 
+                            {needsSetupToken && (
+                                <div className="grid content-start gap-2">
+                                    <Label htmlFor="setup_token">
+                                        Setup token
+                                    </Label>
+                                    <Input
+                                        id="setup_token"
+                                        type="password"
+                                        required
+                                        tabIndex={5}
+                                        autoComplete="off"
+                                        name="setup_token"
+                                        placeholder="Setup token"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        This is the first account. Enter the
+                                        SETUP_TOKEN value from this
+                                        installation's configuration.
+                                    </p>
+                                </div>
+                            )}
+
                             <Button
                                 type="submit"
                                 className="mt-2 w-full"
-                                tabIndex={5}
+                                tabIndex={6}
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
@@ -107,7 +134,7 @@ export default function Register({ passwordRules, byInvitation }: Props) {
 
                         <div className="text-center text-sm text-muted-foreground">
                             Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
+                            <TextLink href={login()} tabIndex={7}>
                                 Log in
                             </TextLink>
                         </div>

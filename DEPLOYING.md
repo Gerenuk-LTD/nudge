@@ -26,6 +26,15 @@ php artisan view:cache
 
 `storage:link` is needed once: images uploaded in the email builder are served from the `public` disk, and inboxes load them directly.
 
+## First run
+
+A new install has no accounts, and the first one becomes its owner. So that nobody who finds the site can claim it first, the first account can't be created on the website without a setup token. Use one of these:
+
+- **From the server (recommended):** run `php artisan app:create-owner you@example.com --name="Your Name"`. It asks for a password, creates the account already verified, and refuses if any account exists.
+- **In the browser:** set `SETUP_TOKEN` in `.env` to a long random value (for example the output of `openssl rand -hex 32`), and run `php artisan config:cache`. Then open `/register` and enter that token alongside your details. Remove `SETUP_TOKEN` and cache the config again afterwards.
+
+Once the owner exists, `REGISTRATION_MODE` decides who else can sign up, and the setup token no longer matters.
+
 ## Environment values that must be set
 
 `.env.example` ships production-safe defaults (`APP_ENV=production`, `APP_DEBUG=false`, secure and encrypted sessions). Never deploy with `APP_ENV=local` or `APP_DEBUG=true`: debug pages show request data and SQL to anyone.
@@ -36,7 +45,7 @@ php artisan view:cache
 - **Queue:** `QUEUE_CONNECTION=redis`. The connection's `retry_after` must exceed the longest job timeout (imports run for up to an hour). The default is 3660 seconds (`REDIS_QUEUE_RETRY_AFTER`). Don't lower it, or long jobs get handed to a second worker while they're still running.
 - **Mail:** set a real `MAIL_MAILER` (for example `smtp`) with its credentials, plus `MAIL_FROM_ADDRESS`. The default, `log`, writes password-reset and invitation links to the log file. This mailer only sends account email. Campaigns go through the sending providers configured in the app.
 - **Tracking:** `MARKETING_TRACKING_URL`, only if tracking links and the unsubscribe page should be served from another domain.
-- **Registration:** `REGISTRATION_MODE` is `invite` (the default: only email addresses with a pending workspace invitation), `closed` or `open`. Whatever the mode, the first user of a new install can always register, so create your account straight after deploying.
+- **Registration:** `REGISTRATION_MODE` is `invite` (the default: only email addresses with a pending workspace invitation), `closed` or `open`. The first account is created separately (see [First run](#first-run)).
 - **Shared installs:** set `MARKETING_ALLOW_PRIVATE_SMTP_HOSTS=false` so workspace owners can't point SMTP at internal services. Leave it `true` only if you trust every workspace owner and relay through a local mail server.
 
 Optional settings:
@@ -96,7 +105,15 @@ The scheduler starts scheduled campaigns and recovers stuck work. Add this cron 
 
 Keep `APP_KEY` secret and backed up. It encrypts sessions and stored provider credentials, and it signs tracking and unsubscribe links.
 
-Rotating APP_KEY currently breaks unsubscribe links in emails already sent; do not rotate it until plan 025 lands. After that, rotation works by moving the old key into `APP_PREVIOUS_KEYS`.
+## Rotating APP_KEY
+
+Rotate the key if it may have leaked:
+
+1. Copy the current `APP_KEY` value into `APP_PREVIOUS_KEYS`. Separate several old keys with commas.
+2. Run `php artisan key:generate` to set a new `APP_KEY`.
+3. Run `php artisan config:cache` and `php artisan queue:restart`.
+
+New links are signed with the new key. Unsubscribe, click and open links in emails already sent keep working as long as the old key stays in `APP_PREVIOUS_KEYS`, and so do stored credentials. Keep it there for as long as old emails might still be acted on; a year is sensible for unsubscribe links. Signed-in users stay signed in.
 
 ## Upgrading
 

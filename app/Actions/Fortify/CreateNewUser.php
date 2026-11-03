@@ -24,8 +24,10 @@ class CreateNewUser implements CreatesNewUsers
         $registration = app(Registration::class);
         $profileRules = $this->profileRules();
 
-        $profileRules['email'][] = function (string $attribute, mixed $value, Closure $fail) use ($registration): void {
-            if (! $registration->allows((string) $value)) {
+        $setupToken = $input['setup_token'] ?? null;
+
+        $profileRules['email'][] = function (string $attribute, mixed $value, Closure $fail) use ($registration, $setupToken): void {
+            if (! $registration->allows((string) $value, is_string($setupToken) ? $setupToken : null)) {
                 $fail($registration->refusal());
             }
         };

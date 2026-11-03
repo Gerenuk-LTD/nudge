@@ -78,6 +78,7 @@ class FortifyServiceProvider extends ServiceProvider
             return Inertia::render('auth/register', [
                 'passwordRules' => Password::defaults()->toPasswordRulesString(),
                 'byInvitation' => ! $registration->isFirstUser() && $registration->mode() === 'invite',
+                'needsSetupToken' => $registration->isFirstUser(),
             ]);
         });
 
