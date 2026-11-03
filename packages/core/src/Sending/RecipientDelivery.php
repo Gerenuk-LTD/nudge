@@ -13,6 +13,7 @@ use Gerenuk\Marketing\Models\CampaignSnapshot;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Models\Workspace;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -61,7 +62,13 @@ class RecipientDelivery
                 $this->messages->build($campaign, $snapshot, $recipient, $contact, $workspace, $linksByHash, $provider->credentials['configuration_set'] ?? null),
             );
         } catch (Throwable $exception) {
-            report($exception);
+            // Provider errors often quote the recipient's address, so the message stays in the app, not the log.
+            Log::warning('Campaign send failed', [
+                'campaign' => $campaign->id,
+                'recipient' => $recipient->id,
+                'provider' => $provider->id,
+                'exception' => $exception::class,
+            ]);
 
             $recipient->update(['status' => RecipientStatus::Failed, 'error' => mb_substr($exception->getMessage(), 0, 1000)]);
             $campaign->increment('failed_count');

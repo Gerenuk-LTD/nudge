@@ -12,7 +12,9 @@ use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Import;
 use Gerenuk\Marketing\Support\ContactData;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -192,4 +194,24 @@ test('an import that unsubscribes people records it', function () {
     expect($event->type)->toBe(EventType::Unsubscribed)
         ->and($event->data)->toBe(['via' => 'import'])
         ->and(Contact::query()->forEmail('new@example.com')->firstOrFail()->events()->count())->toBe(0);
+});
+
+test('a failed import row does not put contact data in the log', function () {
+    // SQLite doesn't enforce column lengths, so simulate the database refusing the row; its bindings hold the email.
+    Contact::saving(function (Contact $contact): void {
+        if ($contact->email === 'secret.person@example.com') {
+            throw new QueryException('sqlite', 'insert into "contacts" ("email") values (?)', [$contact->email], new PDOException('SQLSTATE[22001]: value too long'));
+        }
+    });
+    Log::spy();
+
+    $import = uploadAndStart($this, "email\nsecret.person@example.com\nfine@example.com\n", ['email']);
+
+    expect($import->failed_count)->toBe(1)
+        ->and($import->created_count)->toBe(1);
+
+    Log::shouldHaveReceived('warning')->once()->with('Import row could not be saved', Mockery::on(
+        fn (array $context) => array_keys($context) === ['import', 'row', 'sqlstate'] && ! str_contains(json_encode($context), 'secret.person'),
+    ));
+    Log::shouldNotHaveReceived('error');
 });

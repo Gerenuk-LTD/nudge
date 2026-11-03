@@ -17,6 +17,7 @@ use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
@@ -109,7 +110,12 @@ class ProcessImport implements ShouldQueue
                         $triggers->tagsAdded($contact, $contact->tags()->syncWithoutDetaching($tagIds)['attached']);
                     }
                 } catch (QueryException $exception) {
-                    report($exception);
+                    // Not report(): the exception's SQL carries the row's bindings, which are contact data.
+                    Log::warning('Import row could not be saved', [
+                        'import' => $import->id,
+                        'row' => $line,
+                        'sqlstate' => $exception->errorInfo[0] ?? $exception->getCode(),
+                    ]);
 
                     $counts['failed_count']++;
                     $errors[] = [
