@@ -35,8 +35,8 @@ class AutomationTriggers
     /**
      * @param  array<string, mixed>  $properties
      */
-    public function event(Contact $contact, string $name, array $properties): void
+    public function event(Contact $contact, string $name, array $properties, ?int $eventId = null): void
     {
-        StartAutomationsForTrigger::dispatch($contact->workspace_id, $contact->id, AutomationTrigger::ApiEvent, $name, ['event' => $name, 'properties' => $properties]);
+        StartAutomationsForTrigger::dispatch($contact->workspace_id, $contact->id, AutomationTrigger::ApiEvent, $name, ['event' => $name, 'properties' => $properties], $eventId);
     }
 }

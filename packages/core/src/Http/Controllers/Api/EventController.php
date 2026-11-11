@@ -10,6 +10,7 @@ use Gerenuk\Marketing\Http\Controllers\Controller;
 use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Support\ContactData;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,6 +29,17 @@ class EventController extends Controller
             'create_contact' => ['sometimes', 'boolean'],
         ]);
 
+        $key = $request->headers->has('Idempotency-Key') ? (string) $request->header('Idempotency-Key') : null;
+
+        if ($key !== null && preg_match('/^[\x21-\x7E]{1,255}$/', $key) !== 1) {
+            return response()->json(['message' => 'The Idempotency-Key header must be 1 to 255 visible ASCII characters.'], 422);
+        }
+
+        // A repeat returns the stored event even if its body differs: the key wins.
+        if ($key !== null && ($existing = ActivityEvent::query()->where('idempotency_key', $key)->first()) !== null) {
+            return $this->replay($existing, $triggers);
+        }
+
         $contact = Contact::query()->forEmail($validated['email'])->first();
 
         if ($contact === null && ($validated['create_contact'] ?? false)) {
@@ -40,16 +52,44 @@ class EventController extends Controller
 
         $properties = $validated['properties'] ?? [];
 
-        $event = ActivityEvent::create([
-            'contact_id' => $contact->id,
-            'type' => EventType::Custom,
-            'data' => ['name' => $validated['event'], 'properties' => $properties],
-            'occurred_at' => now(),
-        ]);
+        try {
+            $event = ActivityEvent::create([
+                'contact_id' => $contact->id,
+                'type' => EventType::Custom,
+                'data' => ['name' => $validated['event'], 'properties' => $properties],
+                'idempotency_key' => $key,
+                'occurred_at' => now(),
+            ]);
+        } catch (UniqueConstraintViolationException $e) {
+            // A concurrent request with the same key got there first; answer with its event.
+            $existing = $key === null ? null : ActivityEvent::query()->where('idempotency_key', $key)->first();
 
-        $triggers->event($contact, $validated['event'], $properties);
+            if ($existing === null) {
+                throw $e;
+            }
+
+            return $this->replay($existing, $triggers);
+        }
+
+        $triggers->event($contact, $validated['event'], $properties, $event->id);
 
         return response()->json(['data' => ['id' => $event->id, 'event' => $validated['event'], 'email' => $contact->email]], 202);
+    }
+
+    /**
+     * Answer a repeated request with the stored event. If its automations never started (the dispatch
+     * failed after the row was written), dispatch again; a duplicate dispatch is a no-op once started.
+     */
+    private function replay(ActivityEvent $event, AutomationTriggers $triggers): JsonResponse
+    {
+        $contact = Contact::query()->find($event->contact_id);
+        $name = (string) ($event->data['name'] ?? '');
+
+        if ($event->triggered_at === null && $contact !== null) {
+            $triggers->event($contact, $name, $event->data['properties'] ?? [], $event->id);
+        }
+
+        return response()->json(['data' => ['id' => $event->id, 'event' => $name, 'email' => $contact?->email]], 202);
     }
 
     /**

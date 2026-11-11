@@ -5,12 +5,14 @@ namespace Gerenuk\Marketing\Jobs;
 use Gerenuk\Marketing\Actions\Automations\EnrollContact;
 use Gerenuk\Marketing\Enums\AutomationStatus;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
+use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\Automation;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Starts every active automation whose trigger matches something that just happened to a contact.
@@ -29,6 +31,7 @@ class StartAutomationsForTrigger implements ShouldQueueAfterCommit
         public AutomationTrigger $trigger,
         public string $value,
         public array $context = [],
+        public ?int $eventId = null,
     ) {
         $this->onQueue(config('marketing.sending.queue'));
     }
@@ -36,30 +39,56 @@ class StartAutomationsForTrigger implements ShouldQueueAfterCommit
     public function handle(CurrentWorkspace $currentWorkspace, EnrollContact $enroll): void
     {
         $currentWorkspace->runAs(Workspace::findOrFail($this->workspaceId), function () use ($enroll): void {
-            $contact = Contact::find($this->contactId);
+            if ($this->eventId === null) {
+                $this->startAutomations($enroll);
 
-            if ($contact === null) {
                 return;
             }
 
-            $key = match ($this->trigger) {
-                AutomationTrigger::ListJoined => 'list_id',
-                AutomationTrigger::TagAdded => 'tag_id',
-                AutomationTrigger::ApiEvent => 'event',
-                default => null,
-            };
+            // The same event can be dispatched more than once (a replayed request, a retried job).
+            // The lock keeps two copies apart, and triggered_at tells a later copy there is nothing to do.
+            Cache::lock("marketing:event-trigger:{$this->eventId}", 60)->block(10, function () use ($enroll): void {
+                $event = ActivityEvent::query()->whereKey($this->eventId)->first();
 
-            if ($key === null) {
-                return;
-            }
+                if ($event === null || $event->triggered_at !== null) {
+                    return;
+                }
 
-            Automation::query()
-                ->where('status', AutomationStatus::Active)
-                ->where('trigger_type', $this->trigger)
-                ->get()
-                ->filter(fn (Automation $automation) => $this->matches($automation->triggerValue($key)))
-                ->each(fn (Automation $automation) => $enroll->handle($automation, $contact, ['trigger' => $this->trigger->value, ...$this->context]));
+                $this->startAutomations($enroll);
+
+                // Marked after enrolling, so a job that dies part-way is retried and finishes the work;
+                // EnrollContact skips automations the contact is already in.
+                $event->triggered_at = now();
+                $event->save();
+            });
         });
+    }
+
+    private function startAutomations(EnrollContact $enroll): void
+    {
+        $contact = Contact::find($this->contactId);
+
+        if ($contact === null) {
+            return;
+        }
+
+        $key = match ($this->trigger) {
+            AutomationTrigger::ListJoined => 'list_id',
+            AutomationTrigger::TagAdded => 'tag_id',
+            AutomationTrigger::ApiEvent => 'event',
+            default => null,
+        };
+
+        if ($key === null) {
+            return;
+        }
+
+        Automation::query()
+            ->where('status', AutomationStatus::Active)
+            ->where('trigger_type', $this->trigger)
+            ->get()
+            ->filter(fn (Automation $automation) => $this->matches($automation->triggerValue($key)))
+            ->each(fn (Automation $automation) => $enroll->handle($automation, $contact, ['trigger' => $this->trigger->value, ...$this->context]));
     }
 
     private function matches(mixed $configured): bool

@@ -20,11 +20,13 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $campaign_recipient_id
  * @property EventType $type
  * @property array<string, mixed>|null $data
+ * @property string|null $idempotency_key
  * @property CarbonInterface $occurred_at
+ * @property CarbonInterface|null $triggered_at
  */
 #[Table('events')]
 #[WithoutTimestamps]
-#[Fillable(['workspace_id', 'contact_id', 'campaign_id', 'campaign_recipient_id', 'type', 'data', 'occurred_at'])]
+#[Fillable(['workspace_id', 'contact_id', 'campaign_id', 'campaign_recipient_id', 'type', 'data', 'idempotency_key', 'occurred_at', 'triggered_at'])]
 class ActivityEvent extends Model
 {
     use BelongsToWorkspace;
@@ -35,6 +37,7 @@ class ActivityEvent extends Model
             'type' => EventType::class,
             'data' => 'array',
             'occurred_at' => 'datetime',
+            'triggered_at' => 'datetime',
         ];
     }
 
