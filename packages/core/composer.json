@@ -21,6 +21,7 @@
         "symfony/webhook": "^8.1"
     },
     "require-dev": {
+        "dedoc/scramble": "^0.13.53",
         "orchestra/testbench": "^11.3",
         "pestphp/pest": "^5.3",
         "pestphp/pest-plugin-laravel": "^5.0"
@@ -33,7 +34,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Gerenuk\\Marketing\\Tests\\": "tests/"
+            "Gerenuk\\Marketing\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/"
         }
     },
     "extra": {
