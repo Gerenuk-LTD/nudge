@@ -2,12 +2,36 @@
     "openapi": "3.1.2",
     "info": {
         "title": "Gerenuk Marketing API",
-        "version": "1"
+        "version": "1",
+        "description": "Manage contacts, lists, custom fields and events in a workspace.\n\nEvery request needs a workspace API token, sent as `Authorization: Bearer <token>`. A token carries permissions; each operation says which one it needs. Requests are limited per token each minute."
     },
     "servers": [
         {
-            "url": "http://localhost:8000/api/v1",
+            "url": "http://your-domain.example/api/v1",
             "description": "Default"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Account"
+        },
+        {
+            "name": "Contacts"
+        },
+        {
+            "name": "Events"
+        },
+        {
+            "name": "Lists"
+        },
+        {
+            "name": "Tags"
+        },
+        {
+            "name": "Custom fields"
+        },
+        {
+            "name": "Segments"
         }
     ],
     "security": [
@@ -16,85 +40,189 @@
         }
     ],
     "paths": {
+        "/me": {
+            "get": {
+                "operationId": "marketing.api.me",
+                "description": "The workspace this token belongs to, and the token's name and permissions. Works with any valid token, so it is a cheap way to check a token.",
+                "summary": "Identify the token",
+                "tags": [
+                    "Account"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The token's workspace and permissions.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "workspace": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "name"
+                                                    ]
+                                                },
+                                                "token": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "permissions": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "name",
+                                                        "permissions"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "workspace",
+                                                "token"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated. The token is missing, invalid or expired.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Unauthenticated."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Too Many Attempts."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/contacts": {
             "get": {
                 "operationId": "marketing.api.contacts.index",
-                "description": "Requires a token with the `contacts.view` permission.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nContacts in ID order, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
+                "summary": "List contacts",
                 "tags": [
-                    "Contact"
+                    "Contacts"
                 ],
                 "parameters": [
                     {
                         "name": "status",
                         "in": "query",
+                        "description": "Only contacts with this status: `subscribed` or `unsubscribed`.",
                         "schema": {
-                            "type": [
-                                "string",
-                                "null"
-                            ]
+                            "type": "string"
                         }
                     },
                     {
                         "name": "list",
                         "in": "query",
+                        "description": "Only contacts on the list with this ID.",
                         "schema": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": "integer"
                         }
                     },
                     {
                         "name": "tag",
                         "in": "query",
+                        "description": "Only contacts with the tag with this ID.",
                         "schema": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": "integer"
                         }
                     },
                     {
                         "name": "segment",
                         "in": "query",
+                        "description": "Only contacts in the segment with this ID. An unknown ID answers 404.",
                         "schema": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
+                            "type": "integer"
                         }
                     },
                     {
                         "name": "archived",
                         "in": "query",
+                        "description": "When true, list only archived contacts. By default only active contacts are listed.",
                         "schema": {
-                            "type": [
-                                "boolean",
-                                "null"
-                            ]
+                            "type": "boolean"
                         }
                     },
                     {
                         "name": "search",
                         "in": "query",
+                        "description": "Matches against email address, first name and last name.",
                         "schema": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "maxLength": 255
+                            "type": "string"
                         }
                     },
                     {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Contacts per page, from 1 to 500. Defaults to 100.",
                         "schema": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ],
-                            "minimum": 1,
-                            "maximum": 500
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `meta.next_cursor` value from the previous page.",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -197,6 +325,24 @@
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
                     },
+                    "404": {
+                        "description": "The `segment` filter names a segment that does not exist.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
                         "content": {
@@ -268,16 +414,19 @@
             "get": {
                 "operationId": "marketing.api.contacts.show",
                 "description": "Requires a token with the `contacts.view` permission.",
+                "summary": "Get a contact",
                 "tags": [
-                    "Contact"
+                    "Contacts"
                 ],
                 "parameters": [
                     {
                         "name": "email",
                         "in": "path",
                         "required": true,
+                        "description": "The contact's email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.",
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "email"
                         }
                     }
                 ],
@@ -291,6 +440,418 @@
                                     "properties": {
                                         "data": {
                                             "$ref": "#/components/schemas/ContactResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No contact with that email.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated. The token is missing, invalid or expired.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Unauthenticated."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the required permission.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "This token does not have the contacts.view permission."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Too Many Attempts."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-required-permission": "contacts.view"
+            },
+            "put": {
+                "operationId": "marketing.api.contacts.upsert",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nCreate or update a contact. Custom fields are merged; tags and lists are added, never removed.\nSomeone who unsubscribed is only subscribed again when `resubscribe` is true.\n\nAnswers `201` with the new contact when this call created it, and `200` with the updated contact when it already existed.",
+                "summary": "Create or update a contact",
+                "tags": [
+                    "Contacts"
+                ],
+                "parameters": [
+                    {
+                        "name": "email",
+                        "in": "path",
+                        "required": true,
+                        "description": "The contact's email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.",
+                        "schema": {
+                            "type": "string",
+                            "format": "email"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "description": "Whether the contact is subscribed. See `resubscribe` for turning an unsubscribed contact back on."
+                                    },
+                                    "custom_fields": {
+                                        "type": "object",
+                                        "description": "Values keyed by custom field key. The accepted keys are defined per workspace; list them with `GET /custom-fields`. Unknown keys are rejected. Merged into the contact's existing values."
+                                    },
+                                    "tags": {
+                                        "type": "array",
+                                        "description": "Tag names to add, at most 50, each at most 100 characters. Tags are never removed by this call.",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "lists": {
+                                        "type": "array",
+                                        "description": "IDs of lists to add the contact to. Lists are never removed by this call, and each ID must belong to this workspace.",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "resubscribe": {
+                                        "type": "boolean",
+                                        "description": "Set to true to subscribe someone who previously unsubscribed. Without it their status is left as it is."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The contact already existed and was updated.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "201": {
+                        "description": "The contact was created.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated. The token is missing, invalid or expired.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Unauthenticated."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the required permission.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "This token does not have the contacts.manage permission."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Too Many Attempts."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-required-permission": "contacts.manage"
+            },
+            "delete": {
+                "operationId": "marketing.api.contacts.archive",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nArchives the contact (it is not deleted) and answers `204` with no body.",
+                "summary": "Archive a contact",
+                "tags": [
+                    "Contacts"
+                ],
+                "parameters": [
+                    {
+                        "name": "email",
+                        "in": "path",
+                        "required": true,
+                        "description": "The contact's email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.",
+                        "schema": {
+                            "type": "string",
+                            "format": "email"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Archived. No body."
+                    },
+                    "404": {
+                        "description": "No contact with that email.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated. The token is missing, invalid or expired.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Unauthenticated."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the required permission.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "This token does not have the contacts.manage permission."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Too Many Attempts."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-required-permission": "contacts.manage"
+            }
+        },
+        "/custom-fields": {
+            "get": {
+                "operationId": "marketing.api.custom-fields.index",
+                "description": "Requires a token with the `contacts.view` permission.\n\nThe custom fields defined in the workspace. These keys are the ones accepted in a contact's `custom_fields`.",
+                "summary": "List custom fields",
+                "tags": [
+                    "Custom fields"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Custom field definitions, ordered by key.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string"
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "text",
+                                                            "number",
+                                                            "date",
+                                                            "boolean"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "label",
+                                                    "type"
+                                                ]
+                                            }
                                         }
                                     },
                                     "required": [
@@ -366,30 +927,85 @@
                 },
                 "x-required-permission": "contacts.view"
             },
-            "put": {
-                "operationId": "marketing.api.contacts.upsert",
-                "description": "Requires a token with the `contacts.manage` permission.",
-                "summary": "Create or update a contact. Custom fields are merged; tags and lists are added, never removed.\nSomeone who unsubscribed is only subscribed again when `resubscribe` is true",
+            "post": {
+                "operationId": "marketing.api.custom-fields.store",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nDefines a new custom field. Its type cannot be changed afterwards through this API.",
+                "summary": "Create a custom field",
                 "tags": [
-                    "Contact"
+                    "Custom fields"
                 ],
-                "parameters": [
-                    {
-                        "name": "email",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "key": {
+                                        "type": "string",
+                                        "description": "Lowercase letters, digits and underscores, starting with a letter, at most 64 characters (`^[a-z][a-z0-9_]{0,63}$`). Must be unique within the workspace."
+                                    },
+                                    "label": {
+                                        "type": "string",
+                                        "description": "A display name, at most 100 characters."
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "description": "The type values are validated and stored as.",
+                                        "enum": [
+                                            "text",
+                                            "number",
+                                            "date",
+                                            "boolean"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "key",
+                                    "label",
+                                    "type"
+                                ]
+                            }
                         }
                     }
-                ],
+                },
                 "responses": {
-                    "200": {
-                        "description": "",
+                    "201": {
+                        "description": "The custom field was created.",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "label": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "text",
+                                                        "number",
+                                                        "date",
+                                                        "boolean"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "key",
+                                                "label",
+                                                "type"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
                                 }
                             }
                         }
@@ -462,26 +1078,325 @@
                     }
                 },
                 "x-required-permission": "contacts.manage"
-            },
-            "delete": {
-                "operationId": "marketing.api.contacts.archive",
-                "description": "Requires a token with the `contacts.manage` permission.",
+            }
+        },
+        "/contacts/{email}/events": {
+            "get": {
+                "operationId": "marketing.api.contacts.events",
+                "description": "Requires a token with the `contacts.view` permission.\n\nCursor-paginated, 100 events per page. Pass `next_cursor` as `cursor` to read the next page; it is null on the last page.",
+                "summary": "A contact's activity, newest first",
                 "tags": [
-                    "Contact"
+                    "Events"
                 ],
                 "parameters": [
                     {
                         "name": "email",
                         "in": "path",
                         "required": true,
+                        "description": "The contact's email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.",
+                        "schema": {
+                            "type": "string",
+                            "format": "email"
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `next_cursor` value from the previous page.",
                         "schema": {
                             "type": "string"
                         }
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No content"
+                    "200": {
+                        "description": "The contact's events.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "sent",
+                                                            "delivered",
+                                                            "deferred",
+                                                            "bounced",
+                                                            "dropped",
+                                                            "complained",
+                                                            "opened",
+                                                            "clicked",
+                                                            "unsubscribed",
+                                                            "resubscribed",
+                                                            "paused",
+                                                            "custom",
+                                                            "automation_entered",
+                                                            "automation_completed",
+                                                            "automation_exited"
+                                                        ]
+                                                    },
+                                                    "data": {
+                                                        "type": "object",
+                                                        "additionalProperties": {}
+                                                    },
+                                                    "campaign_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "occurred_at": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "type",
+                                                    "data",
+                                                    "campaign_id",
+                                                    "occurred_at"
+                                                ]
+                                            }
+                                        },
+                                        "next_cursor": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "next_cursor"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No contact with that email.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated. The token is missing, invalid or expired.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Unauthenticated."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the required permission.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "This token does not have the contacts.view permission."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "examples": [
+                                                "Too Many Attempts."
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-required-permission": "contacts.view"
+            }
+        },
+        "/events": {
+            "post": {
+                "operationId": "marketing.api.events.store",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nRecords a named event on a contact's timeline and starts any automations triggered by it. The event is processed asynchronously, so this answers `202`.",
+                "summary": "Record an event",
+                "tags": [
+                    "Events"
+                ],
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "description": "Send the same key when retrying. A repeat within the workspace returns the original response and records nothing new. Must be 1 to 255 visible ASCII characters.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 254
+                                    },
+                                    "event": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z0-9_.:-]+$",
+                                        "maxLength": 100
+                                    },
+                                    "properties": {
+                                        "type": "object",
+                                        "description": "Free-form data about the event, such as an order total. Available to automations that this event triggers."
+                                    },
+                                    "create_contact": {
+                                        "type": "boolean",
+                                        "description": "Set to true to create the contact when no contact has this email. Otherwise an unknown email answers 404."
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "event"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Accepted. `email` is only null when a repeated request finds that its contact has since been deleted.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "event": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "event",
+                                                "email"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No contact with that email, and `create_contact` was not true.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The body failed validation, or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -553,9 +1468,10 @@
         "/lists": {
             "get": {
                 "operationId": "marketing.api.lists.index",
-                "description": "Requires a token with the `contacts.view` permission.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nEvery list in the workspace, by name, with the number of contacts on each.",
+                "summary": "List the lists",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
                 "responses": {
                     "200": {
@@ -648,12 +1564,36 @@
             "post": {
                 "operationId": "marketing.api.lists.store",
                 "description": "Requires a token with the `contacts.manage` permission.",
+                "summary": "Create a list",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The list's name, at most 100 characters. Must be unique within the workspace."
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "At most 500 characters."
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "`ContactListResource`",
+                        "description": "The list was created.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -665,6 +1605,34 @@
                                     },
                                     "required": [
                                         "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The body failed validation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "errors"
                                     ]
                                 }
                             }
@@ -741,15 +1709,16 @@
             "get": {
                 "operationId": "marketing.api.lists.show",
                 "description": "Requires a token with the `contacts.view` permission.",
+                "summary": "Get a list",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
                 "parameters": [
                     {
                         "name": "list",
                         "in": "path",
                         "required": true,
-                        "description": "The list ID",
+                        "description": "The ID of the list.",
                         "schema": {
                             "type": "integer"
                         }
@@ -775,7 +1744,22 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                        "description": "No list with that ID.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -845,21 +1829,41 @@
             },
             "put": {
                 "operationId": "marketing.api.lists.update",
-                "description": "Requires a token with the `contacts.manage` permission.",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nOnly the fields you send are changed.",
+                "summary": "Update a list",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
                 "parameters": [
                     {
                         "name": "list",
                         "in": "path",
                         "required": true,
-                        "description": "The list ID",
+                        "description": "The ID of the list.",
                         "schema": {
                             "type": "integer"
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The list's name, at most 100 characters. Must be unique within the workspace."
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "At most 500 characters. Send null to clear it."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "`ContactListResource`",
@@ -880,7 +1884,50 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                        "description": "No list with that ID.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The body failed validation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -950,16 +1997,17 @@
             },
             "delete": {
                 "operationId": "marketing.api.lists.destroy",
-                "description": "Requires a token with the `contacts.manage` permission.",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nDeletes the list. Its contacts are not deleted.",
+                "summary": "Delete a list",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
                 "parameters": [
                     {
                         "name": "list",
                         "in": "path",
                         "required": true,
-                        "description": "The list ID",
+                        "description": "The ID of the list.",
                         "schema": {
                             "type": "integer"
                         }
@@ -967,10 +2015,25 @@
                 ],
                 "responses": {
                     "204": {
-                        "description": "No content"
+                        "description": "Deleted. No body."
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                        "description": "No list with that ID.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -1042,25 +2105,47 @@
         "/lists/{list}/contacts": {
             "post": {
                 "operationId": "marketing.api.lists.contacts.store",
-                "description": "Requires a token with the `contacts.manage` permission.",
-                "summary": "Add existing contacts to the list by email. Unknown emails are reported back, not created",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nAdd existing contacts to the list by email. Unknown emails are reported back, not created.",
+                "summary": "Add contacts to a list",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
                 "parameters": [
                     {
                         "name": "list",
                         "in": "path",
                         "required": true,
-                        "description": "The list ID",
+                        "description": "The ID of the list.",
                         "schema": {
                             "type": "integer"
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "emails": {
+                                        "type": "array",
+                                        "description": "Email addresses of existing contacts, at most 1000.",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "emails"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "`added` counts the contacts found; `not_found` lists the emails that matched no contact.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1074,7 +2159,9 @@
                                                 },
                                                 "not_found": {
                                                     "type": "array",
-                                                    "items": {}
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
                                                 }
                                             },
                                             "required": [
@@ -1091,7 +2178,50 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                        "description": "No list with that ID.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The body failed validation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -1161,24 +2291,47 @@
             },
             "delete": {
                 "operationId": "marketing.api.lists.contacts.destroy",
-                "description": "Requires a token with the `contacts.manage` permission.",
+                "description": "Requires a token with the `contacts.manage` permission.\n\nRemoves contacts from the list by email. The contacts themselves are not deleted, and unknown emails are reported back.",
+                "summary": "Remove contacts from a list",
                 "tags": [
-                    "ContactList"
+                    "Lists"
                 ],
                 "parameters": [
                     {
                         "name": "list",
                         "in": "path",
                         "required": true,
-                        "description": "The list ID",
+                        "description": "The ID of the list.",
                         "schema": {
                             "type": "integer"
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "emails": {
+                                        "type": "array",
+                                        "description": "Email addresses of contacts to remove, at most 1000.",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "emails"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "`removed` counts the contacts taken off the list; `not_found` lists the emails that matched no contact.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1192,7 +2345,9 @@
                                                 },
                                                 "not_found": {
                                                     "type": "array",
-                                                    "items": {}
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
                                                 }
                                             },
                                             "required": [
@@ -1209,241 +2364,50 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "401": {
-                        "description": "Unauthenticated. The token is missing, invalid or expired.",
+                        "description": "No list with that ID.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Unauthenticated."
-                                            ]
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
                                         "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "The token lacks the required permission.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "This token does not have the contacts.manage permission."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Too Many Attempts."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                },
-                "x-required-permission": "contacts.manage"
-            }
-        },
-        "/custom-fields": {
-            "get": {
-                "operationId": "marketing.api.custom-fields.index",
-                "description": "Requires a token with the `contacts.view` permission.",
-                "tags": [
-                    "CustomField"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/CustomFieldDefinition"
-                                            }
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated. The token is missing, invalid or expired.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Unauthenticated."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "The token lacks the required permission.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "This token does not have the contacts.view permission."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Too Many Attempts."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                },
-                "x-required-permission": "contacts.view"
-            },
-            "post": {
-                "operationId": "marketing.api.custom-fields.store",
-                "description": "Requires a token with the `contacts.manage` permission.",
-                "tags": [
-                    "CustomField"
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "key": {
-                                        "type": "string",
-                                        "pattern": "^[a-z][a-z0-9_]{0,63}$"
-                                    },
-                                    "label": {
-                                        "type": "string",
-                                        "maxLength": 100
-                                    },
-                                    "type": {
-                                        "$ref": "#/components/schemas/CustomFieldType"
-                                    }
-                                },
-                                "required": [
-                                    "key",
-                                    "label",
-                                    "type"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "key": {
-                                                    "type": "string"
-                                                },
-                                                "label": {
-                                                    "type": "string"
-                                                },
-                                                "type": {
-                                                    "$ref": "#/components/schemas/CustomFieldType"
-                                                }
-                                            },
-                                            "required": [
-                                                "key",
-                                                "label",
-                                                "type"
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
                         }
                     },
                     "422": {
-                        "$ref": "#/components/responses/ValidationException"
+                        "description": "The body failed validation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -1512,27 +2476,17 @@
                 "x-required-permission": "contacts.manage"
             }
         },
-        "/contacts/{email}/events": {
+        "/segments": {
             "get": {
-                "operationId": "marketing.api.contacts.events",
-                "description": "Requires a token with the `contacts.view` permission.",
-                "summary": "A contact's activity, newest first",
+                "operationId": "marketing.api.segments.index",
+                "description": "Requires a token with the `contacts.view` permission.\n\nEvery segment in the workspace, by name.",
+                "summary": "List segments",
                 "tags": [
-                    "Event"
-                ],
-                "parameters": [
-                    {
-                        "name": "email",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
+                    "Segments"
                 ],
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "Segments, ordered by name.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1543,451 +2497,17 @@
                                             "items": {
                                                 "type": "object",
                                                 "properties": {
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": [
-                                                            "sent",
-                                                            "delivered",
-                                                            "deferred",
-                                                            "bounced",
-                                                            "dropped",
-                                                            "complained",
-                                                            "opened",
-                                                            "clicked",
-                                                            "unsubscribed",
-                                                            "resubscribed",
-                                                            "paused",
-                                                            "custom",
-                                                            "automation_entered",
-                                                            "automation_completed",
-                                                            "automation_exited"
-                                                        ]
+                                                    "id": {
+                                                        "type": "integer"
                                                     },
-                                                    "data": {
-                                                        "type": "string"
-                                                    },
-                                                    "campaign_id": {
-                                                        "type": [
-                                                            "integer",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "occurred_at": {
+                                                    "name": {
                                                         "type": "string"
                                                     }
                                                 },
                                                 "required": [
-                                                    "type",
-                                                    "data",
-                                                    "campaign_id",
-                                                    "occurred_at"
+                                                    "id",
+                                                    "name"
                                                 ]
-                                            }
-                                        },
-                                        "next_cursor": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "data",
-                                        "next_cursor"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated. The token is missing, invalid or expired.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Unauthenticated."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "The token lacks the required permission.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "This token does not have the contacts.view permission."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Too Many Attempts."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                },
-                "x-required-permission": "contacts.view"
-            }
-        },
-        "/events": {
-            "post": {
-                "operationId": "marketing.api.events.store",
-                "description": "Requires a token with the `contacts.manage` permission.",
-                "tags": [
-                    "Event"
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "maxLength": 254
-                                    },
-                                    "event": {
-                                        "type": "string",
-                                        "pattern": "^[A-Za-z0-9_.:-]+$",
-                                        "maxLength": 100
-                                    },
-                                    "properties": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "create_contact": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "required": [
-                                    "email",
-                                    "event"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "202": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "anyOf": [
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "data": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "integer"
-                                                        },
-                                                        "event": {
-                                                            "type": "string"
-                                                        },
-                                                        "email": {
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "id",
-                                                        "event",
-                                                        "email"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "data"
-                                            ]
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "data": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "integer"
-                                                        },
-                                                        "event": {
-                                                            "type": "string"
-                                                        },
-                                                        "email": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "id",
-                                                        "event",
-                                                        "email"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "data"
-                                            ]
-                                        }
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "const": "No contact with that email. Send create_contact: true to create one."
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
-                    "401": {
-                        "description": "Unauthenticated. The token is missing, invalid or expired.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Unauthenticated."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "The token lacks the required permission.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "This token does not have the contacts.manage permission."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Too Many Attempts."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                },
-                "x-required-permission": "contacts.manage"
-            }
-        },
-        "/me": {
-            "get": {
-                "operationId": "marketing.api.me",
-                "tags": [
-                    "Me"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "workspace": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "integer"
-                                                        },
-                                                        "name": {
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "id",
-                                                        "name"
-                                                    ]
-                                                },
-                                                "token": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "name": {
-                                                            "type": "string"
-                                                        },
-                                                        "permissions": {
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "name",
-                                                        "permissions"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "workspace",
-                                                "token"
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated. The token is missing, invalid or expired.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Unauthenticated."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Either the token exceeded its per-minute limit, or the caller's IP sent too many invalid tokens.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "examples": [
-                                                "Too Many Attempts."
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/segments": {
-            "get": {
-                "operationId": "marketing.api.segments.index",
-                "description": "Requires a token with the `contacts.view` permission.",
-                "tags": [
-                    "Segment"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Segment"
                                             }
                                         }
                                     },
@@ -2068,16 +2588,17 @@
         "/segments/{segment}": {
             "get": {
                 "operationId": "marketing.api.segments.show",
-                "description": "Requires a token with the `contacts.view` permission.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nThe segment's rule definition and the number of contacts that currently match it.",
+                "summary": "Get a segment",
                 "tags": [
-                    "Segment"
+                    "Segments"
                 ],
                 "parameters": [
                     {
                         "name": "segment",
                         "in": "path",
                         "required": true,
-                        "description": "The segment ID",
+                        "description": "The ID of the segment.",
                         "schema": {
                             "type": "integer"
                         }
@@ -2085,7 +2606,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "The segment.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2095,17 +2616,17 @@
                                             "type": "object",
                                             "properties": {
                                                 "id": {
-                                                    "type": "string"
+                                                    "type": "integer"
                                                 },
                                                 "name": {
                                                     "type": "string"
                                                 },
                                                 "definition": {
-                                                    "type": "string"
+                                                    "type": "object",
+                                                    "additionalProperties": {}
                                                 },
                                                 "contacts_count": {
-                                                    "type": "integer",
-                                                    "minimum": 0
+                                                    "type": "integer"
                                                 }
                                             },
                                             "required": [
@@ -2124,7 +2645,22 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                        "description": "No segment with that ID.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -2196,16 +2732,17 @@
         "/segments/{segment}/contacts": {
             "get": {
                 "operationId": "marketing.api.segments.contacts",
-                "description": "Requires a token with the `contacts.view` permission.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nContacts that currently match the segment, in ID order, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
+                "summary": "List the contacts in a segment",
                 "tags": [
-                    "Segment"
+                    "Segments"
                 ],
                 "parameters": [
                     {
                         "name": "segment",
                         "in": "path",
                         "required": true,
-                        "description": "The segment ID",
+                        "description": "The ID of the segment.",
                         "schema": {
                             "type": "integer"
                         }
@@ -2213,13 +2750,18 @@
                     {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Contacts per page, from 1 to 500. Defaults to 100.",
                         "schema": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ],
-                            "minimum": 1,
-                            "maximum": 500
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `meta.next_cursor` value from the previous page.",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -2323,7 +2865,22 @@
                         "$ref": "#/components/responses/ValidationException"
                     },
                     "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                        "description": "No segment with that ID.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -2395,13 +2952,14 @@
         "/tags": {
             "get": {
                 "operationId": "marketing.api.tags.index",
-                "description": "Requires a token with the `contacts.view` permission.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nEvery tag in the workspace, by name, with the number of contacts carrying each. Tags are created by sending their names when upserting a contact.",
+                "summary": "List tags",
                 "tags": [
-                    "Tag"
+                    "Tags"
                 ],
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "Tags, ordered by name.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2419,7 +2977,7 @@
                                                         "type": "string"
                                                     },
                                                     "contacts_count": {
-                                                        "type": "string"
+                                                        "type": "integer"
                                                     }
                                                 },
                                                 "required": [
@@ -2581,15 +3139,30 @@
                         ]
                     },
                     "custom_fields": {
-                        "type": "string"
+                        "type": "object",
+                        "description": "Values keyed by custom field key. The keys are defined per workspace; list them with `GET /custom-fields`.",
+                        "additionalProperties": {
+                            "type": [
+                                "string",
+                                "number",
+                                "boolean",
+                                "null"
+                            ]
+                        }
                     },
                     "tags": {
                         "type": "array",
-                        "items": {}
+                        "description": "Tag names.",
+                        "items": {
+                            "type": "string"
+                        }
                     },
                     "lists": {
                         "type": "array",
-                        "items": {}
+                        "description": "IDs of the lists the contact is on.",
+                        "items": {
+                            "type": "integer"
+                        }
                     },
                     "unsubscribed_at": {
                         "type": [
@@ -2623,34 +3196,6 @@
                     "updated_at"
                 ],
                 "title": "ContactResource"
-            },
-            "CustomFieldDefinition": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "minItems": 0,
-                "maxItems": 0,
-                "title": "CustomFieldDefinition"
-            },
-            "CustomFieldType": {
-                "type": "string",
-                "enum": [
-                    "text",
-                    "number",
-                    "date",
-                    "boolean"
-                ],
-                "title": "CustomFieldType"
-            },
-            "Segment": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "minItems": 0,
-                "maxItems": 0,
-                "title": "Segment"
             }
         },
         "responses": {
@@ -2679,25 +3224,6 @@
                             "required": [
                                 "message",
                                 "errors"
-                            ]
-                        }
-                    }
-                }
-            },
-            "ModelNotFoundException": {
-                "description": "Not found",
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Error overview."
-                                }
-                            },
-                            "required": [
-                                "message"
                             ]
                         }
                     }

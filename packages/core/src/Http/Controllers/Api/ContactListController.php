@@ -2,6 +2,10 @@
 
 namespace Gerenuk\Marketing\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\BodyParameter;
+use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Http\Controllers\Controller;
@@ -14,20 +18,38 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 
+#[Group('Lists')]
 class ContactListController extends Controller
 {
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
+    /**
+     * List the lists
+     *
+     * Every list in the workspace, by name, with the number of contacts on each.
+     */
     public function index(): AnonymousResourceCollection
     {
         return ContactListResource::collection(ContactList::query()->withCount('contacts')->orderBy('name')->get());
     }
 
+    /**
+     * Get a list
+     */
+    #[PathParameter('list', 'The ID of the list.', type: 'integer')]
+    #[Response(404, 'No list with that ID.', type: 'array{message: string}')]
     public function show(ContactList $list): ContactListResource
     {
         return new ContactListResource($list->loadCount('contacts'));
     }
 
+    /**
+     * Create a list
+     */
+    #[BodyParameter('name', 'The list\'s name, at most 100 characters. Must be unique within the workspace.', type: 'string', required: true)]
+    #[BodyParameter('description', 'At most 500 characters.', type: 'string', required: false)]
+    #[Response(201, 'The list was created.', type: 'array{data: ContactListResource}')]
+    #[Response(422, 'The body failed validation.', type: 'array{message: string, errors: array<string, list<string>>}')]
     public function store(Request $request): JsonResponse
     {
         $list = ContactList::create($this->validated($request));
@@ -35,6 +57,16 @@ class ContactListController extends Controller
         return (new ContactListResource($list))->response()->setStatusCode(201);
     }
 
+    /**
+     * Update a list
+     *
+     * Only the fields you send are changed.
+     */
+    #[PathParameter('list', 'The ID of the list.', type: 'integer')]
+    #[BodyParameter('name', 'The list\'s name, at most 100 characters. Must be unique within the workspace.', type: 'string', required: false)]
+    #[BodyParameter('description', 'At most 500 characters. Send null to clear it.', type: 'string', required: false)]
+    #[Response(404, 'No list with that ID.', type: 'array{message: string}')]
+    #[Response(422, 'The body failed validation.', type: 'array{message: string, errors: array<string, list<string>>}')]
     public function update(Request $request, ContactList $list): ContactListResource
     {
         $list->update($this->validated($request, $list));
@@ -42,6 +74,14 @@ class ContactListController extends Controller
         return new ContactListResource($list);
     }
 
+    /**
+     * Delete a list
+     *
+     * Deletes the list. Its contacts are not deleted.
+     */
+    #[PathParameter('list', 'The ID of the list.', type: 'integer')]
+    #[Response(204, 'Deleted. No body.')]
+    #[Response(404, 'No list with that ID.', type: 'array{message: string}')]
     public function destroy(ContactList $list): JsonResponse
     {
         $list->delete();
@@ -50,8 +90,15 @@ class ContactListController extends Controller
     }
 
     /**
+     * Add contacts to a list
+     *
      * Add existing contacts to the list by email. Unknown emails are reported back, not created.
      */
+    #[PathParameter('list', 'The ID of the list.', type: 'integer')]
+    #[BodyParameter('emails', 'Email addresses of existing contacts, at most 1000.', type: 'string[]', required: true)]
+    #[Response(200, '`added` counts the contacts found; `not_found` lists the emails that matched no contact.', type: 'array{data: array{added: int, not_found: list<string>}}')]
+    #[Response(404, 'No list with that ID.', type: 'array{message: string}')]
+    #[Response(422, 'The body failed validation.', type: 'array{message: string, errors: array<string, list<string>>}')]
     public function addContacts(Request $request, ContactList $list, AutomationTriggers $triggers): JsonResponse
     {
         ['found' => $found, 'missing' => $missing] = $this->contactsFromRequest($request);
@@ -63,6 +110,16 @@ class ContactListController extends Controller
         return response()->json(['data' => ['added' => count($found), 'not_found' => $missing]]);
     }
 
+    /**
+     * Remove contacts from a list
+     *
+     * Removes contacts from the list by email. The contacts themselves are not deleted, and unknown emails are reported back.
+     */
+    #[PathParameter('list', 'The ID of the list.', type: 'integer')]
+    #[BodyParameter('emails', 'Email addresses of contacts to remove, at most 1000.', type: 'string[]', required: true)]
+    #[Response(200, '`removed` counts the contacts taken off the list; `not_found` lists the emails that matched no contact.', type: 'array{data: array{removed: int, not_found: list<string>}}')]
+    #[Response(404, 'No list with that ID.', type: 'array{message: string}')]
+    #[Response(422, 'The body failed validation.', type: 'array{message: string, errors: array<string, list<string>>}')]
     public function removeContacts(Request $request, ContactList $list): JsonResponse
     {
         ['found' => $found, 'missing' => $missing] = $this->contactsFromRequest($request);

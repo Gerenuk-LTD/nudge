@@ -22,8 +22,23 @@ class ContactResource extends JsonResource
             'last_name' => $this->last_name,
             'status' => $this->status->value,
             'source' => $this->source->value,
+            /**
+             * Values keyed by custom field key. The keys are defined per workspace; list them with `GET /custom-fields`.
+             *
+             * @var array<string, string|int|float|bool|null>
+             */
             'custom_fields' => (object) ($this->custom_fields ?? []),
+            /**
+             * Tag names.
+             *
+             * @var list<string>
+             */
             'tags' => $this->whenLoaded('tags', fn () => $this->tags->pluck('name')),
+            /**
+             * IDs of the lists the contact is on.
+             *
+             * @var list<int>
+             */
             'lists' => $this->whenLoaded('lists', fn () => $this->lists->pluck('id')),
             'unsubscribed_at' => $this->unsubscribed_at?->toIso8601String(),
             'archived_at' => $this->archived_at?->toIso8601String(),
