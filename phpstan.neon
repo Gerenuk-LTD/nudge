@@ -14,3 +14,11 @@ parameters:
         - packages/core/database/
 
     level: 7
+
+    ignoreErrors:
+        # The API controllers carry Scramble attributes for the generated spec. Scramble is a dev-only
+        # dependency of packages/core, so it is not installed where the host app is analysed.
+        -
+            identifier: attribute.notFound
+            message: '#^Attribute class Dedoc\\Scramble\\Attributes\\\w+ does not exist\.$#'
+            path: packages/core/src/Http/Controllers/Api/*

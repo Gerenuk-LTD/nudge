@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing;
 use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
 use Gerenuk\Marketing\Enums\Permission;
+use Gerenuk\Marketing\Http\Controllers\ApiDocsController;
 use Gerenuk\Marketing\Http\Middleware\AuthenticateApiToken;
 use Gerenuk\Marketing\Http\Middleware\EnsureTokenCan;
 use Gerenuk\Marketing\Http\Middleware\SetCurrentWorkspace;
@@ -47,6 +48,7 @@ class MarketingServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'marketing');
 
         $this->publishes([
             __DIR__.'/../config/marketing.php' => config_path('marketing.php'),
@@ -148,5 +150,16 @@ class MarketingServiceProvider extends ServiceProvider
             ->middleware(['api', 'marketing.api', 'throttle:marketing-api'])
             ->name('marketing.api.')
             ->group(__DIR__.'/../routes/api.php');
+
+        // Outside the token group: the reference is readable without a token.
+        if (config('marketing.api_docs.enabled')) {
+            Route::prefix(config('marketing.api_prefix'))
+                ->middleware(['api', 'throttle:60,1'])
+                ->name('marketing.api.docs')
+                ->group(function (): void {
+                    Route::get('openapi.json', [ApiDocsController::class, 'spec'])->name('.spec');
+                    Route::get('docs', [ApiDocsController::class, 'page'])->name('');
+                });
+        }
     }
 }

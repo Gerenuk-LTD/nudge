@@ -26,6 +26,12 @@ return [
 
     'api_requests_per_minute' => (int) env('MARKETING_API_REQUESTS_PER_MINUTE', 120),
 
+    // The API reference (`{api_prefix}/docs`) and its OpenAPI spec (`{api_prefix}/openapi.json`). The spec
+    // describes open-source code, so it is public; set MARKETING_API_DOCS=false to turn both routes off.
+    'api_docs' => [
+        'enabled' => (bool) env('MARKETING_API_DOCS', true),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Imports
