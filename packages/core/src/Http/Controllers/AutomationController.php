@@ -4,11 +4,13 @@ namespace Gerenuk\Marketing\Http\Controllers;
 
 use Gerenuk\Marketing\Actions\Automations\ActivateAutomation;
 use Gerenuk\Marketing\Automations\ActivationChecklist;
+use Gerenuk\Marketing\Automations\AutomationApproval;
 use Gerenuk\Marketing\Automations\AutomationDefinitionValidator;
 use Gerenuk\Marketing\Automations\SyncAutomationEmails;
 use Gerenuk\Marketing\Enums\AutomationRunStatus;
 use Gerenuk\Marketing\Enums\AutomationStatus;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Http\Requests\AutomationRequest;
 use Gerenuk\Marketing\Models\Automation;
 use Gerenuk\Marketing\Models\AutomationRun;
@@ -86,7 +88,9 @@ class AutomationController extends Controller
                 'definition' => $automation->definition,
                 'entered_count' => $automation->entered_count,
                 'completed_count' => $automation->completed_count,
+                'approved_at' => $automation->approved_at?->toIso8601String(),
             ],
+            'requiresApproval' => $workspace->requires_campaign_approval,
             'problems' => $checklist->problems($automation, $workspace),
             'stepStats' => $this->stepStats($automation),
             'triggers' => array_map(fn (AutomationTrigger $trigger) => ['value' => $trigger->value, 'label' => $trigger->label()], AutomationTrigger::cases()),
@@ -107,8 +111,14 @@ class AutomationController extends Controller
         $validated = $request->validated();
         $validator->validate($validated['definition']);
 
-        DB::transaction(function () use ($automation, $validated, $emails): void {
-            $automation->update([
+        $workspace = $this->currentWorkspace->getOrFail();
+        $user = $this->user($request);
+        $pausedForApproval = false;
+
+        DB::transaction(function () use ($automation, $validated, $emails, $workspace, $user, &$pausedForApproval): void {
+            $before = AutomationApproval::fingerprint($automation);
+
+            $automation->fill([
                 'name' => $validated['name'],
                 'trigger_type' => $validated['trigger_type'],
                 'trigger_config' => $validated['trigger_config'],
@@ -116,8 +126,38 @@ class AutomationController extends Controller
                 'definition' => ['steps' => $validated['definition']['steps'] ?? []],
             ]);
 
+            $changed = AutomationApproval::fingerprint($automation) !== $before;
+            $canApprove = $user->hasWorkspacePermission($workspace, Permission::CampaignsApprove);
+
+            if ($changed && $canApprove && $automation->approved_at !== null) {
+                // An approver's own edit stays approved, signed by them.
+                $automation->fill(['approved_at' => now(), 'approved_by' => $user->getAuthIdentifier()]);
+            } elseif ($changed && ! $canApprove && $automation->approved_at !== null) {
+                $automation->fill(['approved_at' => null, 'approved_by' => null]);
+            }
+
+            if ($changed && ! $canApprove && $workspace->requires_campaign_approval && $automation->status === AutomationStatus::Active) {
+                // Hold everyone where they are; the new emails are not published until an approver resumes it.
+                $automation->status = AutomationStatus::Paused;
+                $pausedForApproval = true;
+            }
+
+            $automation->save();
             $emails->handle($automation);
         });
+
+        if ($pausedForApproval) {
+            Inertia::flash('toast', ['type' => 'warning', 'message' => __('Saved. The automation is paused until someone approves the changes.')]);
+        }
+
+        return back();
+    }
+
+    public function approve(Request $request, Automation $automation): RedirectResponse
+    {
+        $automation->update(['approved_at' => now(), 'approved_by' => $this->user($request)->getAuthIdentifier()]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Automation approved.')]);
 
         return back();
     }

@@ -26,10 +26,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $entered_count
  * @property int $completed_count
  * @property CarbonInterface|null $activated_at
+ * @property CarbonInterface|null $approved_at
+ * @property int|null $approved_by
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  */
-#[Fillable(['workspace_id', 'name', 'status', 'trigger_type', 'trigger_config', 'definition', 'allow_reentry', 'activated_at'])]
+#[Fillable(['workspace_id', 'name', 'status', 'trigger_type', 'trigger_config', 'definition', 'allow_reentry', 'activated_at', 'approved_at', 'approved_by'])]
 #[UseFactory(AutomationFactory::class)]
 class Automation extends Model
 {
@@ -56,6 +58,7 @@ class Automation extends Model
             'definition' => 'array',
             'allow_reentry' => 'boolean',
             'activated_at' => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 

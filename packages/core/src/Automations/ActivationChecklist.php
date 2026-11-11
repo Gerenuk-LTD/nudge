@@ -73,6 +73,10 @@ class ActivationChecklist
             }
         }
 
+        if ($workspace->requires_campaign_approval && $automation->approved_at === null) {
+            $problems[] = __('This workspace requires automations to be approved before they go live.');
+        }
+
         return array_values(array_unique($problems));
     }
 

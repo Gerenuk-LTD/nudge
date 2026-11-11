@@ -134,6 +134,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::put('automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
         Route::delete('automations/{automation}', [AutomationController::class, 'destroy'])->name('automations.destroy');
         Route::post('automations/{automation}/activate', [AutomationController::class, 'activate'])->name('automations.activate');
+        Route::post('automations/{automation}/approve', [AutomationController::class, 'approve'])->middleware('can:campaigns.approve')->name('automations.approve');
         Route::post('automations/{automation}/pause', [AutomationController::class, 'pause'])->name('automations.pause');
     });
 

@@ -40,6 +40,7 @@ import {
     useUnsavedChangesGuard,
 } from '@marketing/hooks/use-editor';
 import { useCan } from '@marketing/hooks/use-workspace';
+import { formatDateTime } from '@marketing/lib/format';
 import type { AutomationStep, StepStats } from '@marketing/types';
 
 type Automation = {
@@ -52,10 +53,12 @@ type Automation = {
     definition: { steps: AutomationStep[] };
     entered_count: number;
     completed_count: number;
+    approved_at: string | null;
 };
 
 type Props = StepEditorOptions & {
     automation: Automation;
+    requiresApproval: boolean;
     problems: string[];
     stepStats: Record<string, StepStats>;
     triggers: { value: string; label: string }[];
@@ -65,7 +68,9 @@ type Props = StepEditorOptions & {
 
 export default function EditAutomation(props: Props) {
     const { automation } = props;
-    const readOnly = !useCan()('automations.manage');
+    const can = useCan();
+    const readOnly = !can('automations.manage');
+    const canApprove = can('campaigns.approve');
 
     const [name, setName] = useState(automation.name);
     const [triggerType, setTriggerType] = useState(automation.trigger_type);
@@ -247,10 +252,53 @@ export default function EditAutomation(props: Props) {
 
                 {automation.status === 'active' && dirty && (
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                        This automation is live. Saved changes apply to contacts
-                        already in it; anyone waiting on a removed step leaves
-                        the automation.
+                        {props.requiresApproval && !canApprove
+                            ? 'This automation is live. Saving changes to its emails or trigger pauses it until someone approves them.'
+                            : 'This automation is live. Saved changes apply to contacts already in it; anyone waiting on a removed step leaves the automation.'}
                     </p>
+                )}
+
+                {props.requiresApproval && (
+                    <section className="space-y-3 rounded-xl border bg-card p-4 shadow-xs">
+                        <h2 className="text-sm font-semibold">Approval</h2>
+                        {automation.approved_at ? (
+                            <p className="text-13 text-muted-foreground">
+                                Approved{' '}
+                                {formatDateTime(automation.approved_at)}.
+                                Changing its emails or trigger withdraws the
+                                approval.
+                            </p>
+                        ) : canApprove ? (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    disabled={saving || dirty}
+                                    onClick={() =>
+                                        router.post(
+                                            AutomationController.approve.url(
+                                                automation.id,
+                                            ),
+                                            {},
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                >
+                                    Approve automation
+                                </Button>
+                                {dirty && (
+                                    <p className="text-13 text-muted-foreground">
+                                        Save your changes first.
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <p className="text-13 text-muted-foreground">
+                                Someone with permission to approve campaigns
+                                needs to approve this automation before it goes
+                                live.
+                            </p>
+                        )}
+                    </section>
                 )}
 
                 {problems.length > 0 && automation.status !== 'active' && (
