@@ -24,6 +24,9 @@ use Workbench\App\Scramble\TokenPermissionExtension;
 /**
  * Configures Scramble for exporting the API spec. It only exists under Testbench, so nothing
  * Scramble-related is loaded in an install of the package.
+ *
+ * Changing an API endpoint? Re-export the spec: `cd packages/core && vendor/bin/testbench scramble:export --path=docs/openapi.json`.
+ * CI fails when docs/openapi.json is out of date.
  */
 class DocsServiceProvider extends ServiceProvider
 {

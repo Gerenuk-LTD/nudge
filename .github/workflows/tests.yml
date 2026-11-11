@@ -74,6 +74,12 @@ jobs:
       - name: Install core dependencies
         run: composer --working-dir=packages/core install --no-interaction --prefer-dist
 
+      - name: API spec is up to date
+        working-directory: packages/core
+        run: |
+          vendor/bin/testbench scramble:export --path=docs/openapi.json
+          git diff --exit-code docs/openapi.json || (echo "::error::Run 'vendor/bin/testbench scramble:export --path=docs/openapi.json' in packages/core and commit the result." && exit 1)
+
       - name: Run core tests on MySQL 8.4
         working-directory: packages/core
         run: vendor/bin/pest

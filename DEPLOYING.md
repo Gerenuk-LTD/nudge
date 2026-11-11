@@ -101,6 +101,12 @@ The scheduler starts scheduled campaigns and recovers stuck work. Add this cron 
 - **Signing keys:** for providers that sign their webhooks, paste the provider's signing key into the provider settings. Webhooks are refused until it's set.
 - **Amazon SES:** deliver events through SNS. The first signed message pins the SNS topic, and messages from any other topic are refused afterwards. Saving the provider again resets the pin.
 
+## API docs
+
+Every install serves a reference for its own API at `{APP_URL}/api/v1/docs`, and the raw OpenAPI spec at `{APP_URL}/api/v1/openapi.json`. The spec names your install's own base URL, so it can be imported straight into Postman, Insomnia or Bruno. Neither address needs an API token, because they describe open-source code and hold no data.
+
+Set `MARKETING_API_DOCS=false` to turn both off. The docs page loads its viewer from a CDN (jsDelivr), so the reader's browser needs internet access; the spec itself is served from your own app.
+
 ## Keys
 
 Keep `APP_KEY` secret and backed up. It encrypts sessions and stored provider credentials, and it signs tracking and unsubscribe links.
