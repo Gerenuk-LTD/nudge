@@ -8,6 +8,7 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function Breadcrumbs({
@@ -22,12 +23,19 @@ export function Breadcrumbs({
                     <BreadcrumbList>
                         {breadcrumbs.map((item, index) => {
                             const isLast = index === breadcrumbs.length - 1;
+                            const hideOnPhone =
+                                breadcrumbs.length > 2 && index > 0 && !isLast;
 
                             return (
                                 <Fragment key={index}>
-                                    <BreadcrumbItem>
+                                    <BreadcrumbItem
+                                        className={cn(
+                                            hideOnPhone &&
+                                                'hidden sm:inline-flex',
+                                        )}
+                                    >
                                         {isLast ? (
-                                            <BreadcrumbPage>
+                                            <BreadcrumbPage className="block max-w-[12rem] truncate sm:max-w-xs">
                                                 {item.title}
                                             </BreadcrumbPage>
                                         ) : (
@@ -38,7 +46,14 @@ export function Breadcrumbs({
                                             </BreadcrumbLink>
                                         )}
                                     </BreadcrumbItem>
-                                    {!isLast && <BreadcrumbSeparator />}
+                                    {!isLast && (
+                                        <BreadcrumbSeparator
+                                            className={cn(
+                                                hideOnPhone &&
+                                                    'hidden sm:inline-flex',
+                                            )}
+                                        />
+                                    )}
                                 </Fragment>
                             );
                         })}

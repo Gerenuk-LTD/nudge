@@ -140,7 +140,7 @@ export default function Members({
                         }
                         title={
                             <>
-                                <span className="text-muted-foreground">
+                                <span className="min-w-0 truncate text-muted-foreground">
                                     {invitation.email}
                                 </span>
                                 <StatusBadge

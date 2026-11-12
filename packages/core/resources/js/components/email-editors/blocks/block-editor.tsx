@@ -474,7 +474,7 @@ export function BlockEditor({
                         title="Email preview"
                         sandbox=""
                         srcDoc={rendered}
-                        className="h-[40rem] rounded-lg border bg-white shadow-sm transition-[width]"
+                        className="h-[40rem] max-w-full rounded-lg border bg-white shadow-sm transition-[width]"
                         style={{ width: mode === 'mobile' ? 375 : '100%' }}
                     />
                 </div>

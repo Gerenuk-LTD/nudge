@@ -71,7 +71,7 @@ export function SettingsListItem({
     return (
         <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 sm:px-6">
             {leading}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-40">
                 <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
                     {title}
                 </div>

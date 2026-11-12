@@ -142,7 +142,10 @@ export function Stepper({
     onSelect?: (key: string) => void;
 }) {
     return (
-        <ol className="flex items-center gap-2" aria-label="Steps">
+        <ol
+            className="flex items-center gap-2 overflow-x-auto"
+            aria-label="Steps"
+        >
             {steps.map((step, index) => {
                 const active = step.key === current;
                 const marker = (
@@ -174,7 +177,7 @@ export function Stepper({
                                 'text-sm whitespace-nowrap',
                                 active
                                     ? 'font-medium text-foreground'
-                                    : 'text-muted-foreground',
+                                    : 'hidden text-muted-foreground sm:inline',
                             )}
                         >
                             {step.label}
@@ -195,6 +198,7 @@ export function Stepper({
                                 type="button"
                                 aria-current={active ? 'step' : undefined}
                                 onClick={() => onSelect(step.key)}
+                                aria-label={`${index + 1}. ${step.label}`}
                                 className="flex items-center gap-2 rounded-md px-1.5 py-1 outline-none hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             >
                                 {marker}

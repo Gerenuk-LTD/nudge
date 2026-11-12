@@ -376,7 +376,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData, 'step'>>) {
                             variant="ghost"
                             size="icon"
                             aria-label={`Remove ${stepLabels[step.type].toLowerCase()}`}
-                            className="absolute top-2 right-2 size-7 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                            className="absolute top-2 right-2 size-7 text-muted-foreground opacity-100 group-hover:opacity-100 focus-visible:opacity-100 pointer-fine:opacity-0"
                             onClick={() => onRemove(step.id)}
                         >
                             <Trash2 className="size-3.5" />

@@ -191,7 +191,7 @@ function MappingForm({
             id: 'column',
             header: 'Column in your file',
             cell: ({ row }) => (
-                <div className="grid max-w-xs leading-tight">
+                <div className="grid max-w-40 leading-tight sm:max-w-xs">
                     <span className="truncate font-medium">
                         {row.original || `Column ${row.index + 1}`}
                     </span>
@@ -204,7 +204,7 @@ function MappingForm({
         {
             id: 'target',
             header: 'Import as',
-            meta: { className: 'w-64' },
+            meta: { className: 'sm:w-64' },
             cell: ({ row }) => {
                 const target = form.data.mapping[row.index];
 
@@ -230,7 +230,7 @@ function MappingForm({
         {
             id: 'matched',
             header: () => <span className="sr-only">Match</span>,
-            meta: { className: 'w-44' },
+            meta: { className: 'hidden w-44 sm:table-cell' },
             cell: ({ row }) => {
                 const target = form.data.mapping[row.index];
 

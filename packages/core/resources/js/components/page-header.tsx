@@ -11,15 +11,19 @@ export function PageHeader({
 }) {
     return (
         <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="space-y-1">
-                <h1 className="text-2xl font-semibold">{title}</h1>
+            <div className="min-w-0 space-y-1">
+                <h1 className="text-2xl font-semibold break-words">{title}</h1>
                 {description && (
                     <p className="text-sm text-muted-foreground">
                         {description}
                     </p>
                 )}
             </div>
-            {actions && <div className="flex gap-2">{actions}</div>}
+            {actions && (
+                <div className="flex flex-wrap items-center gap-2">
+                    {actions}
+                </div>
+            )}
         </div>
     );
 }

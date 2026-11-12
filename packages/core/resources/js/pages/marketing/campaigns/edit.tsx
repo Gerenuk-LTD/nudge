@@ -1521,7 +1521,7 @@ function ReviewStep({
                             title="Email preview"
                             sandbox=""
                             srcDoc={form.data.html}
-                            className="h-[36rem] rounded-md border bg-white transition-[width]"
+                            className="h-[36rem] max-w-full rounded-md border bg-white transition-[width]"
                             style={{
                                 width: device === 'mobile' ? 375 : '100%',
                             }}
