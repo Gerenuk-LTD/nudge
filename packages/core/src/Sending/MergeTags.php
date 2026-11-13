@@ -55,6 +55,49 @@ class MergeTags
     }
 
     /**
+     * Campaign variables used in the template: tags that aren't built in or custom fields, with whether each has a fallback.
+     *
+     * @param  list<string>  $customKeys
+     * @return array<string, bool> tag => has a fallback
+     */
+    public static function variablesIn(string $template, array $customKeys): array
+    {
+        preg_match_all(self::PATTERN, $template, $matches, PREG_SET_ORDER);
+        $variables = [];
+
+        foreach ($matches as $match) {
+            $tag = strtolower($match[1]);
+
+            if (in_array($tag, self::BUILT_IN, true) || str_starts_with($tag, 'custom.')) {
+                continue;
+            }
+
+            $variables[$tag] = ($variables[$tag] ?? false) || trim($match[2] ?? '') !== '';
+        }
+
+        return $variables;
+    }
+
+    /**
+     * Puts the campaign's values in for its variables, leaving every other tag for sending to fill per recipient.
+     *
+     * @param  array<string, string|null>  $values
+     */
+    public static function fill(string $template, array $values, bool $escapeHtml): string
+    {
+        return (string) preg_replace_callback(self::PATTERN, function (array $match) use ($values, $escapeHtml): string {
+            $tag = strtolower($match[1]);
+            $value = $values[$tag] ?? null;
+
+            if ($value === null || $value === '' || in_array($tag, self::BUILT_IN, true) || str_starts_with($tag, 'custom.')) {
+                return $match[0];
+            }
+
+            return $escapeHtml ? e($value) : $value;
+        }, $template);
+    }
+
+    /**
      * @return list<string>
      */
     public static function tagsIn(string $template): array

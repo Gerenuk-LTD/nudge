@@ -10,6 +10,7 @@ use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Sending\CampaignMessage;
 use Gerenuk\Marketing\Sending\HtmlToText;
+use Gerenuk\Marketing\Sending\MergeTags;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\SendRateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -49,14 +50,16 @@ class SendTestEmail
         }
 
         $draft = (clone $campaign)->forceFill(['track_opens' => false, 'track_clicks' => false]);
+        $values = $campaign->variables ?? [];
+        $html = MergeTags::fill((string) $campaign->html, $values, escapeHtml: true);
         $snapshot = new CampaignSnapshot([
-            'subject' => '[Test] '.$campaign->subject,
-            'preheader' => $campaign->preheader,
+            'subject' => '[Test] '.MergeTags::fill((string) $campaign->subject, $values, escapeHtml: false),
+            'preheader' => $campaign->preheader === null ? null : MergeTags::fill($campaign->preheader, $values, escapeHtml: false),
             'from_name' => (string) $campaign->from_name,
             'from_email' => (string) $campaign->from_email,
             'reply_to' => $campaign->reply_to,
-            'html' => (string) $campaign->html,
-            'text' => filled($campaign->text) ? (string) $campaign->text : HtmlToText::convert((string) $campaign->html),
+            'html' => $html,
+            'text' => filled($campaign->text) ? MergeTags::fill((string) $campaign->text, $values, escapeHtml: false) : HtmlToText::convert($html),
         ]);
 
         foreach ($emails as $email) {

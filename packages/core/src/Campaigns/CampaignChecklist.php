@@ -26,7 +26,17 @@ class CampaignChecklist
         $audienceCount = $this->audience->count($campaign);
         $tags = MergeTags::tagsIn($html);
         $personalised = implode("\n", array_filter([(string) $campaign->subject, (string) $campaign->preheader, $html, $campaign->ab_enabled ? (string) $campaign->ab_subject_b : '', $campaign->ab_enabled ? (string) $campaign->ab_html_b : '']));
-        $unfilled = MergeTags::unfilledIn($personalised, array_values(array_map('strval', CustomFieldDefinition::query()->pluck('key')->all())));
+        $customKeys = array_values(array_map('strval', CustomFieldDefinition::query()->pluck('key')->all()));
+        $unfilled = array_values(array_filter(
+            MergeTags::unfilledIn($personalised, $customKeys),
+            fn (string $tag) => str_starts_with($tag, 'custom.'),
+        ));
+        $values = $campaign->variables ?? [];
+        $missing = array_keys(array_filter(
+            MergeTags::variablesIn($personalised, $customKeys),
+            fn (bool $hasFallback, string $tag) => ! $hasFallback && blank($values[$tag] ?? null),
+            ARRAY_FILTER_USE_BOTH,
+        ));
 
         return [
             new ChecklistItem('provider', 'Sending provider connected', $provider !== null, true,
@@ -49,13 +59,13 @@ class CampaignChecklist
                 new ChecklistItem('ab_audience', 'Audience is big enough to test', $audienceCount >= 100, false,
                     'With fewer than 100 contacts the test sample is too small for a reliable winner.'),
             ] : []),
+            new ChecklistItem('variables', 'Variables have values', $missing === [], true,
+                $missing === [] ? null : (string) __('Give these a value in Variables: :tags.', ['tags' => implode(', ', array_map(fn (string $tag) => "{{ {$tag} }}", $missing))])),
             new ChecklistItem('unsubscribe', 'Unsubscribe link placed', in_array('unsubscribe_url', $tags, true), false,
                 'No {{ unsubscribe_url }} tag, so an unsubscribe link will be added at the bottom.'),
             new ChecklistItem('merge_tags', 'Every merge tag can be filled', $unfilled === [], false,
                 $unfilled === [] ? null : (string) __(
-                    count($unfilled) === 1
-                        ? 'This tag has no value, so it will be blank: :tags. Use a contact field, a custom field, or give it a fallback like {{ tag | text }}.'
-                        : 'These tags have no value, so they will be blank: :tags. Use contact fields, custom fields, or give them a fallback like {{ tag | text }}.',
+                    'These custom fields don\'t exist, so they will be blank: :tags. Create the field or fix the tag.',
                     ['tags' => implode(', ', array_map(fn (string $tag) => "{{ {$tag} }}", $unfilled))],
                 )),
             new ChecklistItem('links', 'Links use https', ! $this->hasInsecureLinks($html), false,

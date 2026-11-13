@@ -21,6 +21,7 @@ use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
+use Gerenuk\Marketing\Sending\MergeTags;
 use Gerenuk\Marketing\Support\CampaignSummary;
 use Gerenuk\Marketing\Support\MergeTagOptions;
 use Gerenuk\Marketing\Support\TableQuery;
@@ -39,7 +40,7 @@ use Inertia\Response;
 class CampaignController extends Controller
 {
     /** Fields that change what recipients see; editing them withdraws an approval. */
-    private const CONTENT_FIELDS = ['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'editor_state', 'html', 'text', 'audience_type', 'list_ids', 'segment_id', 'provider_id', 'ab_enabled', 'ab_subject_b', 'ab_html_b'];
+    private const CONTENT_FIELDS = ['subject', 'preheader', 'from_name', 'from_email', 'reply_to', 'editor_state', 'html', 'text', 'audience_type', 'list_ids', 'segment_id', 'provider_id', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'variables'];
 
     /** How many drafts and scheduled campaigns the index shelf shows. */
     private const UPCOMING_LIMIT = 8;
@@ -134,6 +135,7 @@ class CampaignController extends Controller
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'segments' => Segment::query()->orderBy('name')->get(['id', 'name']),
             'mergeTags' => MergeTagOptions::all(),
+            'builtInTags' => MergeTags::BUILT_IN,
             'templates' => Inertia::optional(fn () => $templateChoice->options()),
             'checklist' => Inertia::defer(fn () => array_map(fn (ChecklistItem $item) => $item->toArray(), $checklist->for($campaign, $workspace))),
             'audienceCount' => Inertia::defer(fn () => $audience->count($campaign)),
@@ -406,6 +408,7 @@ class CampaignController extends Controller
                 'id', 'name', 'subject', 'preheader', 'provider_id', 'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'segment_id',
                 'track_opens', 'track_clicks', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_editor_state_b', 'ab_sample_percent', 'ab_wait_minutes', 'ab_metric',
             ]),
+            'variables' => (object) ($campaign->variables ?? []),
             'status' => $campaign->status->value,
             'audience_type' => $campaign->audience_type->value,
             'list_ids' => $campaign->list_ids ?? [],

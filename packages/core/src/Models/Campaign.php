@@ -38,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property array<string, mixed>|null $editor_state
  * @property string|null $html
  * @property string|null $text
+ * @property array<string, string>|null $variables
  * @property AudienceType $audience_type
  * @property list<int>|null $list_ids
  * @property bool $track_opens
@@ -71,7 +72,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 #[Fillable([
     'workspace_id', 'kind', 'automation_id', 'automation_step_id', 'provider_id', 'segment_id', 'created_by', 'approved_by', 'name', 'subject', 'preheader',
-    'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'audience_type', 'list_ids',
+    'from_name', 'from_email', 'reply_to', 'editor', 'editor_state', 'html', 'text', 'variables', 'audience_type', 'list_ids',
     'track_opens', 'track_clicks', 'status', 'approved_at', 'scheduled_at', 'sending_started_at', 'sent_at',
     'recipients_count', 'ab_enabled', 'ab_subject_b', 'ab_html_b', 'ab_editor_state_b', 'ab_sample_percent', 'ab_wait_minutes',
     'ab_metric', 'ab_winner', 'ab_decided_at', 'ab_results',
@@ -105,6 +106,7 @@ class Campaign extends Model
             'ab_editor_state_b' => 'array',
             'ab_decided_at' => 'datetime',
             'ab_results' => 'array',
+            'variables' => 'array',
             'audience_type' => AudienceType::class,
             'list_ids' => 'array',
             'track_opens' => 'boolean',

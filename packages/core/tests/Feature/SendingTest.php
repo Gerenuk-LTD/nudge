@@ -348,7 +348,7 @@ test('the checklist flags merge tags that nothing will fill', function () {
 
     expect($item->passed)->toBeFalse()
         ->and($item->blocking)->toBeFalse()
-        ->and($item->message)->toContain('{{ promo_code }}')
+        ->and($item->message)->not->toContain('promo_code')
         ->and($item->message)->toContain('{{ custom.missing }}')
         ->and($item->message)->not->toContain('maybe')
         ->and($item->message)->not->toContain('custom.plan');
@@ -366,10 +366,89 @@ test('unfilled merge tags warn but do not block the send', function () {
     Contact::factory()->create(['email' => 'ann@example.com']);
     $campaign = Campaign::factory()->create([
         'provider_id' => $this->provider->id,
-        'html' => Campaign::factory()->make()->html.' {{ promo_code }}',
+        'html' => Campaign::factory()->make()->html.' {{ custom.missing }}',
     ]);
 
     expect(sendNow($this, $campaign)->status)->toBe(CampaignStatus::Sent);
+});
+
+test('campaign variable values reach the email', function () {
+    Contact::factory()->create(['email' => 'ann@example.com', 'first_name' => 'Ann']);
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'subject' => 'Code {{ promo_code }}',
+        'html' => '<p>Use {{ promo_code }}</p><p>Hi {{ first_name | there }}</p>',
+        'preheader' => 'Ends {{ ends }}',
+        'variables' => ['promo_code' => 'NOV<10>', 'ends' => 'Friday'],
+    ]);
+
+    sendNow($this, $campaign);
+    $email = $this->transports->sent[0];
+    $html = (string) $email->getHtmlBody();
+
+    expect($email->getSubject())->toBe('Code NOV<10>')
+        ->and($html)->toContain('Use NOV&lt;10&gt;')
+        ->and($html)->toContain('Ends Friday')
+        ->and($html)->not->toContain('{{ promo_code }}')
+        ->and($html)->toContain('Hi Ann');
+});
+
+test('a variable with no value blocks the send', function () {
+    Contact::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'html' => '<p>Use {{ promo_code }}</p>',
+    ]);
+
+    sendNow($this, $campaign);
+})->throws(ValidationException::class);
+
+test('a fallback makes a variable optional', function () {
+    Contact::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'html' => '<p>Use {{ promo_code | none }}</p>',
+    ]);
+
+    sendNow($this, $campaign);
+
+    expect((string) $this->transports->sent[0]->getHtmlBody())->toContain('Use none');
+});
+
+test('the snapshot keeps the variable values it was taken with', function () {
+    Contact::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'html' => '<p>Use {{ promo_code }}</p>',
+        'variables' => ['promo_code' => 'OLD'],
+    ]);
+
+    $campaign = sendNow($this, $campaign);
+    $campaign->update(['variables' => ['promo_code' => 'NEW']]);
+
+    expect($campaign->snapshot()->first()->html)->toContain('Use OLD')->not->toContain('NEW');
+});
+
+test('variable names are validated', function () {
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['Bad-Key' => 'x']])
+        ->assertSessionHasErrors('variables');
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['first_name' => 'x']])
+        ->assertSessionHasErrors('variables');
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']])
+        ->assertSessionHasNoErrors();
+});
+
+test('changing variables withdraws approval', function () {
+    $this->workspace->update(['requires_campaign_approval' => true]);
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.approve', $campaign));
+    expect($campaign->fresh()->approved_at)->not->toBeNull();
+
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']]);
+    expect($campaign->fresh()->approved_at)->toBeNull();
 });
 
 test('a draft campaign can be deleted', function () {

@@ -6,6 +6,7 @@ import {
     ChevronDown,
     CircleAlert,
     CircleCheck,
+    CircleHelp,
     Filter,
     List as ListIcon,
     Monitor,
@@ -43,6 +44,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { index as campaignsIndex } from '@/routes/marketing/campaigns';
 import { index as listsIndex } from '@/routes/marketing/lists';
@@ -59,6 +65,7 @@ import { ToggleSwitch } from '@marketing/components/toggle-switch';
 import { useUnsavedChangesGuard } from '@marketing/hooks/use-editor';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDateTime } from '@marketing/lib/format';
+import { campaignVariables } from '@marketing/lib/merge-tags';
 import type { ChecklistItem, Option } from '@marketing/types';
 
 type Campaign = {
@@ -74,6 +81,7 @@ type Campaign = {
     editor_state: Record<string, unknown> | null;
     html: string | null;
     text: string | null;
+    variables: Record<string, string>;
     segment_id: number | null;
     track_opens: boolean;
     track_clicks: boolean;
@@ -106,6 +114,7 @@ type Props = {
     lists: Option[];
     segments: Option[];
     mergeTags: MergeTag[];
+    builtInTags: string[];
     checklist?: ChecklistItem[];
     audienceCount?: number;
     audienceSizes?: {
@@ -129,6 +138,7 @@ type Draft = {
     editor_state: string;
     html: string;
     text: string;
+    variables: Record<string, string>;
     audience_type: Campaign['audience_type'];
     list_ids: number[];
     segment_id: number | null;
@@ -154,6 +164,7 @@ const stepChecks: Record<(typeof steps)[number], string[]> = {
         'content',
         'unsubscribe',
         'merge_tags',
+        'variables',
         'postal_address',
         'provider',
         'ab_variant',
@@ -201,6 +212,7 @@ export default function EditCampaign(props: Props) {
                 : JSON.stringify(campaign.editor_state),
         html: campaign.html ?? '',
         text: campaign.text ?? '',
+        variables: campaign.variables ?? {},
         audience_type: campaign.audience_type,
         list_ids: campaign.list_ids,
         segment_id: campaign.segment_id,
@@ -409,6 +421,7 @@ const SHOWN_ERROR_KEYS = new Set([
     'segment_id',
     'send_at',
     'subject',
+    'variables',
 ]);
 
 type DraftForm = ReturnType<typeof useForm<Draft>>;
@@ -463,6 +476,17 @@ function ContentStep({
 }) {
     // Bumped when a template replaces the content, so the editor starts over from it.
     const [revision, setRevision] = useState(0);
+    const variables = campaignVariables(
+        [
+            form.data.subject,
+            form.data.preheader,
+            form.data.html,
+            ...(form.data.ab_enabled
+                ? [form.data.ab_subject_b, form.data.ab_html_b]
+                : []),
+        ],
+        props.builtInTags,
+    );
 
     const chooseProvider = (id: number | null) => {
         const provider = props.providers.find(
@@ -666,6 +690,54 @@ function ContentStep({
                 />
                 <InputError message={errors.html} />
             </div>
+
+            {variables.length > 0 && (
+                <div className="rounded-xl border bg-card shadow-xs">
+                    <div className="flex items-center gap-1.5 border-b px-5 py-3.5 text-sm font-semibold">
+                        Variables
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <CircleHelp
+                                    aria-label="About variables"
+                                    className="size-3.5 text-muted-foreground"
+                                />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-64">
+                                Values that are the same for everyone in this
+                                campaign. Any tag that isn't a contact detail or
+                                custom field becomes a variable.
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                    <div className="space-y-4 p-5">
+                        {variables.map(({ tag, optional }) => (
+                            <div key={tag} className="grid gap-1.5">
+                                <Label htmlFor={`variable-${tag}`}>
+                                    <span className="font-mono text-13">
+                                        {`{{ ${tag} }}`}
+                                    </span>
+                                    {optional && (
+                                        <span className="font-normal text-muted-foreground">
+                                            optional
+                                        </span>
+                                    )}
+                                </Label>
+                                <Input
+                                    id={`variable-${tag}`}
+                                    value={form.data.variables[tag] ?? ''}
+                                    onChange={(event) =>
+                                        form.setData('variables', {
+                                            ...form.data.variables,
+                                            [tag]: event.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                        ))}
+                        <InputError message={errors.variables} />
+                    </div>
+                </div>
+            )}
 
             <CampaignOptions
                 form={form}

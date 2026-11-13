@@ -2,7 +2,9 @@
 
 namespace Gerenuk\Marketing\Http\Requests;
 
+use Closure;
 use Gerenuk\Marketing\Enums\AudienceType;
+use Gerenuk\Marketing\Sending\MergeTags;
 use Gerenuk\Marketing\Templates\EmailEditor;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Foundation\Http\FormRequest;
@@ -32,6 +34,19 @@ class CampaignRequest extends FormRequest
             'editor_state' => ['sometimes', 'nullable', 'array'],
             'html' => ['sometimes', 'nullable', 'string', 'max:1000000'],
             'text' => ['sometimes', 'nullable', 'string', 'max:500000'],
+            'variables' => [
+                'sometimes', 'nullable', 'array', 'max:50',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    foreach (array_keys((array) $value) as $key) {
+                        if (! preg_match('/^[a-z][a-z0-9_]*$/', (string) $key) || in_array($key, MergeTags::BUILT_IN, true)) {
+                            $fail(__('Variable names use lowercase letters, numbers and underscores.'));
+
+                            return;
+                        }
+                    }
+                },
+            ],
+            'variables.*' => ['nullable', 'string', 'max:1000'],
             'audience_type' => ['sometimes', Rule::enum(AudienceType::class)],
             'list_ids' => ['sometimes', 'array'],
             'list_ids.*' => ['integer', Rule::exists('contact_lists', 'id')->where('workspace_id', $workspaceId)],

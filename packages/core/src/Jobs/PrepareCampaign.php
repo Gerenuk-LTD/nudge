@@ -14,6 +14,7 @@ use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Sending\HtmlToText;
 use Gerenuk\Marketing\Sending\LinkExtractor;
+use Gerenuk\Marketing\Sending\MergeTags;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -85,20 +86,21 @@ class PrepareCampaign implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $html = (string) $campaign->html;
-            $htmlB = $campaign->ab_enabled && filled($campaign->ab_html_b) ? (string) $campaign->ab_html_b : null;
+            $values = $campaign->variables ?? [];
+            $html = MergeTags::fill((string) $campaign->html, $values, escapeHtml: true);
+            $htmlB = $campaign->ab_enabled && filled($campaign->ab_html_b) ? MergeTags::fill((string) $campaign->ab_html_b, $values, escapeHtml: true) : null;
 
             CampaignSnapshot::create([
                 'campaign_id' => $campaign->id,
-                'subject' => (string) $campaign->subject,
-                'subject_b' => $campaign->ab_enabled && filled($campaign->ab_subject_b) ? $campaign->ab_subject_b : null,
-                'preheader' => $campaign->preheader,
+                'subject' => MergeTags::fill((string) $campaign->subject, $values, escapeHtml: false),
+                'subject_b' => $campaign->ab_enabled && filled($campaign->ab_subject_b) ? MergeTags::fill((string) $campaign->ab_subject_b, $values, escapeHtml: false) : null,
+                'preheader' => $campaign->preheader === null ? null : MergeTags::fill($campaign->preheader, $values, escapeHtml: false),
                 'from_name' => (string) $campaign->from_name,
                 'from_email' => (string) $campaign->from_email,
                 'reply_to' => $campaign->reply_to,
                 'html' => $html,
                 'html_b' => $htmlB,
-                'text' => filled($campaign->text) ? (string) $campaign->text : HtmlToText::convert($html),
+                'text' => filled($campaign->text) ? MergeTags::fill((string) $campaign->text, $values, escapeHtml: false) : HtmlToText::convert($html),
                 'text_b' => $htmlB === null ? null : HtmlToText::convert($htmlB),
             ]);
 
