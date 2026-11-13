@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Marketing\Campaigns\CampaignChecklist;
 use Gerenuk\Marketing\Enums\AudienceType;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\EventType;
@@ -13,6 +14,7 @@ use Gerenuk\Marketing\Models\CampaignLink;
 use Gerenuk\Marketing\Models\CampaignRecipient;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
+use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Suppression;
@@ -322,4 +324,49 @@ test('only approvers can switch campaign approval', function () {
 
     $this->actingAs($this->owner)->put(route('marketing.sending.update'), $settings)->assertSessionHasNoErrors();
     expect($this->workspace->fresh()->requires_campaign_approval)->toBeTrue();
+});
+
+test('the preheader is personalised for each recipient', function () {
+    Contact::factory()->create(['email' => 'ann@example.com', 'first_name' => 'Ann']);
+
+    sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id, 'preheader' => 'For {{ first_name }}']));
+    $html = (string) $this->transports->sent[0]->getHtmlBody();
+
+    expect($html)->toContain('For Ann')->and($html)->not->toContain('{{ first_name }}');
+});
+
+test('the checklist flags merge tags that nothing will fill', function () {
+    CustomFieldDefinition::create(['key' => 'plan', 'label' => 'Plan', 'type' => 'text']);
+    $base = Campaign::factory()->make()->html;
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'html' => $base.' {{ promo_code }} {{ custom.missing }} {{ maybe | none }} {{ custom.plan }}',
+    ]);
+
+    $item = collect(app(CampaignChecklist::class)->for($campaign, $this->workspace))->firstWhere('key', 'merge_tags');
+
+    expect($item->passed)->toBeFalse()
+        ->and($item->blocking)->toBeFalse()
+        ->and($item->message)->toContain('{{ promo_code }}')
+        ->and($item->message)->toContain('{{ custom.missing }}')
+        ->and($item->message)->not->toContain('maybe')
+        ->and($item->message)->not->toContain('custom.plan');
+});
+
+test('a campaign using only known merge tags passes the merge tag check', function () {
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    $item = collect(app(CampaignChecklist::class)->for($campaign, $this->workspace))->firstWhere('key', 'merge_tags');
+
+    expect($item->passed)->toBeTrue();
+});
+
+test('unfilled merge tags warn but do not block the send', function () {
+    Contact::factory()->create(['email' => 'ann@example.com']);
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'html' => Campaign::factory()->make()->html.' {{ promo_code }}',
+    ]);
+
+    expect(sendNow($this, $campaign)->status)->toBe(CampaignStatus::Sent);
 });

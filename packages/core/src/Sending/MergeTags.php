@@ -26,6 +26,34 @@ class MergeTags
         }, $template);
     }
 
+    /** Tags filled for every email without a custom field: contact details, then the ones sending supplies. */
+    public const BUILT_IN = ['email', 'first_name', 'last_name', 'full_name', 'unsubscribe_url', 'postal_address'];
+
+    /**
+     * Tags in the template that nothing will fill and that have no fallback, so they'd come out blank.
+     *
+     * @param  list<string>  $customKeys  The workspace's custom field keys
+     * @return list<string>
+     */
+    public static function unfilledIn(string $template, array $customKeys): array
+    {
+        preg_match_all(self::PATTERN, $template, $matches, PREG_SET_ORDER);
+        $unfilled = [];
+
+        foreach ($matches as $match) {
+            $tag = strtolower($match[1]);
+            $hasFallback = trim($match[2] ?? '') !== '';
+            $known = in_array($tag, self::BUILT_IN, true)
+                || (str_starts_with($tag, 'custom.') && in_array(substr($tag, 7), $customKeys, true));
+
+            if (! $known && ! $hasFallback) {
+                $unfilled[] = $tag;
+            }
+        }
+
+        return array_values(array_unique($unfilled));
+    }
+
     /**
      * @return list<string>
      */

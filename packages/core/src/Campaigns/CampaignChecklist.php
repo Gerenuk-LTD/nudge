@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Campaigns;
 
 use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Sending\LinkExtractor;
 use Gerenuk\Marketing\Sending\MergeTags;
@@ -24,6 +25,8 @@ class CampaignChecklist
         $html = (string) $campaign->html;
         $audienceCount = $this->audience->count($campaign);
         $tags = MergeTags::tagsIn($html);
+        $personalised = implode("\n", array_filter([(string) $campaign->subject, (string) $campaign->preheader, $html, $campaign->ab_enabled ? (string) $campaign->ab_subject_b : '', $campaign->ab_enabled ? (string) $campaign->ab_html_b : '']));
+        $unfilled = MergeTags::unfilledIn($personalised, array_values(array_map('strval', CustomFieldDefinition::query()->pluck('key')->all())));
 
         return [
             new ChecklistItem('provider', 'Sending provider connected', $provider !== null, true,
@@ -48,6 +51,13 @@ class CampaignChecklist
             ] : []),
             new ChecklistItem('unsubscribe', 'Unsubscribe link placed', in_array('unsubscribe_url', $tags, true), false,
                 'No {{ unsubscribe_url }} tag, so an unsubscribe link will be added at the bottom.'),
+            new ChecklistItem('merge_tags', 'Every merge tag can be filled', $unfilled === [], false,
+                $unfilled === [] ? null : (string) __(
+                    count($unfilled) === 1
+                        ? 'This tag has no value, so it will be blank: :tags. Use a contact field, a custom field, or give it a fallback like {{ tag | text }}.'
+                        : 'These tags have no value, so they will be blank: :tags. Use contact fields, custom fields, or give them a fallback like {{ tag | text }}.',
+                    ['tags' => implode(', ', array_map(fn (string $tag) => "{{ {$tag} }}", $unfilled))],
+                )),
             new ChecklistItem('links', 'Links use https', ! $this->hasInsecureLinks($html), false,
                 'Some links use http://, which some inboxes flag.'),
             new ChecklistItem('webhooks', 'Bounces and complaints are tracked', $provider === null || $provider->type->webhookVerification() !== WebhookVerification::None, false,

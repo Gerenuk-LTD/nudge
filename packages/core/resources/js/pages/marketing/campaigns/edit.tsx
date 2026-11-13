@@ -151,6 +151,7 @@ const stepChecks: Record<(typeof steps)[number], string[]> = {
         'sender',
         'content',
         'unsubscribe',
+        'merge_tags',
         'postal_address',
         'provider',
         'ab_variant',

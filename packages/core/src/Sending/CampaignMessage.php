@@ -51,7 +51,8 @@ class CampaignMessage
         }
 
         $html = $this->withFooter($html, $content['html'], $unsubscribeUrl, (string) $workspace->postal_address);
-        $html = $this->withPreheader($html, (string) $snapshot->preheader);
+        $preheader = MergeTags::render((string) $snapshot->preheader, $contact, ['unsubscribe_url' => $unsubscribeUrl, 'postal_address' => (string) $workspace->postal_address], escapeHtml: false);
+        $html = $this->withPreheader($html, $preheader);
 
         if ($campaign->track_opens) {
             $html = $this->withOpenPixel($html, $this->urls->open($recipient));
