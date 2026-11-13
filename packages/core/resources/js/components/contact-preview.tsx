@@ -14,6 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { show as showCampaign } from '@/routes/marketing/campaigns';
 import { show as showContact } from '@/routes/marketing/contacts';
+import { ContactStatusBadge } from '@marketing/components/contact-status-badge';
 import { StatusBadge } from '@marketing/components/status-badge';
 import type { SubscriptionTarget } from '@marketing/components/subscription-dialog';
 import { formatDate, formatDateTime } from '@marketing/lib/format';
@@ -79,17 +80,7 @@ export function ContactPreview({
                                 {contact.name ? contact.email : 'No name'}
                             </SheetDescription>
                             <div className="flex flex-wrap gap-1.5 pt-2">
-                                <StatusBadge
-                                    tone={
-                                        contact.status === 'subscribed'
-                                            ? 'success'
-                                            : 'neutral'
-                                    }
-                                >
-                                    {contact.status === 'subscribed'
-                                        ? 'Subscribed'
-                                        : 'Unsubscribed'}
-                                </StatusBadge>
+                                <ContactStatusBadge status={contact.status} />
                                 {contact.archived_at && (
                                     <StatusBadge tone="warning">
                                         Archived

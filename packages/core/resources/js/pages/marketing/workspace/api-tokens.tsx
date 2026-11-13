@@ -1,5 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { Check, Copy, Ellipsis, KeyRound, Plus, Trash2 } from 'lucide-react';
+import { Ellipsis, KeyRound, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import ApiTokenController from '@/actions/Gerenuk/Marketing/Http/Controllers/ApiTokenController';
@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
-import { useClipboard } from '@/hooks/use-clipboard';
+import { CopyField } from '@marketing/components/copy-field';
 import { cn } from '@/lib/utils';
 import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
 import {
@@ -216,8 +216,6 @@ export default function ApiTokens({
  * The token just created, shown once, with how to use it.
  */
 function NewToken({ token }: { token: string }) {
-    const [copied, copy] = useClipboard();
-
     return (
         <div className="space-y-3 rounded-xl border border-emerald-300/60 bg-emerald-50/60 p-5 dark:border-emerald-400/20 dark:bg-emerald-400/5">
             <div className="space-y-0.5">
@@ -227,24 +225,11 @@ function NewToken({ token }: { token: string }) {
                     revoke it and create another.
                 </p>
             </div>
-            <div className="flex gap-2">
-                <Input
-                    readOnly
-                    aria-label="New API token"
-                    value={token}
-                    onFocus={(event) => event.target.select()}
-                    className="bg-card font-mono text-xs"
-                />
-                <Button
-                    type="button"
-                    variant="outline"
-                    className="bg-card"
-                    onClick={() => copy(token)}
-                >
-                    {copied === token ? <Check /> : <Copy />}
-                    {copied === token ? 'Copied' : 'Copy'}
-                </Button>
-            </div>
+            <CopyField
+                label="New API token"
+                value={token}
+                className="bg-card"
+            />
             <p className="text-xs text-muted-foreground">
                 Send it with each request as{' '}
                 <code className="rounded bg-card px-1 py-0.5 font-mono">

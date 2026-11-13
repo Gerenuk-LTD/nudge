@@ -33,7 +33,7 @@ import type { ContactPreviewData } from '@marketing/components/contact-preview';
 import { ContactPreview } from '@marketing/components/contact-preview';
 import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
-import { StatusBadge } from '@marketing/components/status-badge';
+import { ContactStatusBadge } from '@marketing/components/contact-status-badge';
 import { SubscriptionDialog } from '@marketing/components/subscription-dialog';
 import type { SubscriptionTarget } from '@marketing/components/subscription-dialog';
 import { Pagination } from '@marketing/components/pagination';
@@ -423,14 +423,6 @@ function ContactActions({
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
-    );
-}
-
-function ContactStatusBadge({ status }: { status: ContactStatus }) {
-    return (
-        <StatusBadge tone={status === 'subscribed' ? 'success' : 'neutral'}>
-            {status === 'subscribed' ? 'Subscribed' : 'Unsubscribed'}
-        </StatusBadge>
     );
 }
 

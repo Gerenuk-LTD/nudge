@@ -6,15 +6,7 @@ import {
     useForm,
     usePage,
 } from '@inertiajs/react';
-import {
-    Check,
-    CircleCheck,
-    Copy,
-    Ellipsis,
-    Pencil,
-    Send,
-    Trash2,
-} from 'lucide-react';
+import { CircleCheck, Ellipsis, Pencil, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import ProviderController from '@/actions/Gerenuk/Marketing/Http/Controllers/ProviderController';
@@ -38,7 +30,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { useClipboard } from '@/hooks/use-clipboard';
+import { CopyField } from '@marketing/components/copy-field';
 import { cn } from '@/lib/utils';
 import { StatTile } from '@marketing/components/stat-tile';
 import {
@@ -355,7 +347,6 @@ export default function ShowProvider({
 }
 
 function WebhookCard({ provider }: { provider: Provider }) {
-    const [copied, copy] = useClipboard();
     const verification = provider.type.webhook_verification;
 
     return (
@@ -395,29 +386,10 @@ function WebhookCard({ provider }: { provider: Provider }) {
                                 </li>
                             ))}
                         </ol>
-                        <div className="flex gap-2">
-                            <Input
-                                readOnly
-                                aria-label="Webhook URL"
-                                value={provider.webhook_url ?? ''}
-                                onFocus={(event) => event.target.select()}
-                                className="font-mono text-xs"
-                            />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => copy(provider.webhook_url ?? '')}
-                            >
-                                {copied === provider.webhook_url ? (
-                                    <Check />
-                                ) : (
-                                    <Copy />
-                                )}
-                                {copied === provider.webhook_url
-                                    ? 'Copied'
-                                    : 'Copy'}
-                            </Button>
-                        </div>
+                        <CopyField
+                            label="Webhook URL"
+                            value={provider.webhook_url ?? ''}
+                        />
                         {verification === 'signing_secret' &&
                             !provider.has_webhook_secret && (
                                 <Shout

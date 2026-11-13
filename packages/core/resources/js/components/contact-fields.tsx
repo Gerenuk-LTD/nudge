@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
-import { ToggleSwitch } from '@marketing/components/toggle-switch';
+import { ToggleRow } from '@marketing/components/toggle-row';
 import type { CustomField, Option } from '@marketing/types';
 
 export type CustomFieldValue = string | number | boolean | null;
@@ -179,23 +179,15 @@ export function SubscriptionSwitch({
     note?: string;
 }) {
     return (
-        <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/30 px-3.5 py-3">
-            <div className="space-y-0.5">
-                <Label htmlFor={id} className="text-sm">
-                    Subscribed to marketing emails
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                    {note ??
-                        'Only if they agreed to hear from you. Unsubscribed contacts are kept but never emailed.'}
-                </p>
-            </div>
-            <span className="pt-0.5">
-                <ToggleSwitch
-                    id={id}
-                    checked={subscribed}
-                    onCheckedChange={onChange}
-                />
-            </span>
-        </div>
+        <ToggleRow
+            id={id}
+            label="Subscribed to marketing emails"
+            description={
+                note ??
+                'Only if they agreed to hear from you. Unsubscribed contacts are kept but never emailed.'
+            }
+            checked={subscribed}
+            onCheckedChange={onChange}
+        />
     );
 }

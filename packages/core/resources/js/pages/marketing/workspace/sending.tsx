@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { edit } from '@/routes/marketing/sending';
-import { ToggleSwitch } from '@marketing/components/toggle-switch';
+import { ToggleRow } from '@marketing/components/toggle-row';
 import { formatDateTime } from '@marketing/lib/format';
 
 export default function SendingSettings({
@@ -124,40 +124,26 @@ function SettingsForm({
                     <InputError message={form.errors.postal_address} />
                 </div>
 
-                <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/30 px-3.5 py-3">
-                    <div className="space-y-0.5">
-                        <Label htmlFor="requires_approval" className="text-sm">
-                            Require approval before a campaign is sent
-                        </Label>
+                <ToggleRow
+                    id="requires_approval"
+                    label="Require approval before a campaign is sent"
+                    description="Someone with the approve permission must sign off each campaign. Editing a campaign withdraws its approval."
+                    checked={form.data.requires_campaign_approval}
+                    disabled={!canChangeApproval}
+                    onCheckedChange={(checked) =>
+                        form.setData('requires_campaign_approval', checked)
+                    }
+                >
+                    {!canChangeApproval && (
                         <p className="text-xs text-muted-foreground">
-                            Someone with the approve permission must sign off
-                            each campaign. Editing a campaign withdraws its
-                            approval.
+                            Only people who can approve campaigns can change
+                            this.
                         </p>
-                        {!canChangeApproval && (
-                            <p className="text-xs text-muted-foreground">
-                                Only people who can approve campaigns can change
-                                this.
-                            </p>
-                        )}
-                        <InputError
-                            message={form.errors.requires_campaign_approval}
-                        />
-                    </div>
-                    <span className="pt-0.5">
-                        <ToggleSwitch
-                            id="requires_approval"
-                            checked={form.data.requires_campaign_approval}
-                            disabled={!canChangeApproval}
-                            onCheckedChange={(checked) =>
-                                form.setData(
-                                    'requires_campaign_approval',
-                                    checked,
-                                )
-                            }
-                        />
-                    </span>
-                </div>
+                    )}
+                    <InputError
+                        message={form.errors.requires_campaign_approval}
+                    />
+                </ToggleRow>
             </SettingsSection>
         </form>
     );

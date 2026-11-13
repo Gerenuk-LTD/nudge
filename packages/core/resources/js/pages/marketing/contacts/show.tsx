@@ -47,6 +47,7 @@ import {
 import type { CustomFieldValue } from '@marketing/components/contact-fields';
 import { PageBody } from '@marketing/components/page-header';
 import { SettingsSection } from '@marketing/components/settings-section';
+import { ContactStatusBadge } from '@marketing/components/contact-status-badge';
 import { StatusBadge } from '@marketing/components/status-badge';
 import { SubscriptionDialog } from '@marketing/components/subscription-dialog';
 import { TagInput } from '@marketing/components/tag-input';
@@ -199,17 +200,7 @@ export default function ContactShow({
                                     </span>
                                 </span>
                             )}
-                            <StatusBadge
-                                tone={
-                                    contact.status === 'subscribed'
-                                        ? 'success'
-                                        : 'neutral'
-                                }
-                            >
-                                {contact.status === 'subscribed'
-                                    ? 'Subscribed'
-                                    : 'Unsubscribed'}
-                            </StatusBadge>
+                            <ContactStatusBadge status={contact.status} />
                             {contact.unsubscribed_at &&
                                 contact.status === 'unsubscribed' && (
                                     <span>
