@@ -640,17 +640,28 @@ function ContentStep({
                     }}
                     mergeTags={props.mergeTags}
                     previewValues={previewValues}
-                    onChange={(content) =>
-                        form.setData((data) => ({
-                            ...data,
+                    onChange={(content, initial) => {
+                        const fields = {
                             editor: content.editor,
                             editor_state:
                                 content.state === null
                                     ? ''
                                     : JSON.stringify(content.state),
                             html: content.html,
-                        }))
-                    }
+                        };
+
+                        form.setData((data) => ({ ...data, ...fields }));
+
+                        // Re-rendering saved content on open isn't an edit, so it isn't autosaved and can't withdraw an approval.
+                        // Empty saved HTML (a fresh draft or a starter) still saves, or the campaign would go out blank.
+                        if (
+                            initial &&
+                            form.data.html.trim() !== '' &&
+                            revision === 0
+                        ) {
+                            form.setDefaults(fields);
+                        }
+                    }}
                     actions={
                         <>
                             <TemplateDialog
@@ -980,16 +991,22 @@ function AbTestPanel({
                         }}
                         mergeTags={mergeTags}
                         previewValues={form.data.variables}
-                        onChange={(content) =>
-                            form.setData((data) => ({
-                                ...data,
+                        onChange={(content, initial) => {
+                            const fields = {
                                 ab_html_b: content.html,
                                 ab_editor_state_b:
                                     content.state === null
                                         ? ''
                                         : JSON.stringify(content.state),
-                            }))
-                        }
+                            };
+
+                            form.setData((data) => ({ ...data, ...fields }));
+
+                            // As for version A: re-rendering saved content on open isn't an edit.
+                            if (initial && form.data.ab_html_b.trim() !== '') {
+                                form.setDefaults(fields);
+                            }
+                        }}
                     />
                 </div>
             )}
