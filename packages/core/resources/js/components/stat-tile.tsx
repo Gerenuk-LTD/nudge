@@ -23,26 +23,30 @@ export function StatTile({
     valueClassName?: string;
 }) {
     return (
-        <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-xs">
-            <dt className="flex items-center gap-2.5 text-sm text-muted-foreground">
+        <div className="flex h-full flex-col rounded-xl border bg-card p-4 text-card-foreground shadow-xs">
+            <dt className="flex items-start justify-between gap-2 text-13 text-muted-foreground">
+                <span className="min-w-0">{label}</span>
                 {Icon && <StatIcon icon={Icon} problem={problem} />}
-                {label}
             </dt>
             <dd
                 className={cn(
-                    'mt-1 text-2xl font-semibold tabular-nums',
+                    'mt-2 text-2xl font-semibold tracking-tight tabular-nums',
                     problem && 'text-red-700 dark:text-red-400',
                     valueClassName,
                 )}
             >
                 {value}
             </dd>
-            {hint && <dd className="text-xs text-muted-foreground">{hint}</dd>}
+            {hint && (
+                <dd className="mt-auto pt-1 text-xs text-muted-foreground">
+                    {hint}
+                </dd>
+            )}
         </div>
     );
 }
 
-/** The small square an icon sits in beside a stat's label. */
+/** A stat's icon, shown quietly at the top right of its card. */
 export function StatIcon({
     icon: Icon,
     problem = false,
@@ -51,15 +55,12 @@ export function StatIcon({
     problem?: boolean;
 }) {
     return (
-        <span
+        <Icon
             aria-hidden
             className={cn(
-                'flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/40 text-muted-foreground',
-                problem &&
-                    'border-red-200 bg-red-50 text-red-600 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-400',
+                'size-4 shrink-0 text-muted-foreground/70',
+                problem && 'text-red-600 dark:text-red-400',
             )}
-        >
-            <Icon className="size-3.5" />
-        </span>
+        />
     );
 }

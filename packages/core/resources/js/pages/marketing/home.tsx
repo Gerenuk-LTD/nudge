@@ -196,11 +196,13 @@ export default function Home({
                             )}
                             trendLabel="new contacts"
                         >
-                            <Sparkline
-                                data={audience.added}
-                                label="Contacts added per day"
-                                className="text-emerald-600/70 dark:text-emerald-400/70"
-                            />
+                            {total(audience.added) > 0 && (
+                                <Sparkline
+                                    data={audience.added}
+                                    label="Contacts added per day"
+                                    className="text-emerald-600/70 dark:text-emerald-400/70"
+                                />
+                            )}
                         </Stat>
                     )}
                     {sending && (
@@ -215,11 +217,13 @@ export default function Home({
                                     sending.previous.sent,
                                 )}
                             >
-                                <Sparkline
-                                    data={sending.sent}
-                                    label="Emails sent per day"
-                                    className="text-sky-600/70 dark:text-sky-400/70"
-                                />
+                                {total(sending.sent) > 0 && (
+                                    <Sparkline
+                                        data={sending.sent}
+                                        label="Emails sent per day"
+                                        className="text-sky-600/70 dark:text-sky-400/70"
+                                    />
+                                )}
                             </Stat>
                             <Stat
                                 icon={MailOpen}
@@ -508,43 +512,43 @@ function Stat({
               : `${Math.abs(delta).toFixed(1)} pts`;
 
     return (
-        <Card className="gap-3 py-4">
-            <CardContent className="space-y-1 px-5">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                        <StatIcon icon={icon} />
-                        <p className="truncate text-13 text-muted-foreground">
-                            {label}
-                        </p>
-                    </div>
-                    {shown !== null && delta !== null && (
-                        <span
-                            title={`Compared with the ${trendLabel ? `${trendLabel} in the ` : ''}previous period`}
-                            className={cn(
-                                'inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums',
-                                delta > 0 &&
-                                    'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
-                                delta < 0 &&
-                                    'bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400',
-                                delta === 0 && 'bg-muted text-muted-foreground',
-                            )}
-                        >
-                            {delta > 0 ? (
-                                <ArrowUpRight className="size-3" />
-                            ) : delta < 0 ? (
-                                <ArrowDownRight className="size-3" />
-                            ) : null}
-                            {shown}
-                        </span>
-                    )}
+        <Card className="h-full gap-0 py-5">
+            <CardContent className="flex h-full flex-col px-5">
+                <div className="flex items-start justify-between gap-2">
+                    <p className="text-13 text-muted-foreground">{label}</p>
+                    <StatIcon icon={icon} />
                 </div>
-                <p className="text-2xl font-semibold tabular-nums">{value}</p>
-                <p className="text-xs text-muted-foreground">
-                    {detail}
-                    {delta !== null && ' · vs previous period'}
+                <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+                    {value}
                 </p>
+                <div className="mt-auto space-y-3 pt-4">
+                    {children}
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        {shown !== null && delta !== null && (
+                            <span
+                                title={`Compared with the ${trendLabel ? `${trendLabel} in the ` : ''}previous period`}
+                                className={cn(
+                                    'inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums',
+                                    delta > 0 &&
+                                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
+                                    delta < 0 &&
+                                        'bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400',
+                                    delta === 0 &&
+                                        'bg-muted text-muted-foreground',
+                                )}
+                            >
+                                {delta > 0 ? (
+                                    <ArrowUpRight className="size-3" />
+                                ) : delta < 0 ? (
+                                    <ArrowDownRight className="size-3" />
+                                ) : null}
+                                {shown}
+                            </span>
+                        )}
+                        <span>{detail}</span>
+                    </p>
+                </div>
             </CardContent>
-            {children && <div className="px-5">{children}</div>}
         </Card>
     );
 }
