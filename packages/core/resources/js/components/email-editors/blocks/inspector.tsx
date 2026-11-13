@@ -1,9 +1,20 @@
-import { AlignCenter, AlignLeft, AlignRight, ArrowLeft } from 'lucide-react';
+import {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    ArrowLeft,
+    CircleHelp,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ImagePicker } from './image-picker';
 import { COLUMN_LAYOUTS, FONTS, withLayout } from './model';
@@ -78,6 +89,7 @@ export function Inspector({
                     max={720}
                     step={10}
                     unit="px"
+                    tip="The widest the email gets, on large screens. On phones it shrinks to fit and columns stack. Use Desktop and Mobile above to see the result."
                     onChange={(width) => onSettingsChange({ width })}
                 />
             </Panel>
@@ -349,18 +361,42 @@ function Field({
     label,
     htmlFor,
     hint,
+    tip,
     children,
 }: {
     label: string;
     htmlFor?: string;
     hint?: string;
+    tip?: ReactNode;
     children: ReactNode;
 }) {
     return (
         <div className="grid content-start gap-2">
-            <Label htmlFor={htmlFor} className="text-13">
-                {label}
-            </Label>
+            {tip ? (
+                <div className="flex items-center gap-1.5">
+                    <Label htmlFor={htmlFor} className="text-13">
+                        {label}
+                    </Label>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                type="button"
+                                aria-label={`About ${label.toLowerCase()}`}
+                                className="rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            >
+                                <CircleHelp className="size-3.5" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-60">
+                            {tip}
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            ) : (
+                <Label htmlFor={htmlFor} className="text-13">
+                    {label}
+                </Label>
+            )}
             {children}
             {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
@@ -406,6 +442,7 @@ function RangeField({
     max,
     step,
     unit,
+    tip,
     onChange,
 }: {
     label: string;
@@ -414,10 +451,11 @@ function RangeField({
     max: number;
     step: number;
     unit: string;
+    tip?: ReactNode;
     onChange: (value: number) => void;
 }) {
     return (
-        <Field label={label}>
+        <Field label={label} tip={tip}>
             <div className="flex items-center gap-3">
                 <input
                     type="range"

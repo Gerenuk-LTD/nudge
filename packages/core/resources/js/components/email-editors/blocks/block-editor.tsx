@@ -415,7 +415,7 @@ export function BlockEditor({
                                 <div
                                     className="mx-auto rounded-lg py-4 shadow-xs"
                                     style={{
-                                        maxWidth: document.settings.width,
+                                        width: document.settings.width,
                                         background: document.settings.canvas,
                                     }}
                                 >
