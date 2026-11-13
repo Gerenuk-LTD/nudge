@@ -10,7 +10,8 @@ export type EmailEditorProps = {
     html: string;
     state: unknown;
     mergeTags: MergeTag[];
-    onChange: (html: string, state: unknown) => void;
+    /** `initial` is true for the editor's own write as it opens, which is not an edit by the person. */
+    onChange: (html: string, state: unknown, initial?: boolean) => void;
     /**
      * Whether the editor may write its own rendering of the content back as soon as it opens. Off when only showing
      * an existing email in a different editor, so looking at it never changes it.

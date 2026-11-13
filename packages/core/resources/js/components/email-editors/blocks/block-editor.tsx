@@ -171,7 +171,7 @@ export function BlockEditor({
         const rendered = renderEmail(latest.current);
 
         if (syncOnMount && (rendered !== html || asDocument(state) === null)) {
-            latestOnChange.current(rendered, latest.current);
+            latestOnChange.current(rendered, latest.current, true);
         }
         // Only on first load; later changes go through commit.
         // eslint-disable-next-line react-hooks/exhaustive-deps

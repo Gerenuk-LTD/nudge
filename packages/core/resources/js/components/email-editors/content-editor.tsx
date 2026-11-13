@@ -28,7 +28,7 @@ export function EmailContentEditor({
     /** Extra controls on the row with the editor switch, such as template actions. */
     actions?: ReactNode;
     mergeTags: MergeTag[];
-    onChange: (content: EmailContent) => void;
+    onChange: (content: EmailContent, initial?: boolean) => void;
 }) {
     // Drag and drop is the default: every email opens in the builder unless HTML is picked on the switch.
     const [chosen, setChosen] = useState<string | null>(null);
@@ -111,8 +111,8 @@ export function EmailContentEditor({
                 state={state}
                 syncOnMount={!showingHtmlAsBlocks}
                 mergeTags={mergeTags}
-                onChange={(html, state) =>
-                    onChange({ editor: editorKey, state, html })
+                onChange={(html, state, initial) =>
+                    onChange({ editor: editorKey, state, html }, initial)
                 }
             />
         </div>

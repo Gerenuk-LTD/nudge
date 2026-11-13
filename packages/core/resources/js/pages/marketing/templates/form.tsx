@@ -175,17 +175,23 @@ export default function TemplateForm({
                             html: form.data.html,
                         }}
                         mergeTags={mergeTags}
-                        onChange={(content) =>
-                            form.setData((data) => ({
-                                ...data,
+                        onChange={(content, initial) => {
+                            const fields = {
                                 editor: content.editor,
                                 editor_state:
                                     content.state === null
                                         ? ''
                                         : JSON.stringify(content.state),
                                 html: content.html,
-                            }))
-                        }
+                            };
+
+                            form.setData((data) => ({ ...data, ...fields }));
+
+                            // The builder's own rendering as it opens is the starting point, not an edit, so leaving asks nothing.
+                            if (initial) {
+                                form.setDefaults(fields);
+                            }
+                        }}
                     />
                     <InputError message={form.errors.html} />
                 </div>
