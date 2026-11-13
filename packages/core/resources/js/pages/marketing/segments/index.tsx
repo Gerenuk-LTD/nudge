@@ -1,16 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
-import {
-    ArrowRight,
-    Ellipsis,
-    Filter,
-    Pencil,
-    Plus,
-    Trash2,
-    Users,
-} from 'lucide-react';
+import { Ellipsis, Filter, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import SegmentController from '@/actions/Gerenuk/Marketing/Http/Controllers/SegmentController';
 import { ConfirmDialog } from '@marketing/components/confirm-dialog';
+import { EmptyState } from '@marketing/components/empty-state';
+import { StarterCard, StarterGrid } from '@marketing/components/starter-grid';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -105,55 +99,35 @@ function EmptySegments({
     fields: SegmentField[];
 }) {
     return (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                <Filter className="size-5" />
-            </span>
-            <div className="space-y-1">
-                <p className="font-medium">No segments yet</p>
-                <p className="max-w-md text-sm text-muted-foreground">
-                    A segment picks contacts by their details, tags and lists,
-                    and keeps itself up to date as contacts change. Send
-                    campaigns to it, or use it to filter your contacts.
-                </p>
-            </div>
-            {canEdit && (
-                <>
-                    <Button size="sm" className="mt-1" asChild>
-                        <Link href={create()}>
-                            <Plus />
-                            New segment
-                        </Link>
-                    </Button>
-                    <div className="mt-5 w-full max-w-3xl space-y-2.5">
-                        <p className="text-xs font-medium text-muted-foreground">
-                            Or start from one of these
-                        </p>
-                        <div className="grid gap-2 text-left sm:grid-cols-2">
+        <EmptyState
+            icon={Filter}
+            title="No segments yet"
+            description="A segment picks contacts by their details, tags and lists, and keeps itself up to date as contacts change. Send campaigns to it, or use it to filter your contacts."
+            actions={
+                canEdit && (
+                    <>
+                        <Button size="sm" asChild>
+                            <Link href={create()}>
+                                <Plus />
+                                New segment
+                            </Link>
+                        </Button>
+                        <StarterGrid>
                             {segmentStarters(fields).map((starter) => (
-                                <Link
+                                <StarterCard
                                     key={starter.key}
+                                    title={starter.name}
+                                    description={starter.description}
                                     href={create({
                                         query: { starter: starter.key },
                                     })}
-                                    className="group flex items-center gap-3 rounded-lg border bg-card px-3.5 py-3 shadow-xs transition-colors hover:border-foreground/20"
-                                >
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-sm font-medium">
-                                            {starter.name}
-                                        </span>
-                                        <span className="block truncate text-xs text-muted-foreground">
-                                            {starter.description}
-                                        </span>
-                                    </span>
-                                    <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                                </Link>
+                                />
                             ))}
-                        </div>
-                    </div>
-                </>
-            )}
-        </div>
+                        </StarterGrid>
+                    </>
+                )
+            }
+        />
     );
 }
 

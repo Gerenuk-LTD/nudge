@@ -1,7 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
-    ArrowRight,
     Calendar,
     Check,
     Copy,
@@ -46,7 +45,9 @@ import { edit as editAutomation } from '@/routes/marketing/automations';
 import { index as customFieldsIndex } from '@/routes/marketing/custom-fields';
 import { edit as editSegment } from '@/routes/marketing/segments';
 import { byId, DataTable } from '@marketing/components/data-table';
+import { EmptyState } from '@marketing/components/empty-state';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { StarterCard, StarterGrid } from '@marketing/components/starter-grid';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { CustomFieldType } from '@marketing/types';
 import { Shout } from '@marketing/components/shout';
@@ -246,69 +247,38 @@ export default function CustomFieldsIndex({
                 />
 
                 {fields.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <TextCursorInput className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">No custom fields yet</p>
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                Store details such as company, plan or birthday
-                                on each contact. Fill them from imports or the
-                                API, filter on them in segments, and drop them
-                                into emails.
-                            </p>
-                        </div>
-                        {canEdit && (
-                            <>
-                                <Button
-                                    size="sm"
-                                    className="mt-1"
-                                    onClick={() => create()}
-                                >
-                                    <Plus />
-                                    New field
-                                </Button>
-                                <div className="mt-5 w-full max-w-3xl space-y-2.5">
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Or start from one of these
-                                    </p>
-                                    <div className="grid gap-2 text-left sm:grid-cols-2 lg:grid-cols-3">
-                                        {STARTERS.map((starter) => {
-                                            const Icon =
-                                                fieldTypes[starter.type].icon;
-
-                                            return (
-                                                <button
-                                                    key={starter.key}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        create(starter)
-                                                    }
-                                                    className="group flex items-center gap-3 rounded-lg border bg-card px-3.5 py-3 text-left shadow-xs transition-colors outline-none hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                >
-                                                    <Icon className="size-4 shrink-0 text-muted-foreground" />
-                                                    <span className="min-w-0 flex-1">
-                                                        <span className="block truncate text-sm font-medium">
-                                                            {starter.label}
-                                                        </span>
-                                                        <span className="block truncate text-xs text-muted-foreground">
-                                                            {
-                                                                fieldTypes[
-                                                                    starter.type
-                                                                ].label
-                                                            }
-                                                        </span>
-                                                    </span>
-                                                    <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                    <EmptyState
+                        icon={TextCursorInput}
+                        title="No custom fields yet"
+                        description="Store details such as company, plan or birthday on each contact. Fill them from imports or the API, filter on them in segments, and drop them into emails."
+                        actions={
+                            canEdit && (
+                                <>
+                                    <Button size="sm" onClick={() => create()}>
+                                        <Plus />
+                                        New field
+                                    </Button>
+                                    <StarterGrid columns={3}>
+                                        {STARTERS.map((starter) => (
+                                            <StarterCard
+                                                key={starter.key}
+                                                icon={
+                                                    fieldTypes[starter.type]
+                                                        .icon
+                                                }
+                                                title={starter.label}
+                                                description={
+                                                    fieldTypes[starter.type]
+                                                        .label
+                                                }
+                                                onClick={() => create(starter)}
+                                            />
+                                        ))}
+                                    </StarterGrid>
+                                </>
+                            )
+                        }
+                    />
                 ) : (
                     <DataTable
                         columns={columns}

@@ -1,6 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
-    ArrowRight,
     Ellipsis,
     List,
     Pencil,
@@ -14,6 +13,8 @@ import type { FormEvent } from 'react';
 import ContactListController from '@/actions/Gerenuk/Marketing/Http/Controllers/ContactListController';
 import InputError from '@/components/input-error';
 import { ConfirmDialog } from '@marketing/components/confirm-dialog';
+import { EmptyState } from '@marketing/components/empty-state';
+import { StarterCard, StarterGrid } from '@marketing/components/starter-grid';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -105,56 +106,33 @@ export default function ListsIndex({
                 />
 
                 {lists.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <List className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">No lists yet</p>
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                Lists are the audiences you send campaigns to,
-                                like a newsletter or your customers. Make one,
-                                then import or add contacts to it.
-                            </p>
-                        </div>
-                        {canEdit && (
-                            <>
-                                <Button
-                                    size="sm"
-                                    className="mt-1"
-                                    onClick={() => add()}
-                                >
-                                    <Plus />
-                                    New list
-                                </Button>
-                                <div className="mt-5 w-full max-w-3xl space-y-2.5">
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Or start from one of these
-                                    </p>
-                                    <div className="grid gap-2 text-left sm:grid-cols-2">
+                    <EmptyState
+                        icon={List}
+                        title="No lists yet"
+                        description="Lists are the audiences you send campaigns to, like a newsletter or your customers. Make one, then import or add contacts to it."
+                        actions={
+                            canEdit && (
+                                <>
+                                    <Button size="sm" onClick={() => add()}>
+                                        <Plus />
+                                        New list
+                                    </Button>
+                                    <StarterGrid>
                                         {STARTERS.map((starter) => (
-                                            <button
+                                            <StarterCard
                                                 key={starter.name}
-                                                type="button"
+                                                title={starter.name}
+                                                description={
+                                                    starter.description
+                                                }
                                                 onClick={() => add(starter)}
-                                                className="group flex items-center gap-3 rounded-lg border bg-card px-3.5 py-3 text-left shadow-xs transition-colors outline-none hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                            >
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="block truncate text-sm font-medium">
-                                                        {starter.name}
-                                                    </span>
-                                                    <span className="block truncate text-xs text-muted-foreground">
-                                                        {starter.description}
-                                                    </span>
-                                                </span>
-                                                <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                                            </button>
+                                            />
                                         ))}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                    </StarterGrid>
+                                </>
+                            )
+                        }
+                    />
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {lists.map((list) => (

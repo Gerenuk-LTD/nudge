@@ -40,6 +40,7 @@ import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { edit as editSegment } from '@/routes/marketing/segments';
 import { index as tagsIndex } from '@/routes/marketing/tags';
 import { byId, DataTable } from '@marketing/components/data-table';
+import { EmptyState } from '@marketing/components/empty-state';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { Shout } from '@marketing/components/shout';
@@ -146,59 +147,52 @@ export default function TagsIndex({
                 />
 
                 {tags.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <TagIcon className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">No tags yet</p>
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                Tag contacts to group them loosely, like
-                                customers or leads. Segments can pick them out,
-                                and automations can start when one is added.
-                            </p>
-                        </div>
-                        {canEdit && (
-                            <>
-                                <Button
-                                    size="sm"
-                                    className="mt-1"
-                                    onClick={() =>
-                                        setAction({ kind: 'create' })
-                                    }
-                                >
-                                    <Plus />
-                                    New tag
-                                </Button>
-                                <div className="mt-4 space-y-2.5">
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Or add some common ones
-                                    </p>
-                                    <div className="flex flex-wrap justify-center gap-1.5">
-                                        {STARTERS.map((name) => (
-                                            <button
-                                                key={name}
-                                                type="button"
-                                                onClick={() =>
-                                                    router.post(
-                                                        TagController.store.url(),
-                                                        { name },
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
-                                                className="inline-flex h-8 items-center gap-1.5 rounded-full border bg-card px-3 text-13 text-muted-foreground shadow-xs transition-colors outline-none hover:border-foreground/30 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                            >
-                                                <Plus className="size-3.5" />
-                                                {name}
-                                            </button>
-                                        ))}
+                    <EmptyState
+                        icon={TagIcon}
+                        title="No tags yet"
+                        description="Tag contacts to group them loosely, like customers or leads. Segments can pick them out, and automations can start when one is added."
+                        actions={
+                            canEdit && (
+                                <>
+                                    <Button
+                                        size="sm"
+                                        onClick={() =>
+                                            setAction({ kind: 'create' })
+                                        }
+                                    >
+                                        <Plus />
+                                        New tag
+                                    </Button>
+                                    <div className="mt-4 w-full space-y-2.5">
+                                        <p className="text-xs font-medium text-muted-foreground">
+                                            Or add some common ones
+                                        </p>
+                                        <div className="flex flex-wrap justify-center gap-1.5">
+                                            {STARTERS.map((name) => (
+                                                <button
+                                                    key={name}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        router.post(
+                                                            TagController.store.url(),
+                                                            { name },
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        )
+                                                    }
+                                                    className="inline-flex h-8 items-center gap-1.5 rounded-full border bg-card px-3 text-13 text-muted-foreground shadow-xs transition-colors outline-none hover:border-foreground/30 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                >
+                                                    <Plus className="size-3.5" />
+                                                    {name}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                </>
+                            )
+                        }
+                    />
                 ) : (
                     <>
                         {tags.length > 8 && (

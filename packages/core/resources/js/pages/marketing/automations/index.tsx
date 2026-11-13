@@ -1,5 +1,5 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowRight, Plus, Workflow } from 'lucide-react';
+import { Plus, Workflow } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import AutomationController from '@/actions/Gerenuk/Marketing/Http/Controllers/AutomationController';
@@ -23,6 +23,7 @@ import { stepKinds } from '@marketing/components/automation/step-kinds';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { StarterCard, StarterGrid } from '@marketing/components/starter-grid';
 import { StatusBadge } from '@marketing/components/status-badge';
 import { useCan } from '@marketing/hooks/use-workspace';
 import type { StepType } from '@marketing/types';
@@ -97,42 +98,27 @@ export default function AutomationsIndex({
                                 <>
                                     <NewAutomation triggers={triggers} />
                                     {starters.length > 0 && (
-                                        <div className="mt-5 w-full max-w-3xl space-y-2.5">
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Or start from one of these
-                                            </p>
-                                            <div className="grid gap-2 text-left sm:grid-cols-2">
-                                                {starters.map((starter) => (
-                                                    <button
-                                                        key={starter.name}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            router.post(
-                                                                AutomationController.store.url(),
-                                                                {
-                                                                    name: starter.name,
-                                                                    trigger_type:
-                                                                        starter.trigger,
-                                                                },
-                                                            )
-                                                        }
-                                                        className="group flex items-center gap-3 rounded-lg border bg-card px-3.5 py-3 text-left shadow-xs transition-colors outline-none hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                    >
-                                                        <span className="min-w-0 flex-1">
-                                                            <span className="block truncate text-sm font-medium">
-                                                                {starter.name}
-                                                            </span>
-                                                            <span className="block truncate text-xs text-muted-foreground">
-                                                                {
-                                                                    starter.description
-                                                                }
-                                                            </span>
-                                                        </span>
-                                                        <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        <StarterGrid>
+                                            {starters.map((starter) => (
+                                                <StarterCard
+                                                    key={starter.name}
+                                                    title={starter.name}
+                                                    description={
+                                                        starter.description
+                                                    }
+                                                    onClick={() =>
+                                                        router.post(
+                                                            AutomationController.store.url(),
+                                                            {
+                                                                name: starter.name,
+                                                                trigger_type:
+                                                                    starter.trigger,
+                                                            },
+                                                        )
+                                                    }
+                                                />
+                                            ))}
+                                        </StarterGrid>
                                     )}
                                 </>
                             )
