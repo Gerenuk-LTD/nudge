@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { Check } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/CampaignController';
@@ -161,6 +161,7 @@ export default function ShowCampaign({
     const [confirmingStop, setConfirmingStop] = useState(false);
     const [confirmingResend, setConfirmingResend] = useState(false);
     const [confirmingWinner, setConfirmingWinner] = useState(false);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
 
     const abRows: AbRow[] = abTest
         ? (['a', 'b'] as const).map((variant) => ({
@@ -293,6 +294,20 @@ export default function ShowCampaign({
                                         }
                                     >
                                         Duplicate
+                                    </Button>
+                                )}
+                            {can('campaigns.manage') &&
+                                campaign.kind === 'broadcast' &&
+                                campaign.status === 'cancelled' && (
+                                    <Button
+                                        variant="ghost"
+                                        className="text-muted-foreground"
+                                        onClick={() =>
+                                            setConfirmingDelete(true)
+                                        }
+                                    >
+                                        <Trash2 />
+                                        Delete
                                     </Button>
                                 )}
                             {can('campaigns.manage') &&
@@ -612,6 +627,19 @@ export default function ShowCampaign({
                         setConfirmingStop(false);
                         router.post(CampaignController.cancel.url(campaign.id));
                     }}
+                />
+
+                <ConfirmDialog
+                    open={confirmingDelete}
+                    onOpenChange={setConfirmingDelete}
+                    title={`Delete ${campaign.name}?`}
+                    description="The campaign and its delivery history are removed. This can't be undone."
+                    confirmLabel="Delete campaign"
+                    onConfirm={() =>
+                        router.delete(
+                            CampaignController.destroy.url(campaign.id),
+                        )
+                    }
                 />
             </PageBody>
         </>

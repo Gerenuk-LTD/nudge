@@ -21,6 +21,7 @@ use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
 
@@ -369,4 +370,52 @@ test('unfilled merge tags warn but do not block the send', function () {
     ]);
 
     expect(sendNow($this, $campaign)->status)->toBe(CampaignStatus::Sent);
+});
+
+test('a draft campaign can be deleted', function () {
+    $draft = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $draft))
+        ->assertRedirect(route('marketing.campaigns.index'));
+
+    expect(Campaign::find($draft->id))->toBeNull();
+});
+
+test('a cancelled campaign is deleted along with its recipients', function () {
+    Contact::factory()->create();
+    $campaign = sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id]));
+    $campaign->update(['status' => CampaignStatus::Cancelled]);
+
+    expect(CampaignRecipient::where('campaign_id', $campaign->id)->count())->toBeGreaterThan(0);
+
+    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $campaign))
+        ->assertRedirect(route('marketing.campaigns.index'));
+
+    expect(Campaign::find($campaign->id))->toBeNull();
+
+    // The test database does not enforce foreign keys, so check the schema declares the cascade.
+    $campaignKey = collect(Schema::getForeignKeys('campaign_recipients'))->firstWhere('columns', ['campaign_id']);
+
+    expect($campaignKey['on_delete'])->toBe('cascade');
+});
+
+test('sent and scheduled campaigns cannot be deleted', function () {
+    Contact::factory()->create();
+    $sent = sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id]));
+    $scheduled = Campaign::factory()->create(['provider_id' => $this->provider->id, 'status' => CampaignStatus::Scheduled, 'scheduled_at' => now()->addDay()]);
+
+    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $sent))->assertForbidden();
+    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $scheduled))->assertForbidden();
+
+    expect(Campaign::find($sent->id))->not->toBeNull()
+        ->and(Campaign::find($scheduled->id))->not->toBeNull();
+});
+
+test('viewers cannot delete a campaign', function () {
+    $draft = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+    $viewer = $this->addMember($this->workspace, 'Viewer');
+
+    $this->actingAs($viewer)->delete(route('marketing.campaigns.destroy', $draft))->assertForbidden();
+
+    expect(Campaign::find($draft->id))->not->toBeNull();
 });

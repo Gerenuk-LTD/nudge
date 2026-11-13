@@ -12,6 +12,7 @@ import {
     Pencil,
     Send,
     Smartphone,
+    Trash2,
     TriangleAlert,
     Users,
 } from 'lucide-react';
@@ -182,6 +183,7 @@ function stepState(
 export default function EditCampaign(props: Props) {
     const { campaign } = props;
     const [step, setStep] = useState<(typeof steps)[number]>('Content');
+    const [deleting, setDeleting] = useState(false);
     const can = useCan();
 
     const form = useForm<Draft>({
@@ -227,7 +229,7 @@ export default function EditCampaign(props: Props) {
                 ? null
                 : JSON.parse(data.ab_editor_state_b),
     }));
-    useAutosave(form, campaign.id, scheduled);
+    useAutosave(form, campaign.id, scheduled || deleting);
     const hiddenErrors = Object.entries(errors).filter(
         (entry): entry is [string, string] =>
             !SHOWN_ERROR_KEYS.has(entry[0]) && Boolean(entry[1]),
@@ -296,14 +298,26 @@ export default function EditCampaign(props: Props) {
                                 Unschedule
                             </Button>
                         ) : (
-                            next && (
-                                <Button onClick={() => goTo(next)}>
-                                    {next === 'Review and send'
-                                        ? 'Review'
-                                        : `Next: ${next}`}
-                                    <ArrowRight />
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    className="text-muted-foreground"
+                                    onClick={() => setDeleting(true)}
+                                >
+                                    <Trash2 />
+                                    <span className="sr-only sm:not-sr-only">
+                                        Delete
+                                    </span>
                                 </Button>
-                            )
+                                {next && (
+                                    <Button onClick={() => goTo(next)}>
+                                        {next === 'Review and send'
+                                            ? 'Review'
+                                            : `Next: ${next}`}
+                                        <ArrowRight />
+                                    </Button>
+                                )}
+                            </>
                         )
                     }
                 />
@@ -337,6 +351,19 @@ export default function EditCampaign(props: Props) {
                         ))}
                     </div>
                 )}
+
+                <ConfirmDialog
+                    open={deleting}
+                    onOpenChange={setDeleting}
+                    title={`Delete ${form.data.name || 'this draft'}?`}
+                    description="The draft and its content are removed. This can't be undone."
+                    confirmLabel="Delete draft"
+                    onConfirm={() =>
+                        router.delete(
+                            CampaignController.destroy.url(campaign.id),
+                        )
+                    }
+                />
 
                 {!scheduled && next && (
                     <div className="flex justify-end border-t pt-6">
