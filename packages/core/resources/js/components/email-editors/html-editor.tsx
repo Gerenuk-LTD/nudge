@@ -1,11 +1,17 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { fillVariables } from '@marketing/lib/merge-tags';
 import type { EmailEditorProps } from './types';
 
 /**
  * A code editor with a live preview. The interim editor until the drag-and-drop builder arrives.
  */
-export function HtmlEditor({ html, mergeTags, onChange }: EmailEditorProps) {
+export function HtmlEditor({
+    html,
+    mergeTags,
+    onChange,
+    previewValues,
+}: EmailEditorProps) {
     const textarea = useRef<HTMLTextAreaElement>(null);
 
     const insert = (tag: string) => {
@@ -58,7 +64,9 @@ export function HtmlEditor({ html, mergeTags, onChange }: EmailEditorProps) {
                 <iframe
                     title="Preview"
                     sandbox=""
-                    srcDoc={html}
+                    srcDoc={fillVariables(html, previewValues ?? {}, {
+                        escapeHtml: true,
+                    })}
                     className="min-h-[32rem] w-full rounded-md border bg-white"
                 />
             </div>

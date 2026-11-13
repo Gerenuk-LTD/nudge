@@ -24,3 +24,34 @@ export function campaignVariables(
 
     return [...found].map(([tag, optional]) => ({ tag, optional }));
 }
+
+const ESCAPES: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+};
+
+/**
+ * Puts campaign variable values into a text the way sending does, for previews. Tags without a value are left as they
+ * are, and so are built-in and custom field tags, which differ per person.
+ */
+export function fillVariables(
+    text: string,
+    values: Record<string, string>,
+    { escapeHtml }: { escapeHtml: boolean },
+): string {
+    return text.replace(PATTERN, (whole, name: string) => {
+        const tag = name.toLowerCase();
+        const value = values[tag];
+
+        if (!value || tag.startsWith('custom.')) {
+            return whole;
+        }
+
+        return escapeHtml
+            ? value.replace(/[&<>"']/g, (c) => ESCAPES[c])
+            : value;
+    });
+}

@@ -23,11 +23,14 @@ export function EmailContentEditor({
     mergeTags,
     onChange,
     actions,
+    previewValues,
 }: {
     content: EmailContent;
     /** Extra controls on the row with the editor switch, such as template actions. */
     actions?: ReactNode;
     mergeTags: MergeTag[];
+    /** Campaign variable values to show in the preview only. What the editor saves keeps the tags. */
+    previewValues?: Record<string, string>;
     onChange: (content: EmailContent, initial?: boolean) => void;
 }) {
     // Drag and drop is the default: every email opens in the builder unless HTML is picked on the switch.
@@ -111,6 +114,7 @@ export function EmailContentEditor({
                 state={state}
                 syncOnMount={!showingHtmlAsBlocks}
                 mergeTags={mergeTags}
+                previewValues={previewValues}
                 onChange={(html, state, initial) =>
                     onChange({ editor: editorKey, state, html }, initial)
                 }

@@ -17,6 +17,8 @@ export type EmailEditorProps = {
      * an existing email in a different editor, so looking at it never changes it.
      */
     syncOnMount?: boolean;
+    /** Campaign variable values to show in the preview only. What the editor saves keeps the tags. */
+    previewValues?: Record<string, string>;
 };
 
 export type EmailEditor = {

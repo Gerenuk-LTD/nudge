@@ -6,7 +6,6 @@ import {
     ChevronDown,
     CircleAlert,
     CircleCheck,
-    CircleHelp,
     Filter,
     List as ListIcon,
     Monitor,
@@ -44,11 +43,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { index as campaignsIndex } from '@/routes/marketing/campaigns';
 import { index as listsIndex } from '@/routes/marketing/lists';
@@ -65,7 +59,8 @@ import { ToggleSwitch } from '@marketing/components/toggle-switch';
 import { useUnsavedChangesGuard } from '@marketing/hooks/use-editor';
 import { useCan } from '@marketing/hooks/use-workspace';
 import { formatDateTime } from '@marketing/lib/format';
-import { campaignVariables } from '@marketing/lib/merge-tags';
+import { campaignVariables, fillVariables } from '@marketing/lib/merge-tags';
+import { CampaignVariables } from '@marketing/components/campaign-variables';
 import type { ChecklistItem, Option } from '@marketing/types';
 
 type Campaign = {
@@ -244,7 +239,9 @@ export default function EditCampaign(props: Props) {
     useAutosave(form, campaign.id, scheduled || deleting);
     const hiddenErrors = Object.entries(errors).filter(
         (entry): entry is [string, string] =>
-            !SHOWN_ERROR_KEYS.has(entry[0]) && Boolean(entry[1]),
+            !SHOWN_ERROR_KEYS.has(entry[0]) &&
+            !entry[0].startsWith('variables.') &&
+            Boolean(entry[1]),
     );
     useUnsavedChangesGuard(!scheduled && (form.isDirty || form.processing));
 
@@ -487,6 +484,12 @@ function ContentStep({
         ],
         props.builtInTags,
     );
+    // Only the variables this email uses, so stale values from deleted tags never show.
+    const previewValues = Object.fromEntries(
+        variables
+            .map(({ tag }) => [tag, form.data.variables[tag] ?? ''] as const)
+            .filter(([, value]) => value !== ''),
+    );
 
     const chooseProvider = (id: number | null) => {
         const provider = props.providers.find(
@@ -636,6 +639,7 @@ function ContentStep({
                         html: form.data.html,
                     }}
                     mergeTags={props.mergeTags}
+                    previewValues={previewValues}
                     onChange={(content) =>
                         form.setData((data) => ({
                             ...data,
@@ -692,51 +696,12 @@ function ContentStep({
             </div>
 
             {variables.length > 0 && (
-                <div className="rounded-xl border bg-card shadow-xs">
-                    <div className="flex items-center gap-1.5 border-b px-5 py-3.5 text-sm font-semibold">
-                        Variables
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <CircleHelp
-                                    aria-label="About variables"
-                                    className="size-3.5 text-muted-foreground"
-                                />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-64">
-                                Values that are the same for everyone in this
-                                campaign. Any tag that isn't a contact detail or
-                                custom field becomes a variable.
-                            </TooltipContent>
-                        </Tooltip>
-                    </div>
-                    <div className="space-y-4 p-5">
-                        {variables.map(({ tag, optional }) => (
-                            <div key={tag} className="grid gap-1.5">
-                                <Label htmlFor={`variable-${tag}`}>
-                                    <span className="font-mono text-13">
-                                        {`{{ ${tag} }}`}
-                                    </span>
-                                    {optional && (
-                                        <span className="font-normal text-muted-foreground">
-                                            optional
-                                        </span>
-                                    )}
-                                </Label>
-                                <Input
-                                    id={`variable-${tag}`}
-                                    value={form.data.variables[tag] ?? ''}
-                                    onChange={(event) =>
-                                        form.setData('variables', {
-                                            ...form.data.variables,
-                                            [tag]: event.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
-                        ))}
-                        <InputError message={errors.variables} />
-                    </div>
-                </div>
+                <CampaignVariables
+                    variables={variables}
+                    values={form.data.variables}
+                    onChange={(values) => form.setData('variables', values)}
+                    errors={errors}
+                />
             )}
 
             <CampaignOptions
@@ -1014,6 +979,7 @@ function AbTestPanel({
                             html: form.data.ab_html_b,
                         }}
                         mergeTags={mergeTags}
+                        previewValues={form.data.variables}
                         onChange={(content) =>
                             form.setData((data) => ({
                                 ...data,
@@ -1503,6 +1469,22 @@ function ReviewStep({
     const passed = (checklist ?? []).filter((item) => item.passed);
     const blocked = !checklist || problems.length > 0;
     const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+    const variableValues = campaignVariables(
+        [
+            form.data.subject,
+            form.data.preheader,
+            form.data.html,
+            ...(form.data.ab_enabled
+                ? [form.data.ab_subject_b, form.data.ab_html_b]
+                : []),
+        ],
+        props.builtInTags,
+    );
+    const previewValues = Object.fromEntries(
+        variableValues
+            .map(({ tag }) => [tag, form.data.variables[tag] ?? ''] as const)
+            .filter(([, value]) => value !== ''),
+    );
 
     return (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -1547,16 +1529,24 @@ function ReviewStep({
                         label="Subject"
                         onEdit={() => goTo('Content')}
                         value={
-                            form.data.subject || (
-                                <Missing>No subject yet</Missing>
-                            )
+                            (form.data.subject &&
+                                fillVariables(
+                                    form.data.subject,
+                                    previewValues,
+                                    { escapeHtml: false },
+                                )) || <Missing>No subject yet</Missing>
                         }
                     />
                     <SummaryRow
                         label="Preview text"
                         onEdit={() => goTo('Content')}
                         value={
-                            form.data.preheader || (
+                            (form.data.preheader &&
+                                fillVariables(
+                                    form.data.preheader,
+                                    previewValues,
+                                    { escapeHtml: false },
+                                )) || (
                                 <span className="text-muted-foreground">
                                     None, so inboxes show the first line
                                 </span>
@@ -1616,7 +1606,11 @@ function ReviewStep({
                         <iframe
                             title="Email preview"
                             sandbox=""
-                            srcDoc={form.data.html}
+                            srcDoc={fillVariables(
+                                form.data.html,
+                                previewValues,
+                                { escapeHtml: true },
+                            )}
                             className="h-[36rem] max-w-full rounded-md border bg-white transition-[width]"
                             style={{
                                 width: device === 'mobile' ? 375 : '100%',

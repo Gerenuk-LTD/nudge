@@ -53,6 +53,7 @@ import {
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { fillVariables } from '@marketing/lib/merge-tags';
 import type { EmailEditorProps } from '../types';
 import { Inspector } from './inspector';
 import {
@@ -145,6 +146,7 @@ export function BlockEditor({
     mergeTags,
     onChange,
     syncOnMount = true,
+    previewValues,
 }: EmailEditorProps) {
     const [document, setDocument] = useState<EmailDocument>(
         () => asDocument(state) ?? defaultDocument(),
@@ -330,8 +332,13 @@ export function BlockEditor({
         ? (dragging.slice(PALETTE_PREFIX.length) as BlockType)
         : null;
     const rendered = useMemo(
-        () => (mode === 'edit' ? '' : renderEmail(document)),
-        [mode, document],
+        () =>
+            mode === 'edit'
+                ? ''
+                : fillVariables(renderEmail(document), previewValues ?? {}, {
+                      escapeHtml: true,
+                  }),
+        [mode, document, previewValues],
     );
 
     return (
