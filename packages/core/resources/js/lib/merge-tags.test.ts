@@ -16,16 +16,22 @@ describe('campaignVariables', () => {
     it('counts a repeated tag once', () => {
         expect(
             campaignVariables(['{{ code }}', 'again {{code}}'], builtIn),
-        ).toEqual([{ tag: 'code', optional: false }]);
+        ).toEqual([{ tag: 'code', optional: false, fallback: null }]);
     });
 
     it('marks a tag with a fallback as optional', () => {
         expect(
             campaignVariables(['{{ code | none }} and {{ date }}'], builtIn),
         ).toEqual([
-            { tag: 'code', optional: true },
-            { tag: 'date', optional: false },
+            { tag: 'code', optional: true, fallback: 'none' },
+            { tag: 'date', optional: false, fallback: null },
         ]);
+    });
+
+    it('keeps the first fallback seen for a tag', () => {
+        expect(
+            campaignVariables(['{{ venue | TBC }}', '{{ venue }}'], builtIn),
+        ).toEqual([{ tag: 'venue', optional: true, fallback: 'TBC' }]);
     });
 
     it('keeps first-seen order across texts', () => {

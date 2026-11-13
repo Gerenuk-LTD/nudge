@@ -4,8 +4,8 @@ const PATTERN = /\{\{\s*([a-z][a-z0-9_.]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/gi;
 export function campaignVariables(
     texts: string[],
     builtIn: string[],
-): { tag: string; optional: boolean }[] {
-    const found = new Map<string, boolean>();
+): { tag: string; optional: boolean; fallback: string | null }[] {
+    const found = new Map<string, string | null>();
 
     for (const text of texts) {
         for (const match of text.matchAll(PATTERN)) {
@@ -15,14 +15,20 @@ export function campaignVariables(
                 continue;
             }
 
+            const fallback = (match[2] ?? '').trim();
+
             found.set(
                 tag,
-                (found.get(tag) ?? false) || (match[2] ?? '').trim() !== '',
+                found.get(tag) ?? (fallback !== '' ? fallback : null),
             );
         }
     }
 
-    return [...found].map(([tag, optional]) => ({ tag, optional }));
+    return [...found].map(([tag, fallback]) => ({
+        tag,
+        optional: fallback !== null,
+        fallback,
+    }));
 }
 
 const ESCAPES: Record<string, string> = {

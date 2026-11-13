@@ -1,161 +1,108 @@
-import { ChevronDown, CircleHelp } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input';
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { envelopeInput } from '@marketing/components/email-envelope';
 
-/** The campaign's own tags and their values, as compact rows that fold away once all are filled. */
+/** Turns a variable's tag into a label people read: promo_code → Promo code. */
+function labelFor(tag: string): string {
+    const words = tag.replace(/[._]+/g, ' ').trim();
+
+    return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The campaign's own tags and their values, laid out like the rest of the Content step. */
 export function CampaignVariables({
     variables,
     values,
     onChange,
     errors,
 }: {
-    variables: { tag: string; optional: boolean }[];
+    variables: { tag: string; optional: boolean; fallback: string | null }[];
     values: Record<string, string>;
     onChange: (values: Record<string, string>) => void;
     errors: Record<string, string | undefined>;
 }) {
-    const isMissing = (tag: string, optional: boolean) =>
-        !optional && !(values[tag] ?? '').trim();
-    const missing = variables.filter(({ tag, optional }) =>
-        isMissing(tag, optional),
+    const missing = variables.filter(
+        ({ tag, fallback }) => fallback === null && !(values[tag] ?? '').trim(),
     );
-    const anyMissing = missing.length > 0;
-    const [open, setOpen] = useState(anyMissing);
-
-    // Opens when a value is needed, but never closes by itself, so the card doesn't jump while someone types.
-    useEffect(() => {
-        if (anyMissing) {
-            setOpen(true);
-        }
-    }, [anyMissing]);
 
     return (
-        <Collapsible open={open} onOpenChange={setOpen} asChild>
-            <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
-                <div
-                    className={cn(
-                        'flex items-center justify-between gap-3 px-5 py-3',
-                        open && 'border-b',
-                    )}
-                >
-                    <div className="flex items-center gap-1.5 text-sm font-semibold">
-                        Variables
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    type="button"
-                                    aria-label="About variables"
-                                >
-                                    <CircleHelp className="size-3.5 text-muted-foreground" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-64">
-                                Values that are the same for everyone in this
-                                campaign. Any tag that isn't a contact detail or
-                                custom field becomes a variable.
-                            </TooltipContent>
-                        </Tooltip>
-                    </div>
-                    <CollapsibleTrigger asChild>
-                        <button
-                            type="button"
-                            className="flex items-center gap-2"
-                        >
-                            {anyMissing ? (
-                                <span className="text-13 font-medium text-amber-700 dark:text-amber-400">
-                                    {missing.length} of {variables.length} need
-                                    a value
-                                </span>
-                            ) : (
-                                <span className="text-13 text-muted-foreground">
-                                    {variables.length} set
-                                </span>
-                            )}
-                            <ChevronDown
+        <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+            <header className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
+                <div className="space-y-1">
+                    <h2 className="text-base font-semibold">Variables</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Filled in the same for everyone who gets this campaign.
+                    </p>
+                </div>
+                {missing.length > 0 && (
+                    <span className="shrink-0 pt-0.5 text-13 font-medium text-amber-700 dark:text-amber-400">
+                        {missing.length} to fill in
+                    </span>
+                )}
+            </header>
+            <div className="max-h-[30rem] divide-y overflow-y-auto">
+                {variables.map(({ tag, fallback }) => (
+                    <div key={tag} className="px-4 py-1 sm:px-6">
+                        <div className="flex items-center gap-3">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <label
+                                        htmlFor={`variable-${tag}`}
+                                        className="w-32 shrink-0 truncate text-13 text-muted-foreground sm:w-40"
+                                    >
+                                        {labelFor(tag)}
+                                    </label>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                    side="top"
+                                    className="font-mono text-xs"
+                                >{`{{ ${tag} }}`}</TooltipContent>
+                            </Tooltip>
+                            <input
+                                id={`variable-${tag}`}
+                                value={values[tag] ?? ''}
+                                placeholder={
+                                    fallback !== null
+                                        ? `${fallback} if left empty`
+                                        : 'Needed before sending'
+                                }
+                                aria-invalid={
+                                    errors[`variables.${tag}`]
+                                        ? true
+                                        : undefined
+                                }
+                                onChange={(event) =>
+                                    onChange({
+                                        ...values,
+                                        [tag]: event.target.value,
+                                    })
+                                }
                                 className={cn(
-                                    'size-4 text-muted-foreground transition-transform',
-                                    open && 'rotate-180',
+                                    envelopeInput,
+                                    'flex-1 font-medium placeholder:font-normal',
+                                    fallback === null &&
+                                        'placeholder:text-amber-700/70 dark:placeholder:text-amber-400/70',
                                 )}
                             />
-                        </button>
-                    </CollapsibleTrigger>
-                </div>
-                <CollapsibleContent>
-                    <div className="max-h-[26rem] divide-y overflow-y-auto">
-                        {variables.map(({ tag, optional }) => (
-                            <div
-                                key={tag}
-                                className="grid items-center gap-x-4 gap-y-1.5 px-5 py-2.5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]"
-                            >
-                                <label
-                                    htmlFor={`variable-${tag}`}
-                                    className="flex min-w-0 items-center gap-2"
-                                >
-                                    <span
-                                        className="truncate font-mono text-13"
-                                        title={`{{ ${tag} }}`}
-                                    >
-                                        {`{{ ${tag} }}`}
-                                    </span>
-                                    {optional ? (
-                                        <span className="text-xs text-muted-foreground">
-                                            optional
-                                        </span>
-                                    ) : (
-                                        isMissing(tag, optional) && (
-                                            <>
-                                                <span
-                                                    className="size-1.5 shrink-0 rounded-full bg-amber-500"
-                                                    aria-hidden
-                                                />
-                                                <span className="sr-only">
-                                                    needs a value
-                                                </span>
-                                            </>
-                                        )
-                                    )}
-                                </label>
-                                <div>
-                                    <Input
-                                        id={`variable-${tag}`}
-                                        className="h-8 text-13"
-                                        value={values[tag] ?? ''}
-                                        aria-invalid={Boolean(
-                                            errors[`variables.${tag}`],
-                                        )}
-                                        onChange={(event) =>
-                                            onChange({
-                                                ...values,
-                                                [tag]: event.target.value,
-                                            })
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors[`variables.${tag}`]}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {errors.variables && (
-                        <div className="border-t px-5 py-2.5">
-                            <InputError message={errors.variables} />
                         </div>
-                    )}
-                </CollapsibleContent>
-            </section>
-        </Collapsible>
+                        <InputError
+                            message={errors[`variables.${tag}`]}
+                            className="pb-2 pl-35 sm:pl-43"
+                        />
+                    </div>
+                ))}
+            </div>
+            {errors.variables && (
+                <InputError
+                    message={errors.variables}
+                    className="border-t px-5 py-2.5 sm:px-6"
+                />
+            )}
+        </section>
     );
 }
