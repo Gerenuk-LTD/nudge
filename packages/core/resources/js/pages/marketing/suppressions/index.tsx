@@ -38,6 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { show as showContact } from '@/routes/marketing/contacts';
 import { index as suppressionsIndex } from '@/routes/marketing/suppressions';
+import { EmptyState } from '@marketing/components/empty-state';
 import { byId, DataTable } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { Pagination } from '@marketing/components/pagination';
@@ -238,32 +239,23 @@ export default function SuppressionsIndex({
                 />
 
                 {total === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <ShieldCheck className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">
-                                No suppressed addresses
-                            </p>
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                Addresses that hard bounce or mark you as spam
-                                are added here automatically, so you never email
-                                them again. You can also block addresses
-                                yourself.
-                            </p>
-                        </div>
-                        {canEdit && (
-                            <Button
-                                size="sm"
-                                className="mt-1"
-                                onClick={() => setBlocking(true)}
-                            >
-                                <Ban />
-                                Block addresses
-                            </Button>
-                        )}
-                    </div>
+                    <EmptyState
+                        icon={ShieldCheck}
+                        title="No suppressed addresses"
+                        description="Addresses that hard bounce or mark you as spam are added here automatically, so you never email them again. You can also block addresses yourself."
+                        actions={
+                            canEdit && (
+                                <Button
+                                    size="sm"
+                                    className="mt-1"
+                                    onClick={() => setBlocking(true)}
+                                >
+                                    <Ban />
+                                    Block addresses
+                                </Button>
+                            )
+                        }
+                    />
                 ) : (
                     <>
                         <div className="grid gap-3 sm:grid-cols-3">

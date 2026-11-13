@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@marketing/components/empty-state';
 import { StatTile } from '@marketing/components/stat-tile';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { create, index as importsIndex } from '@/routes/marketing/imports';
@@ -102,35 +103,35 @@ export default function ShowImport(props: Props) {
 
 function FileMissing({ item }: { item: ImportSummary }) {
     return (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                <FileQuestion className="size-5" />
-            </span>
-            <div className="space-y-1">
-                <p className="font-medium">This file is no longer available</p>
-                <p className="max-w-md text-sm text-muted-foreground">
+        <EmptyState
+            icon={FileQuestion}
+            title="This file is no longer available"
+            description={
+                <>
                     The upload was removed before it was imported. Upload{' '}
                     {item.original_filename} again to carry on.
-                </p>
-            </div>
-            <div className="flex gap-2 pt-1">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                        router.delete(ImportController.destroy.url(item.id))
-                    }
-                >
-                    Remove this import
-                </Button>
-                <Button size="sm" asChild>
-                    <Link href={create()}>
-                        <Upload />
-                        Upload again
-                    </Link>
-                </Button>
-            </div>
-        </div>
+                </>
+            }
+            actions={
+                <>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                            router.delete(ImportController.destroy.url(item.id))
+                        }
+                    >
+                        Remove this import
+                    </Button>
+                    <Button size="sm" asChild>
+                        <Link href={create()}>
+                            <Upload />
+                            Upload again
+                        </Link>
+                    </Button>
+                </>
+            }
+        />
     );
 }
 

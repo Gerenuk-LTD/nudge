@@ -9,6 +9,7 @@ import {
     edit,
     index as templatesIndex,
 } from '@/routes/marketing/templates';
+import { EmptyState } from '@marketing/components/empty-state';
 import { ConfirmDelete } from '@marketing/components/confirm-delete';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import {
@@ -78,13 +79,10 @@ export default function TemplatesIndex({
                         </p>
                     </div>
                     {templates.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-12 text-center">
-                            <LayoutTemplate className="size-5 text-muted-foreground" />
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                No templates yet. Customise a starter below, or
-                                save any campaign as a template from its page.
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={LayoutTemplate}
+                            description="No templates yet. Customise a starter below, or save any campaign as a template from its page."
+                        />
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             {templates.map((template) => (

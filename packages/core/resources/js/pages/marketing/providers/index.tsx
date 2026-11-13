@@ -7,6 +7,7 @@ import {
     index as providersIndex,
     show,
 } from '@/routes/marketing/providers';
+import { EmptyState } from '@marketing/components/empty-state';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import {
     BOUNCE_DANGER,
@@ -57,26 +58,19 @@ export default function ProvidersIndex({
                 />
 
                 {providers.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <Send className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">No provider connected</p>
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                Campaigns and automations need a sending service
-                                to go out. Connect the account you already use,
-                                such as Amazon SES, Postmark, Mailgun or plain
-                                SMTP.
-                            </p>
-                        </div>
-                        <Button size="sm" className="mt-1" asChild>
-                            <Link href={create()}>
-                                <Plus />
-                                Connect provider
-                            </Link>
-                        </Button>
-                    </div>
+                    <EmptyState
+                        icon={Send}
+                        title="No provider connected"
+                        description="Campaigns and automations need a sending service to go out. Connect the account you already use, such as Amazon SES, Postmark, Mailgun or plain SMTP."
+                        actions={
+                            <Button size="sm" className="mt-1" asChild>
+                                <Link href={create()}>
+                                    <Plus />
+                                    Connect provider
+                                </Link>
+                            </Button>
+                        }
+                    />
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {providers.map((provider) => (

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { NativeSelect } from '@/components/ui/native-select';
+import { EmptyState } from '@marketing/components/empty-state';
 import type {
     SegmentCondition,
     SegmentField,
@@ -265,27 +266,22 @@ export function SegmentGroupEditor({
 
     if (depth === 1 && group.conditions.length === 0) {
         return (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center">
-                <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                    <Filter className="size-5" />
-                </span>
-                <div className="space-y-1">
-                    <p className="font-medium">No conditions yet</p>
-                    <p className="max-w-sm text-sm text-muted-foreground">
-                        Without conditions, the segment includes every active
-                        contact. Add one to narrow it down.
-                    </p>
-                </div>
-                <Button
-                    type="button"
-                    size="sm"
-                    className="mt-1"
-                    onClick={() => add(emptyCondition(fields))}
-                >
-                    <Plus />
-                    Add a condition
-                </Button>
-            </div>
+            <EmptyState
+                icon={Filter}
+                title="No conditions yet"
+                description="Without conditions, the segment includes every active contact. Add one to narrow it down."
+                actions={
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="mt-1"
+                        onClick={() => add(emptyCondition(fields))}
+                    >
+                        <Plus />
+                        Add a condition
+                    </Button>
+                }
+            />
         );
     }
 

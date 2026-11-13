@@ -26,6 +26,7 @@ import {
     show as showContact,
 } from '@/routes/marketing/contacts';
 import { create as createImport } from '@/routes/marketing/imports';
+import { EmptyState } from '@marketing/components/empty-state';
 import { AddContactDialog } from '@marketing/components/add-contact-dialog';
 import { ContactAvatar } from '@marketing/components/contact-fields';
 import type { ContactPreviewData } from '@marketing/components/contact-preview';
@@ -233,37 +234,32 @@ export default function ContactsIndex({
                 />
 
                 {empty ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <Users className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">No contacts yet</p>
-                            <p className="max-w-sm text-sm text-muted-foreground">
-                                Import a CSV from another tool, or add people
-                                one at a time.
-                            </p>
-                        </div>
-                        <div className="flex gap-2 pt-1">
-                            {can('contacts.import') && (
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href={createImport()}>
-                                        <Upload />
-                                        Import a CSV
-                                    </Link>
-                                </Button>
-                            )}
-                            {can('contacts.manage') && (
-                                <Button
-                                    size="sm"
-                                    onClick={() => setAddingOpen(true)}
-                                >
-                                    <Plus />
-                                    Add contact
-                                </Button>
-                            )}
-                        </div>
-                    </div>
+                    <EmptyState
+                        icon={Users}
+                        title="No contacts yet"
+                        description="Import a CSV from another tool, or add people one at a time."
+                        actions={
+                            <>
+                                {can('contacts.import') && (
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={createImport()}>
+                                            <Upload />
+                                            Import a CSV
+                                        </Link>
+                                    </Button>
+                                )}
+                                {can('contacts.manage') && (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => setAddingOpen(true)}
+                                    >
+                                        <Plus />
+                                        Add contact
+                                    </Button>
+                                )}
+                            </>
+                        }
+                    />
                 ) : (
                     <>
                         <div className="flex flex-wrap items-center gap-2">

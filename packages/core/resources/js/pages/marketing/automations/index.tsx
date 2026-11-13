@@ -18,6 +18,7 @@ import {
     edit,
     index as automationsIndex,
 } from '@/routes/marketing/automations';
+import { EmptyState } from '@marketing/components/empty-state';
 import { stepKinds } from '@marketing/components/automation/step-kinds';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
@@ -60,17 +61,11 @@ export default function AutomationsIndex({
                 />
 
                 {automations.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-muted/40 px-6 py-14 text-center">
-                        <Workflow className="size-5 text-muted-foreground" />
-                        <p className="text-sm font-medium">
-                            No automations yet
-                        </p>
-                        <p className="max-w-sm text-13 text-muted-foreground">
-                            A welcome series is a good first one: an email when
-                            someone joins a list, then a follow-up a few days
-                            later.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon={Workflow}
+                        title="No automations yet"
+                        description="A welcome series is a good first one: an email when someone joins a list, then a follow-up a few days later."
+                    />
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {automations.map((automation) => (

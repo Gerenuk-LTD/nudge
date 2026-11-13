@@ -23,6 +23,7 @@ import {
     index as importsIndex,
     show,
 } from '@/routes/marketing/imports';
+import { EmptyState } from '@marketing/components/empty-state';
 import { ImportStatusBadge } from '@marketing/components/import-status-badge';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import type { ImportStatus, ImportSummary } from '@marketing/types';
@@ -87,25 +88,19 @@ export default function ImportsIndex({
                 />
 
                 {imports.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-6 py-16 text-center">
-                        <span className="flex size-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-xs">
-                            <FileSpreadsheet className="size-5" />
-                        </span>
-                        <div className="space-y-1">
-                            <p className="font-medium">No imports yet</p>
-                            <p className="max-w-md text-sm text-muted-foreground">
-                                Moving from another tool? Export your contacts
-                                as a CSV and bring them in here. All you need is
-                                an email column.
-                            </p>
-                        </div>
-                        <Button size="sm" className="mt-1" asChild>
-                            <Link href={create()}>
-                                <Upload />
-                                Import CSV
-                            </Link>
-                        </Button>
-                    </div>
+                    <EmptyState
+                        icon={FileSpreadsheet}
+                        title="No imports yet"
+                        description="Moving from another tool? Export your contacts as a CSV and bring them in here. All you need is an email column."
+                        actions={
+                            <Button size="sm" className="mt-1" asChild>
+                                <Link href={create()}>
+                                    <Upload />
+                                    Import CSV
+                                </Link>
+                            </Button>
+                        }
+                    />
                 ) : (
                     <div className="space-y-8">
                         {days.map(([day, items]) => (
