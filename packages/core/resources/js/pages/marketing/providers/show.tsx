@@ -39,6 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { cn } from '@/lib/utils';
+import { StatTile } from '@marketing/components/stat-tile';
 import {
     edit,
     index as providersIndex,
@@ -247,7 +248,7 @@ export default function ShowProvider({
                 )}
 
                 <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <Stat
+                    <StatTile
                         label="Sent, last 7 days"
                         value={stats.sent.toLocaleString()}
                     />
@@ -532,33 +533,6 @@ function TestForm({
     );
 }
 
-function Stat({
-    label,
-    value,
-    hint,
-    className,
-}: {
-    label: string;
-    value: string;
-    hint?: string;
-    className?: string;
-}) {
-    return (
-        <div className="rounded-xl border bg-card p-4 shadow-xs">
-            <dt className="text-sm text-muted-foreground">{label}</dt>
-            <dd
-                className={cn(
-                    'mt-1 text-2xl font-semibold tabular-nums',
-                    className,
-                )}
-            >
-                {value}
-            </dd>
-            {hint && <dd className="text-xs text-muted-foreground">{hint}</dd>}
-        </div>
-    );
-}
-
 /** A share of the week's sends, coloured when it passes a safe level. */
 function RateStat({
     label,
@@ -579,7 +553,7 @@ function RateStat({
 }) {
     if (!tracked) {
         return (
-            <Stat
+            <StatTile
                 label={label}
                 value="—"
                 hint="Not reported by this provider"
@@ -590,7 +564,7 @@ function RateStat({
     const rate = sent > 0 ? count / sent : null;
 
     return (
-        <Stat
+        <StatTile
             label={label}
             value={rate === null ? '—' : `${(rate * 100).toFixed(1)}%`}
             hint={
@@ -598,7 +572,7 @@ function RateStat({
                     ? hint
                     : `${count.toLocaleString()} emails${hint ? ` · ${hint.toLowerCase()}` : ''}`
             }
-            className={cn(
+            valueClassName={cn(
                 rate !== null &&
                     danger !== undefined &&
                     rate > danger &&

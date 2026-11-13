@@ -11,7 +11,6 @@ import {
     UserPlus,
     Users,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import type { FormEvent } from 'react';
 import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
@@ -21,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { StatTile } from '@marketing/components/stat-tile';
 import { index as contactsIndex } from '@/routes/marketing/contacts';
 import { create, index as importsIndex } from '@/routes/marketing/imports';
 import { DataTable } from '@marketing/components/data-table';
@@ -418,23 +418,23 @@ function Results({ import: item, destination, failedRows }: Props) {
             )}
 
             <dl className="grid gap-4 sm:grid-cols-3">
-                <Stat
+                <StatTile
                     icon={UserPlus}
                     label="Added"
                     hint="New contacts"
-                    value={item.created_count}
+                    value={item.created_count.toLocaleString()}
                 />
-                <Stat
+                <StatTile
                     icon={RefreshCw}
                     label="Updated"
                     hint="Already in the workspace"
-                    value={item.updated_count}
+                    value={item.updated_count.toLocaleString()}
                 />
-                <Stat
+                <StatTile
                     icon={CircleAlert}
                     label="Failed"
                     hint="Rows that could not be imported"
-                    value={item.failed_count}
+                    value={item.failed_count.toLocaleString()}
                     problem={item.failed_count > 0}
                 />
             </dl>
@@ -532,43 +532,6 @@ function Destination({ destination }: { destination: Props['destination'] }) {
                 </span>
             )}
         </p>
-    );
-}
-
-function Stat({
-    icon: Icon,
-    label,
-    hint,
-    value,
-    problem = false,
-}: {
-    icon: LucideIcon;
-    label: string;
-    hint: string;
-    value: number;
-    problem?: boolean;
-}) {
-    return (
-        <div className="rounded-xl border bg-card p-4 shadow-xs">
-            <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Icon
-                    className={cn(
-                        'size-4',
-                        problem && 'text-red-600 dark:text-red-400',
-                    )}
-                />
-                {label}
-            </dt>
-            <dd
-                className={cn(
-                    'mt-1 text-2xl font-semibold tabular-nums',
-                    problem && 'text-red-700 dark:text-red-400',
-                )}
-            >
-                {value.toLocaleString()}
-            </dd>
-            <dd className="text-xs text-muted-foreground">{hint}</dd>
-        </div>
     );
 }
 

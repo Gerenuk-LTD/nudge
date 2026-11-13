@@ -24,6 +24,7 @@ import {
 } from '@marketing/components/data-table';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { SaveTemplateDialog } from '@marketing/components/template-picker';
+import { StatTile } from '@marketing/components/stat-tile';
 import { StatusBadge } from '@marketing/components/status-badge';
 import type { StatusTone } from '@marketing/components/status-badge';
 import { Pagination } from '@marketing/components/pagination';
@@ -348,47 +349,47 @@ export default function ShowCampaign({
                 )}
 
                 <dl className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
-                    <Stat
+                    <StatTile
                         label="Recipients"
                         value={stats.recipients.toLocaleString()}
                     />
-                    <Stat
+                    <StatTile
                         label="Delivered"
                         value={percent(stats.delivered, stats.sent)}
-                        detail={stats.delivered.toLocaleString()}
+                        hint={stats.delivered.toLocaleString()}
                     />
-                    <Stat
+                    <StatTile
                         label="Clicked"
                         value={
                             campaign.track_clicks
                                 ? percent(stats.clicked, stats.sent)
                                 : '—'
                         }
-                        detail={stats.clicked.toLocaleString()}
+                        hint={stats.clicked.toLocaleString()}
                     />
-                    <Stat
+                    <StatTile
                         label="Opened"
                         value={
                             campaign.track_opens
                                 ? percent(stats.opened, stats.sent)
                                 : '—'
                         }
-                        detail="approximate"
+                        hint="approximate"
                     />
-                    <Stat
+                    <StatTile
                         label="Unsubscribed"
                         value={percent(stats.unsubscribed, stats.sent)}
-                        detail={stats.unsubscribed.toLocaleString()}
+                        hint={stats.unsubscribed.toLocaleString()}
                     />
-                    <Stat
+                    <StatTile
                         label="Bounced"
                         value={percent(stats.bounced, stats.sent)}
-                        detail={stats.bounced.toLocaleString()}
+                        hint={stats.bounced.toLocaleString()}
                     />
-                    <Stat
+                    <StatTile
                         label="Complaints"
                         value={percent(stats.complained, stats.sent)}
-                        detail={stats.complained.toLocaleString()}
+                        hint={stats.complained.toLocaleString()}
                     />
                 </dl>
 
@@ -628,26 +629,6 @@ export default function ShowCampaign({
                 </Dialog>
             </PageBody>
         </>
-    );
-}
-
-function Stat({
-    label,
-    value,
-    detail,
-}: {
-    label: string;
-    value: string;
-    detail?: string;
-}) {
-    return (
-        <div className="rounded-xl border p-4">
-            <dt className="text-sm text-muted-foreground">{label}</dt>
-            <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
-            {detail && (
-                <dd className="text-xs text-muted-foreground">{detail}</dd>
-            )}
-        </div>
     );
 }
 

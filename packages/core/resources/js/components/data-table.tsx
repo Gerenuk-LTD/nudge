@@ -211,7 +211,7 @@ export function DataTable<TData>({
                                 className="px-4 py-12 whitespace-normal"
                             >
                                 <div className="flex flex-col items-center gap-3 text-center">
-                                    <div className="flex size-9 items-center justify-center rounded-lg border bg-background shadow-xs">
+                                    <div className="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
                                         <Inbox className="size-4 text-muted-foreground" />
                                     </div>
                                     <p className="text-sm text-muted-foreground">

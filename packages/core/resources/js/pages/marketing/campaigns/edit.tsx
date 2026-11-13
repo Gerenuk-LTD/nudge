@@ -1273,7 +1273,7 @@ function ChoiceCard({
         >
             <span
                 className={cn(
-                    'flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground',
+                    'flex size-8 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground',
                     selected &&
                         'border-foreground bg-foreground text-background',
                 )}

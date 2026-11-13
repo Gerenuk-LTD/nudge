@@ -42,7 +42,7 @@ export default function Unsubscribe({
             <Head title="Unsubscribe" />
 
             <main className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
-                <div className="w-full max-w-md space-y-4 rounded-xl border bg-background p-6 text-center shadow-sm">
+                <div className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 text-center shadow-xs">
                     {unsubscribed ? (
                         <>
                             <h1 className="text-lg font-semibold">
