@@ -115,8 +115,12 @@ export function EmailContentEditor({
                 syncOnMount={!showingHtmlAsBlocks}
                 mergeTags={mergeTags}
                 previewValues={previewValues}
+                // After a switch, the editor's first write is part of the person's change, not the starting point.
                 onChange={(html, state, initial) =>
-                    onChange({ editor: editorKey, state, html }, initial)
+                    onChange(
+                        { editor: editorKey, state, html },
+                        initial && chosen === null,
+                    )
                 }
             />
         </div>
