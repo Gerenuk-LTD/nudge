@@ -16,14 +16,6 @@ import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/Cam
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { show as showContact } from '@/routes/marketing/contacts';
 import { index as campaignsIndex } from '@/routes/marketing/campaigns';
@@ -566,72 +558,38 @@ export default function ShowCampaign({
                     </section>
                 )}
 
-                <Dialog
+                <ConfirmDialog
                     open={confirmingWinner}
                     onOpenChange={setConfirmingWinner}
-                >
-                    <DialogContent>
-                        <DialogTitle>
-                            Send the leading version to everyone else now?
-                        </DialogTitle>
-                        <DialogDescription>
-                            The remaining audience gets the version that's ahead
-                            right now. This can't be undone.
-                        </DialogDescription>
-                        <DialogFooter className="gap-2">
-                            <DialogClose asChild>
-                                <Button variant="secondary">Not yet</Button>
-                            </DialogClose>
-                            <Button
-                                onClick={() => {
-                                    setConfirmingWinner(false);
-                                    router.post(
-                                        CampaignController.pickWinner.url(
-                                            campaign.id,
-                                        ),
-                                    );
-                                }}
-                            >
-                                Pick the winner
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    title="Send the leading version to everyone else now?"
+                    description="The remaining audience gets the version that's ahead right now. This can't be undone."
+                    destructive={false}
+                    cancelLabel="Not yet"
+                    confirmLabel="Pick the winner"
+                    onConfirm={() => {
+                        setConfirmingWinner(false);
+                        router.post(
+                            CampaignController.pickWinner.url(campaign.id),
+                        );
+                    }}
+                />
 
-                <Dialog
+                <ConfirmDialog
                     open={confirmingResend}
                     onOpenChange={setConfirmingResend}
-                >
-                    <DialogContent>
-                        <DialogTitle>
-                            Resend to people who didn't open?
-                        </DialogTitle>
-                        <DialogDescription>
-                            This creates a segment of everyone who received this
-                            campaign but hasn't opened it, and a draft copy of
-                            the campaign aimed at that segment. Nothing is sent
-                            until you schedule the copy, so you can change its
-                            subject line first.
-                        </DialogDescription>
-                        <DialogFooter className="gap-2">
-                            <DialogClose asChild>
-                                <Button variant="secondary">Cancel</Button>
-                            </DialogClose>
-                            <Button
-                                onClick={() => {
-                                    setConfirmingResend(false);
-                                    router.post(
-                                        CampaignController.resendToNonOpeners.url(
-                                            campaign.id,
-                                        ),
-                                    );
-                                }}
-                            >
-                                Draft the resend
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    title="Resend to people who didn't open?"
+                    description="This creates a segment of everyone who received this campaign but hasn't opened it, and a draft copy of the campaign aimed at that segment. Nothing is sent until you schedule the copy, so you can change its subject line first."
+                    destructive={false}
+                    confirmLabel="Draft the resend"
+                    onConfirm={() => {
+                        setConfirmingResend(false);
+                        router.post(
+                            CampaignController.resendToNonOpeners.url(
+                                campaign.id,
+                            ),
+                        );
+                    }}
+                />
 
                 <ConfirmDialog
                     open={confirmingStop}
