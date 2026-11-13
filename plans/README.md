@@ -301,3 +301,22 @@ Covered component reuse, mobile layout (375px), and card surfaces in both themes
 - Email asset uploads: raster `mimes` only (no SVG), with hashed names.
 - The hard-coded test `APP_KEY` in `packages/core/phpunit.xml`: the standard Testbench setup, test-only.
 - Core importing host code: none found. Every `@/` import in core is on the agreed contract list, and there are no `App\` references besides the overridable `user_model` default.
+
+## Direction backlog (from `/improve next`, 2026-11-13, against `868a969`)
+
+Not planned yet. The maintainer will choose when to plan these. The advisor recommends this order: 2, then 1 as a design and spike plan, then 3.
+
+1. **Signup forms with double opt-in** (L, coarse; high confidence).
+    - Evidence: there's no public way to subscribe. `ContactSource` is only `manual` / `api` / `import`, and `Http/Controllers/Public` holds only tracking, unsubscribe and webhooks. The consent trail (024) can already record the form source and confirmation.
+    - Open questions: a hosted page or an embeddable snippet; spam protection (honeypot, rate limits); the confirmation email itself.
+2. **Contact erasure and export (GDPR)** (M; high confidence).
+    - Evidence: "contact erasure" has been deferred since round 4, and round 2 noted that workspace deletion or account transfer is needed for GDPR erasure. Contacts can be imported but not exported, while suppressions already have `suppressions/export`.
+    - The key rule: erasure removes or anonymises recipients, events and consent records, but keeps the suppression entry, so the address can't be re-imported and emailed again.
+3. **Preview as a contact** (S–M; medium confidence).
+    - Evidence: `SendTestEmail.php:66` already fills tags from a matching contact. Editor previews leave contact tags raw, as plan 040's maintenance note says.
+    - Prefer a server-side render endpoint, so the preview stays in step with sending.
+4. **Send in each contact's time zone** (M; medium confidence).
+    - Evidence: there's no time zone anywhere in core, so the `date_field` trigger and scheduled campaigns fire at server time.
+    - It needs a contact time zone field fed by imports, the API or forms, so it pairs with 1.
+
+Considered and not suggested: more automation step types. send, wait, condition, update contact, webhook and exit cover the common flows.
