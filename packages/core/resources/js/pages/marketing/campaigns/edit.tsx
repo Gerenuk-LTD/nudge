@@ -29,6 +29,7 @@ import {
     EmailEnvelope,
     envelopeInput,
 } from '@marketing/components/email-envelope';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -984,21 +985,16 @@ function AbTestPanel({
                 </Field>
             </div>
 
-            <Dialog open={discarding} onOpenChange={setDiscarding}>
-                <DialogContent>
-                    <DialogTitle>Discard version B's content?</DialogTitle>
-                    <DialogDescription>
-                        Testing the subject line sends version A's content to
-                        everyone. Version B's content will be deleted.
-                    </DialogDescription>
-                    <DialogFooter className="gap-2">
-                        <DialogClose asChild>
-                            <Button variant="secondary">Keep it</Button>
-                        </DialogClose>
-                        <Button onClick={discardContent}>Discard</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={discarding}
+                onOpenChange={setDiscarding}
+                title="Discard version B's content?"
+                description="Testing the subject line sends version A's content to everyone. Version B's content will be deleted."
+                cancelLabel="Keep it"
+                confirmLabel="Discard"
+                destructive={false}
+                onConfirm={discardContent}
+            />
         </div>
     );
 }

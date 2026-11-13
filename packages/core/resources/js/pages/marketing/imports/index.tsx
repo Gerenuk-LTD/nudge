@@ -2,15 +2,8 @@ import { Head, Link, router, usePoll } from '@inertiajs/react';
 import { Ellipsis, FileSpreadsheet, Trash2, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ImportController from '@/actions/Gerenuk/Marketing/Http/Controllers/ImportController';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -229,35 +222,27 @@ function RemoveImport({ item }: { item: ImportSummary }) {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Dialog open={confirming} onOpenChange={setConfirming}>
-                <DialogContent>
-                    <DialogTitle>
+            <ConfirmDialog
+                open={confirming}
+                onOpenChange={setConfirming}
+                title={
+                    <>
                         {pending ? 'Discard' : 'Remove'}{' '}
                         {item.original_filename}?
-                    </DialogTitle>
-                    <DialogDescription>
-                        {pending
-                            ? 'The uploaded file is deleted without importing anything.'
-                            : 'The import and its file are removed from your history. Contacts it brought in are kept.'}
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                router.delete(
-                                    ImportController.destroy.url(item.id),
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            {pending ? 'Discard upload' : 'Remove import'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </>
+                }
+                description={
+                    pending
+                        ? 'The uploaded file is deleted without importing anything.'
+                        : 'The import and its file are removed from your history. Contacts it brought in are kept.'
+                }
+                confirmLabel={pending ? 'Discard upload' : 'Remove import'}
+                onConfirm={() =>
+                    router.delete(ImportController.destroy.url(item.id), {
+                        preserveScroll: true,
+                    })
+                }
+            />
         </>
     );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/CampaignController';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -600,33 +601,18 @@ export default function ShowCampaign({
                     </DialogContent>
                 </Dialog>
 
-                <Dialog open={confirmingStop} onOpenChange={setConfirmingStop}>
-                    <DialogContent>
-                        <DialogTitle>Stop sending this campaign?</DialogTitle>
-                        <DialogDescription>
-                            Anyone who hasn't been sent it yet won't get it.
-                            Emails already sent can't be recalled.
-                        </DialogDescription>
-                        <DialogFooter className="gap-2">
-                            <DialogClose asChild>
-                                <Button variant="secondary">Not yet</Button>
-                            </DialogClose>
-                            <Button
-                                variant="destructive"
-                                onClick={() => {
-                                    setConfirmingStop(false);
-                                    router.post(
-                                        CampaignController.cancel.url(
-                                            campaign.id,
-                                        ),
-                                    );
-                                }}
-                            >
-                                Stop sending
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <ConfirmDialog
+                    open={confirmingStop}
+                    onOpenChange={setConfirmingStop}
+                    title="Stop sending this campaign?"
+                    description="Anyone who hasn't been sent it yet won't get it. Emails already sent can't be recalled."
+                    cancelLabel="Not yet"
+                    confirmLabel="Stop sending"
+                    onConfirm={() => {
+                        setConfirmingStop(false);
+                        router.post(CampaignController.cancel.url(campaign.id));
+                    }}
+                />
             </PageBody>
         </>
     );

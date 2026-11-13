@@ -15,6 +15,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import SuppressionController from '@/actions/Gerenuk/Marketing/Http/Controllers/SuppressionController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -439,60 +440,39 @@ function RemoveConfirm({
     const risky = suppression !== null && suppression.reason !== 'manual';
 
     return (
-        <Dialog
+        <ConfirmDialog
             open={suppression !== null}
             onOpenChange={(open) => !open && onClose()}
+            title={suppression && <>Email {suppression.email} again?</>}
+            description="It is taken off the suppression list, so campaigns and automations can reach it again."
+            confirmLabel="Allow emails again"
+            destructive={risky}
+            onConfirm={() =>
+                suppression &&
+                router.delete(
+                    SuppressionController.destroy.url(suppression.id),
+                    {
+                        preserveScroll: true,
+                        onSuccess: onClose,
+                    },
+                )
+            }
         >
-            <DialogContent>
-                {suppression && (
-                    <>
-                        <DialogTitle>
-                            Email {suppression.email} again?
-                        </DialogTitle>
-                        <DialogDescription>
-                            It is taken off the suppression list, so campaigns
-                            and automations can reach it again.
-                        </DialogDescription>
-                        {risky && (
-                            <Shout
-                                type="warning"
-                                heading={
-                                    suppression.reason === 'bounce'
-                                        ? 'This address bounced'
-                                        : 'This person marked you as spam'
-                                }
-                            >
-                                Sending to it again can hurt your sender
-                                reputation and land your emails in spam for
-                                everyone. Only do this if you know the problem
-                                is fixed.
-                            </Shout>
-                        )}
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="ghost">Cancel</Button>
-                            </DialogClose>
-                            <Button
-                                variant={risky ? 'destructive' : 'default'}
-                                onClick={() =>
-                                    router.delete(
-                                        SuppressionController.destroy.url(
-                                            suppression.id,
-                                        ),
-                                        {
-                                            preserveScroll: true,
-                                            onSuccess: onClose,
-                                        },
-                                    )
-                                }
-                            >
-                                Allow emails again
-                            </Button>
-                        </DialogFooter>
-                    </>
-                )}
-            </DialogContent>
-        </Dialog>
+            {suppression && risky && (
+                <Shout
+                    type="warning"
+                    heading={
+                        suppression.reason === 'bounce'
+                            ? 'This address bounced'
+                            : 'This person marked you as spam'
+                    }
+                >
+                    Sending to it again can hurt your sender reputation and land
+                    your emails in spam for everyone. Only do this if you know
+                    the problem is fixed.
+                </Shout>
+            )}
+        </ConfirmDialog>
     );
 }
 

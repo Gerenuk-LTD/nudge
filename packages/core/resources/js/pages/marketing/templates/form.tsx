@@ -3,15 +3,8 @@ import { Copy, Ellipsis, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import EmailTemplateController from '@/actions/Gerenuk/Marketing/Http/Controllers/EmailTemplateController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -243,31 +236,18 @@ function TemplateMenu({ template }: { template: Template }) {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Dialog open={deleting} onOpenChange={setDeleting}>
-                <DialogContent>
-                    <DialogTitle>Delete {template.name}?</DialogTitle>
-                    <DialogDescription>
-                        Emails already made from it keep their content.
-                    </DialogDescription>
-                    <DialogFooter className="gap-2">
-                        <DialogClose asChild>
-                            <Button variant="secondary">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                router.delete(
-                                    EmailTemplateController.destroy.url(
-                                        template.id,
-                                    ),
-                                )
-                            }
-                        >
-                            Delete template
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={deleting}
+                onOpenChange={setDeleting}
+                title={<>Delete {template.name}?</>}
+                description="Emails already made from it keep their content."
+                confirmLabel="Delete template"
+                onConfirm={() =>
+                    router.delete(
+                        EmailTemplateController.destroy.url(template.id),
+                    )
+                }
+            />
         </>
     );
 }

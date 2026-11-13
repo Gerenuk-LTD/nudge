@@ -13,6 +13,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import ContactListController from '@/actions/Gerenuk/Marketing/Http/Controllers/ContactListController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -320,31 +321,18 @@ function ListCard({
                 </div>
             </div>
 
-            <Dialog open={deleting} onOpenChange={setDeleting}>
-                <DialogContent>
-                    <DialogTitle>Delete {list.name}?</DialogTitle>
-                    <DialogDescription>
-                        The list is removed. Its contacts are kept, and stay on
-                        any other lists they are on.
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                router.delete(
-                                    ContactListController.destroy.url(list.id),
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            Delete list
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={deleting}
+                onOpenChange={setDeleting}
+                title={<>Delete {list.name}?</>}
+                description="The list is removed. Its contacts are kept, and stay on any other lists they are on."
+                confirmLabel="Delete list"
+                onConfirm={() =>
+                    router.delete(ContactListController.destroy.url(list.id), {
+                        preserveScroll: true,
+                    })
+                }
+            />
         </div>
     );
 }

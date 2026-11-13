@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import ApiTokenController from '@/actions/Gerenuk/Marketing/Http/Controllers/ApiTokenController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -193,38 +194,20 @@ export default function ApiTokens({
                 </DialogContent>
             </Dialog>
 
-            <Dialog
+            <ConfirmDialog
                 open={revoking !== null}
                 onOpenChange={(open) => !open && setRevoking(null)}
-            >
-                <DialogContent>
-                    <DialogTitle>Revoke {revoking?.name}?</DialogTitle>
-                    <DialogDescription>
-                        Anything using this token stops working straight away.
-                        This can't be undone.
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                revoking &&
-                                router.delete(
-                                    ApiTokenController.destroy.url(revoking.id),
-                                    {
-                                        preserveScroll: true,
-                                        onFinish: () => setRevoking(null),
-                                    },
-                                )
-                            }
-                        >
-                            Revoke token
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                title={<>Revoke {revoking?.name}?</>}
+                description="Anything using this token stops working straight away. This can't be undone."
+                confirmLabel="Revoke token"
+                onConfirm={() =>
+                    revoking &&
+                    router.delete(ApiTokenController.destroy.url(revoking.id), {
+                        preserveScroll: true,
+                        onFinish: () => setRevoking(null),
+                    })
+                }
+            />
         </>
     );
 }

@@ -10,15 +10,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import SegmentController from '@/actions/Gerenuk/Marketing/Http/Controllers/SegmentController';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -283,30 +276,18 @@ function SegmentCard({
                 </div>
             </div>
 
-            <Dialog open={deleting} onOpenChange={setDeleting}>
-                <DialogContent>
-                    <DialogTitle>Delete {segment.name}?</DialogTitle>
-                    <DialogDescription>
-                        The segment is deleted. No contacts are changed.
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                router.delete(
-                                    SegmentController.destroy.url(segment.id),
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            Delete segment
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={deleting}
+                onOpenChange={setDeleting}
+                title={<>Delete {segment.name}?</>}
+                description="The segment is deleted. No contacts are changed."
+                confirmLabel="Delete segment"
+                onConfirm={() =>
+                    router.delete(SegmentController.destroy.url(segment.id), {
+                        preserveScroll: true,
+                    })
+                }
+            />
         </div>
     );
 }

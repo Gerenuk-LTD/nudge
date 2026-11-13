@@ -19,6 +19,7 @@ import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import ProviderController from '@/actions/Gerenuk/Marketing/Http/Controllers/ProviderController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -337,31 +338,18 @@ export default function ShowProvider({
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={removing} onOpenChange={setRemoving}>
-                <DialogContent>
-                    <DialogTitle>Remove {provider.name}?</DialogTitle>
-                    <DialogDescription>
-                        Its credentials are deleted. Campaigns and automations
-                        that send through it will need another provider.
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                router.delete(
-                                    ProviderController.destroy.url(provider.id),
-                                    { onFinish: () => setRemoving(false) },
-                                )
-                            }
-                        >
-                            Remove provider
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={removing}
+                onOpenChange={setRemoving}
+                title={<>Remove {provider.name}?</>}
+                description="Its credentials are deleted. Campaigns and automations that send through it will need another provider."
+                confirmLabel="Remove provider"
+                onConfirm={() =>
+                    router.delete(ProviderController.destroy.url(provider.id), {
+                        onFinish: () => setRemoving(false),
+                    })
+                }
+            />
         </>
     );
 }

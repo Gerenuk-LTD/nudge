@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import RoleController from '@/actions/Gerenuk/Marketing/Http/Controllers/RoleController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -194,37 +195,20 @@ export default function Roles({
                 </DialogContent>
             </Dialog>
 
-            <Dialog
+            <ConfirmDialog
                 open={deleting !== null}
                 onOpenChange={(open) => !open && setDeleting(null)}
-            >
-                <DialogContent>
-                    <DialogTitle>Delete {deleting?.name}?</DialogTitle>
-                    <DialogDescription>
-                        Nobody has this role, so nothing else changes.
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                deleting &&
-                                router.delete(
-                                    RoleController.destroy.url(deleting.id),
-                                    {
-                                        preserveScroll: true,
-                                        onFinish: () => setDeleting(null),
-                                    },
-                                )
-                            }
-                        >
-                            Delete role
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                title={<>Delete {deleting?.name}?</>}
+                description="Nobody has this role, so nothing else changes."
+                confirmLabel="Delete role"
+                onConfirm={() =>
+                    deleting &&
+                    router.delete(RoleController.destroy.url(deleting.id), {
+                        preserveScroll: true,
+                        onFinish: () => setDeleting(null),
+                    })
+                }
+            />
         </>
     );
 }

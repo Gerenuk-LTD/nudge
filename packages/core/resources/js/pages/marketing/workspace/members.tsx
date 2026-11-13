@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import MemberController from '@/actions/Gerenuk/Marketing/Http/Controllers/MemberController';
 import InputError from '@/components/input-error';
+import { ConfirmDialog } from '@marketing/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -184,51 +185,39 @@ export default function Members({
                 </DialogContent>
             </Dialog>
 
-            <Dialog
+            <ConfirmDialog
                 open={confirming !== null}
                 onOpenChange={(open) => !open && setConfirming(null)}
-            >
-                <DialogContent>
-                    <DialogTitle>
-                        {confirming?.kind === 'member'
-                            ? `Remove ${confirming.member.name}?`
-                            : 'Revoke this invitation?'}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {confirming?.kind === 'member'
-                            ? 'They lose access to this workspace straight away. Their campaigns and other work stay.'
-                            : `The link sent to ${confirming?.invitation.email} stops working.`}
-                    </DialogDescription>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={() =>
-                                confirming &&
-                                router.delete(
-                                    confirming.kind === 'member'
-                                        ? MemberController.destroy.url(
-                                              confirming.member.id,
-                                          )
-                                        : MemberController.revokeInvitation.url(
-                                              confirming.invitation.id,
-                                          ),
-                                    {
-                                        preserveScroll: true,
-                                        onFinish: () => setConfirming(null),
-                                    },
-                                )
-                            }
-                        >
-                            {confirming?.kind === 'member'
-                                ? 'Remove member'
-                                : 'Revoke invitation'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                title={
+                    confirming?.kind === 'member'
+                        ? `Remove ${confirming.member.name}?`
+                        : 'Revoke this invitation?'
+                }
+                description={
+                    confirming?.kind === 'member'
+                        ? 'They lose access to this workspace straight away. Their campaigns and other work stay.'
+                        : `The link sent to ${confirming?.invitation.email} stops working.`
+                }
+                confirmLabel={
+                    confirming?.kind === 'member'
+                        ? 'Remove member'
+                        : 'Revoke invitation'
+                }
+                onConfirm={() =>
+                    confirming &&
+                    router.delete(
+                        confirming.kind === 'member'
+                            ? MemberController.destroy.url(confirming.member.id)
+                            : MemberController.revokeInvitation.url(
+                                  confirming.invitation.id,
+                              ),
+                        {
+                            preserveScroll: true,
+                            onFinish: () => setConfirming(null),
+                        },
+                    )
+                }
+            />
         </>
     );
 }
