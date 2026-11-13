@@ -5,10 +5,15 @@ import {
     ArrowUpRight,
     CalendarClock,
     Check,
+    MailOpen,
+    MousePointerClick,
     Plus,
+    Send,
     Upload,
+    Users,
     Workflow,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +39,7 @@ import type { DailyCount } from '@marketing/components/charts';
 import { Sparkline, TrendChart } from '@marketing/components/charts';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { Shout } from '@marketing/components/shout';
+import { StatIcon } from '@marketing/components/stat-tile';
 import { useCan, useWorkspace } from '@marketing/hooks/use-workspace';
 import { formatDate, formatDateTime, percent } from '@marketing/lib/format';
 import type { CampaignSummary } from '@marketing/types';
@@ -180,6 +186,7 @@ export default function Home({
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {audience && (
                         <Stat
+                            icon={Users}
                             label="Subscribed contacts"
                             value={audience.subscribed.toLocaleString()}
                             detail={`+${total(audience.added).toLocaleString()} added`}
@@ -199,6 +206,7 @@ export default function Home({
                     {sending && (
                         <>
                             <Stat
+                                icon={Send}
                                 label="Emails sent"
                                 value={sending.totals.sent.toLocaleString()}
                                 detail={`in ${days} days`}
@@ -214,6 +222,7 @@ export default function Home({
                                 />
                             </Stat>
                             <Stat
+                                icon={MailOpen}
                                 label="Open rate"
                                 value={percent(
                                     sending.totals.opened,
@@ -232,6 +241,7 @@ export default function Home({
                                 )}
                             />
                             <Stat
+                                icon={MousePointerClick}
                                 label="Click rate"
                                 value={percent(
                                     sending.totals.clicked,
@@ -469,6 +479,7 @@ function pointsChange(current: number | null, previous: number | null) {
 }
 
 function Stat({
+    icon,
     label,
     value,
     detail,
@@ -477,6 +488,7 @@ function Stat({
     points = null,
     children,
 }: {
+    icon: LucideIcon;
     label: string;
     value: string;
     detail: string;
@@ -498,8 +510,13 @@ function Stat({
     return (
         <Card className="gap-3 py-4">
             <CardContent className="space-y-1 px-5">
-                <div className="flex items-start justify-between gap-2">
-                    <p className="text-13 text-muted-foreground">{label}</p>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <StatIcon icon={icon} />
+                        <p className="truncate text-13 text-muted-foreground">
+                            {label}
+                        </p>
+                    </div>
                     {shown !== null && delta !== null && (
                         <span
                             title={`Compared with the ${trendLabel ? `${trendLabel} in the ` : ''}previous period`}

@@ -6,7 +6,17 @@ import {
     useForm,
     usePage,
 } from '@inertiajs/react';
-import { CircleCheck, Ellipsis, Pencil, Send, Trash2 } from 'lucide-react';
+import {
+    CircleCheck,
+    Ellipsis,
+    MailCheck,
+    MailX,
+    Pencil,
+    Send,
+    ShieldAlert,
+    Trash2,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import ProviderController from '@/actions/Gerenuk/Marketing/Http/Controllers/ProviderController';
@@ -242,16 +252,19 @@ export default function ShowProvider({
 
                 <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatTile
+                        icon={Send}
                         label="Sent, last 7 days"
                         value={stats.sent.toLocaleString()}
                     />
                     <RateStat
+                        icon={MailCheck}
                         label="Delivered"
                         count={stats.delivered}
                         sent={stats.sent}
                         tracked={receivesWebhooks}
                     />
                     <RateStat
+                        icon={MailX}
                         label="Bounced"
                         count={stats.bounced}
                         sent={stats.sent}
@@ -261,6 +274,7 @@ export default function ShowProvider({
                         hint="Keep under 2%"
                     />
                     <RateStat
+                        icon={ShieldAlert}
                         label="Complaints"
                         count={stats.complained}
                         sent={stats.sent}
@@ -495,6 +509,7 @@ function TestForm({
 
 /** A share of the week's sends, coloured when it passes a safe level. */
 function RateStat({
+    icon,
     label,
     count,
     sent,
@@ -503,6 +518,7 @@ function RateStat({
     danger,
     hint,
 }: {
+    icon: LucideIcon;
     label: string;
     count: number;
     sent: number;
@@ -514,6 +530,7 @@ function RateStat({
     if (!tracked) {
         return (
             <StatTile
+                icon={icon}
                 label={label}
                 value="—"
                 hint="Not reported by this provider"
@@ -525,6 +542,7 @@ function RateStat({
 
     return (
         <StatTile
+            icon={icon}
             label={label}
             value={rate === null ? '—' : `${(rate * 100).toFixed(1)}%`}
             hint={

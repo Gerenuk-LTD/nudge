@@ -1,5 +1,15 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { Check, Trash2 } from 'lucide-react';
+import {
+    Check,
+    MailCheck,
+    MailOpen,
+    MailX,
+    MousePointerClick,
+    ShieldAlert,
+    Trash2,
+    UserMinus,
+    Users,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/CampaignController';
@@ -366,15 +376,18 @@ export default function ShowCampaign({
 
                 <dl className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
                     <StatTile
+                        icon={Users}
                         label="Recipients"
                         value={stats.recipients.toLocaleString()}
                     />
                     <StatTile
+                        icon={MailCheck}
                         label="Delivered"
                         value={percent(stats.delivered, stats.sent)}
                         hint={stats.delivered.toLocaleString()}
                     />
                     <StatTile
+                        icon={MousePointerClick}
                         label="Clicked"
                         value={
                             campaign.track_clicks
@@ -384,6 +397,7 @@ export default function ShowCampaign({
                         hint={stats.clicked.toLocaleString()}
                     />
                     <StatTile
+                        icon={MailOpen}
                         label="Opened"
                         value={
                             campaign.track_opens
@@ -393,16 +407,19 @@ export default function ShowCampaign({
                         hint="approximate"
                     />
                     <StatTile
+                        icon={UserMinus}
                         label="Unsubscribed"
                         value={percent(stats.unsubscribed, stats.sent)}
                         hint={stats.unsubscribed.toLocaleString()}
                     />
                     <StatTile
+                        icon={MailX}
                         label="Bounced"
                         value={percent(stats.bounced, stats.sent)}
                         hint={stats.bounced.toLocaleString()}
                     />
                     <StatTile
+                        icon={ShieldAlert}
                         label="Complaints"
                         value={percent(stats.complained, stats.sent)}
                         hint={stats.complained.toLocaleString()}
