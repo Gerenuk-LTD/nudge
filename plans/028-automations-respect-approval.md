@@ -38,6 +38,7 @@ to real contacts without anyone approving them. The approval control can be
 bypassed just by using an automation instead of a broadcast.
 
 **Decided by the maintainer (2026-11-11):**
+
 - Automations need approval to go live whenever the workspace requires campaign approval. The permission is the same, `campaigns.approve`.
 - When someone **without** `campaigns.approve` changes what a live automation sends, the approval is withdrawn and the automation is **paused**. Contacts are held where they are until an approver approves it and resumes it.
 - When someone **with** `campaigns.approve` makes the change, it counts as approved. The automation stays live, and the approval is re-stamped with that person.
@@ -47,21 +48,21 @@ bypassed just by using an automation instead of a broadcast.
 **`src/Http/Controllers/AutomationController.php`**:
 
 - `update()` validates, then in one transaction it updates the automation and calls `SyncAutomationEmails::handle()`:
-  ```php
-  DB::transaction(function () use ($automation, $validated, $emails): void {
-      $automation->update([
-          'name' => $validated['name'],
-          'trigger_type' => $validated['trigger_type'],
-          'trigger_config' => $validated['trigger_config'],
-          'allow_reentry' => $validated['allow_reentry'],
-          'definition' => ['steps' => $validated['definition']['steps'] ?? []],
-      ]);
+    ```php
+    DB::transaction(function () use ($automation, $validated, $emails): void {
+        $automation->update([
+            'name' => $validated['name'],
+            'trigger_type' => $validated['trigger_type'],
+            'trigger_config' => $validated['trigger_config'],
+            'allow_reentry' => $validated['allow_reentry'],
+            'definition' => ['steps' => $validated['definition']['steps'] ?? []],
+        ]);
 
-      $emails->handle($automation);
-  });
+        $emails->handle($automation);
+    });
 
-  return back();
-  ```
+    return back();
+    ```
 - `activate()` calls `ActivateAutomation::handle($automation, $workspace)` and flashes "Automation is live.".
 - `pause()` sets `status` to `Paused` when it's `Active`.
 - `edit()` renders `marketing/automations/edit` with `automation`, `problems` (from `ActivationChecklist::problems`) and more. It doesn't pass approval information.
@@ -77,6 +78,7 @@ bypassed just by using an automation instead of a broadcast.
 **`src/Models/Automation.php`**: `#[Fillable(['workspace_id', 'name', 'status', 'trigger_type', 'trigger_config', 'definition', 'allow_reentry', 'activated_at'])]`, with casts on line ~50 and a `@property` docblock.
 
 **Routes**, in `routes/web.php:132-137`:
+
 ```php
 Route::middleware('can:automations.manage')->group(function () {
     Route::post('automations', [AutomationController::class, 'store'])->name('automations.store');
@@ -85,12 +87,15 @@ Route::middleware('can:automations.manage')->group(function () {
     Route::post('automations/{automation}/activate', [AutomationController::class, 'activate'])->name('automations.activate');
     Route::post('automations/{automation}/pause', [AutomationController::class, 'pause'])->name('automations.pause');
 ```
+
 The campaign approve route, the pattern to copy, is at `routes/web.php:119`:
+
 ```php
 Route::post('campaigns/{campaign}/approve', [CampaignController::class, 'approve'])->middleware('can:campaigns.approve')->name('campaigns.approve');
 ```
 
 **Campaign approval, the pattern to mirror**, in `CampaignController.php`:
+
 ```php
 public function approve(Request $request, Campaign $campaign): RedirectResponse
 {
@@ -103,9 +108,11 @@ public function approve(Request $request, Campaign $campaign): RedirectResponse
     return back();
 }
 ```
+
 The columns are `$table->timestamp('approved_at')->nullable()` and `$table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete()` (`database/migrations/2026_10_29_000001_create_sending_tables.php:58,74`). The permission check in a controller is `$this->user($request)->hasWorkspacePermission($workspace, Permission::CampaignsApprove)` (see `SendingSettingsController.php:28`).
 
 **Frontend**, `resources/js/pages/marketing/automations/edit.tsx` (618 lines):
+
 - The props include `problems: string[]` (line ~59).
 - `activate` (line ~139) saves, then posts to `AutomationController.activate.url(automation.id)`.
 - The header buttons (lines ~217-243): Pause when active, otherwise Resume / Start automation.
@@ -115,6 +122,7 @@ The columns are `$table->timestamp('approved_at')->nullable()` and `$table->fore
 The campaign page's approval panel to copy is at `resources/js/pages/marketing/campaigns/edit.tsx:1635-1667`. It shows "Approved <date>. Editing the content withdraws the approval." when approved, an outline "Approve campaign" button when `canApprove`, and otherwise "Someone with permission to approve campaigns needs to approve this one.". Permissions come from `const can = useCan();` (`import { useCan } from '@marketing/hooks/use-workspace';`), and `can('campaigns.approve')`. The route helpers are generated by Wayfinder into the gitignored `resources/js/actions`, so `AutomationController.approve` appears once the Vite or Wayfinder generation runs.
 
 **Tests**:
+
 - `tests/Feature/AutomationTest.php` has helpers `emailStep($id, $subject, $providerId)` and `liveAutomation($test, $trigger, $triggerConfig, $steps, $reentry)`. Its `beforeEach` creates `$this->owner`, `$this->workspace` (with a postal address) and `$this->provider`.
 - `tests/Feature/SendingTest.php:131` "approval is required when the workspace asks for it, and edits withdraw it" is the campaign equivalent.
 - `$this->addMember($this->workspace, 'Editor')` (`tests/TestCase.php:64`) creates an Editor.
@@ -123,17 +131,18 @@ The campaign page's approval panel to copy is at `resources/js/pages/marketing/c
 
 From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`composer.bat`), unless they say "root".
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Core tests | `vendor/bin/pest` | all pass, except the 7 "Amazon SES through SNS" tests that fail on Windows (OpenSSL config) |
-| One file | `vendor/bin/pest tests/Feature/AutomationApprovalTest.php` | all pass |
-| PHPStan (root) | `vendor/bin/phpstan analyse --memory-limit=1G` | 0 errors |
-| Pint (root) | `vendor/bin/pint --test packages/core` | passes |
-| Frontend (root) | `npm run check` and `npm run types:check` | pass |
+| Purpose         | Command                                                    | Expected                                                                                    |
+| --------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Core tests      | `vendor/bin/pest`                                          | all pass, except the 7 "Amazon SES through SNS" tests that fail on Windows (OpenSSL config) |
+| One file        | `vendor/bin/pest tests/Feature/AutomationApprovalTest.php` | all pass                                                                                    |
+| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`             | 0 errors                                                                                    |
+| Pint (root)     | `vendor/bin/pint --test packages/core`                     | passes                                                                                      |
+| Frontend (root) | `npm run check` and `npm run types:check`                  | pass                                                                                        |
 
 ## Scope
 
 **In scope:**
+
 - New migration `database/migrations/2026_11_11_000002_add_approval_to_automations_table.php`
 - `src/Models/Automation.php`
 - `src/Automations/ActivationChecklist.php`
@@ -144,6 +153,7 @@ From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`compose
 - `tests/Feature/AutomationApprovalTest.php` (new)
 
 **Out of scope:**
+
 - `SyncAutomationEmails` and `ActivateAutomation`. Their behaviour is already right once the status is `Paused` or the checklist blocks.
 - `CampaignChecklist`, campaign approval and the sending-settings page copy. "Campaigns now need approval" also covers automations now, but changing the wording isn't needed here.
 - Retroactively pausing automations that are already live. They keep running until they're next edited or paused (see Maintenance notes).
@@ -161,6 +171,7 @@ From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`compose
 ### Step 1: Columns
 
 Create `database/migrations/2026_11_11_000002_add_approval_to_automations_table.php`, adding to `automations`:
+
 - `$table->timestamp('approved_at')->nullable();`
 - `$table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();`
 
@@ -190,6 +201,7 @@ class AutomationApproval
 ```
 
 `fingerprint()` returns `hash('sha256', json_encode([...]))` over:
+
 - `trigger_type->value`;
 - `trigger_config`, with keys sorted recursively (`ksort`), so the same config in a different key order hashes the same;
 - the list of `send_email` steps from `$automation->steps()->ofType(StepType::SendEmail)`, each reduced to `['id' => (string) $step['id'], ...only EMAIL_FIELDS from $step['config']]`, with missing fields as `null` and the list sorted by `id`.
@@ -203,56 +215,62 @@ Adding or removing an email step changes the fingerprint. So does changing any o
 ### Step 3: Server rules
 
 1. **`ActivationChecklist::problems()`**: after the existing checks, add:
-   ```php
-   if ($workspace->requires_campaign_approval && $automation->approved_at === null) {
-       $problems[] = __('This workspace requires automations to be approved before they go live.');
-   }
-   ```
-   `ActivateAutomation` already refuses to start with any problem, so this covers both "Start automation" and "Resume".
+
+    ```php
+    if ($workspace->requires_campaign_approval && $automation->approved_at === null) {
+        $problems[] = __('This workspace requires automations to be approved before they go live.');
+    }
+    ```
+
+    `ActivateAutomation` already refuses to start with any problem, so this covers both "Start automation" and "Resume".
 
 2. **`AutomationController::approve(Request $request, Automation $automation)`**: sets `approved_at = now()` and `approved_by = $this->user($request)->getAuthIdentifier()`, flashes `__('Automation approved.')`, and returns `back()`. Route, inside the `can:automations.manage` group, next to `activate`:
-   ```php
-   Route::post('automations/{automation}/approve', [AutomationController::class, 'approve'])->middleware('can:campaigns.approve')->name('automations.approve');
-   ```
-   Check that a route inside a group can add its own `->middleware('can:...')`, which it can in Laravel. Then the approver needs both `automations.manage` and `campaigns.approve`.
+
+    ```php
+    Route::post('automations/{automation}/approve', [AutomationController::class, 'approve'])->middleware('can:campaigns.approve')->name('automations.approve');
+    ```
+
+    Check that a route inside a group can add its own `->middleware('can:...')`, which it can in Laravel. Then the approver needs both `automations.manage` and `campaigns.approve`.
 
 3. **`AutomationController::update()`**: `$request` is already an `AutomationRequest`, which extends `Request`, so `$this->user($request)` works without injecting anything else. Replace the `$automation->update([...])` call inside the existing transaction with:
-   ```php
-   $before = AutomationApproval::fingerprint($automation);
 
-   $automation->fill([...same fields as today...]);
+    ```php
+    $before = AutomationApproval::fingerprint($automation);
 
-   $changed = AutomationApproval::fingerprint($automation) !== $before;
-   $canApprove = $this->user($request)->hasWorkspacePermission($workspace, Permission::CampaignsApprove);
-   $pausedForApproval = false;
+    $automation->fill([...same fields as today...]);
 
-   if ($changed && $canApprove && $automation->approved_at !== null) {
-       // An approver's own edit stays approved, signed by them.
-       $automation->fill(['approved_at' => now(), 'approved_by' => $this->user($request)->getAuthIdentifier()]);
-   } elseif ($changed && ! $canApprove && $automation->approved_at !== null) {
-       $automation->fill(['approved_at' => null, 'approved_by' => null]);
-   }
+    $changed = AutomationApproval::fingerprint($automation) !== $before;
+    $canApprove = $this->user($request)->hasWorkspacePermission($workspace, Permission::CampaignsApprove);
+    $pausedForApproval = false;
 
-   if ($changed && ! $canApprove && $workspace->requires_campaign_approval && $automation->status === AutomationStatus::Active) {
-       // Hold everyone where they are; the new emails are not published until an approver resumes it.
-       $automation->status = AutomationStatus::Paused;
-       $pausedForApproval = true;
-   }
+    if ($changed && $canApprove && $automation->approved_at !== null) {
+        // An approver's own edit stays approved, signed by them.
+        $automation->fill(['approved_at' => now(), 'approved_by' => $this->user($request)->getAuthIdentifier()]);
+    } elseif ($changed && ! $canApprove && $automation->approved_at !== null) {
+        $automation->fill(['approved_at' => null, 'approved_by' => null]);
+    }
 
-   $automation->save();
-   $emails->handle($automation);
-   ```
-   Set the status **before** `$emails->handle()`. `SyncAutomationEmails` then marks the step campaigns `Draft` and doesn't publish the unapproved content.
+    if ($changed && ! $canApprove && $workspace->requires_campaign_approval && $automation->status === AutomationStatus::Active) {
+        // Hold everyone where they are; the new emails are not published until an approver resumes it.
+        $automation->status = AutomationStatus::Paused;
+        $pausedForApproval = true;
+    }
 
-   Note on the first branch: an approver's edit to an automation that was never approved (for example one already live before this release) doesn't approve it silently. They can click Approve. Keep it that way.
+    $automation->save();
+    $emails->handle($automation);
+    ```
 
-   After the transaction, when `$pausedForApproval`, flash `['type' => 'warning', 'message' => __('Saved. The automation is paused until someone approves the changes.')]`. Check that `'warning'` is a toast type the frontend handles (`grep -rn "'warning'\|\"warning\"" resources/js`). If it isn't, use `'success'`.
+    Set the status **before** `$emails->handle()`. `SyncAutomationEmails` then marks the step campaigns `Draft` and doesn't publish the unapproved content.
 
-   `$workspace` is `$this->currentWorkspace->getOrFail()`.
+    Note on the first branch: an approver's edit to an automation that was never approved (for example one already live before this release) doesn't approve it silently. They can click Approve. Keep it that way.
+
+    After the transaction, when `$pausedForApproval`, flash `['type' => 'warning', 'message' => __('Saved. The automation is paused until someone approves the changes.')]`. Check that `'warning'` is a toast type the frontend handles (`grep -rn "'warning'\|\"warning\"" resources/js`). If it isn't, use `'success'`.
+
+    `$workspace` is `$this->currentWorkspace->getOrFail()`.
 
 4. **`AutomationController::edit()`**: add these props:
-   - `'requiresApproval' => $workspace->requires_campaign_approval`;
-   - `'approved_at' => $automation->approved_at?->toIso8601String()` inside the `automation` array.
+    - `'requiresApproval' => $workspace->requires_campaign_approval`;
+    - `'approved_at' => $automation->approved_at?->toIso8601String()` inside the `automation` array.
 
 **Verify**: `vendor/bin/pest` → all pass. Some existing `AutomationTest` tests may now fail if they turn approval on; none are expected to. If one does, STOP and report it rather than editing that test.
 
@@ -263,11 +281,12 @@ In `resources/js/pages/marketing/automations/edit.tsx`:
 1. Add `approved_at: string | null` to the automation prop type, and `requiresApproval: boolean` to the page props.
 2. Add `const can = useCan();` (import from `@marketing/hooks/use-workspace`, as in `campaigns/edit.tsx:58`), and `const canApprove = can('campaigns.approve');`.
 3. Add an approval panel when `props.requiresApproval`, styled like `campaigns/edit.tsx:1635-1667` (`rounded-xl border bg-card p-4 shadow-xs`, `h2` "Approval"):
-   - if approved: "Approved <formatted date>. Changing its emails or trigger withdraws the approval." Use the same date formatter the campaign page uses, if one is importable; otherwise `new Date(...).toLocaleString()`.
-   - else if `canApprove`: an outline button "Approve automation" that posts to `AutomationController.approve.url(automation.id)` with `{ preserveScroll: true }`. It's disabled while `saving` or `dirty`, so approvers approve what's saved, not unsaved edits. Add the helper text "Save your changes first." when it's dirty.
-   - else: "Someone with permission to approve campaigns needs to approve this automation before it goes live."
+    - if approved: "Approved <formatted date>. Changing its emails or trigger withdraws the approval." Use the same date formatter the campaign page uses, if one is importable; otherwise `new Date(...).toLocaleString()`.
+    - else if `canApprove`: an outline button "Approve automation" that posts to `AutomationController.approve.url(automation.id)` with `{ preserveScroll: true }`. It's disabled while `saving` or `dirty`, so approvers approve what's saved, not unsaved edits. Add the helper text "Save your changes first." when it's dirty.
+    - else: "Someone with permission to approve campaigns needs to approve this automation before it goes live."
 
-   Put it next to the "Before it can start" box.
+    Put it next to the "Before it can start" box.
+
 4. Live-edit warning: when `automation.status === 'active' && dirty && props.requiresApproval && !canApprove`, replace the existing text with "This automation is live. Saving changes to its emails or trigger pauses it until someone approves them." Otherwise keep the existing text.
 
 The checklist problem from Step 3.1 already shows in the "Before it can start" box, so nothing else is needed there.
@@ -284,16 +303,17 @@ Set `requires_campaign_approval = true` on the workspace unless a test says othe
 2. **Approval lets it start.** The owner posts `automations.approve`, then an Editor activates it. The status is `active` and `approved_by` is the owner's id.
 3. **Editors can't approve.** An Editor posting `automations.approve` gets 403, and `approved_at` stays null.
 4. **An Editor's email edit pauses a live, approved automation.**
-   - Approve and activate it.
-   - As an Editor, `put automations.update` with the email subject changed (send the full payload the request validates; copy the shape from an existing update test in `AutomationTest.php`).
-   - Expect: `status` is `paused`, `approved_at` is null, and the step's campaign (`Campaign::where('automation_id', ...)`) is `Draft` with its snapshot still holding the **old** subject.
-   - Then the owner approves and activates. The status is `active`, and the snapshot has the new subject.
+    - Approve and activate it.
+    - As an Editor, `put automations.update` with the email subject changed (send the full payload the request validates; copy the shape from an existing update test in `AutomationTest.php`).
+    - Expect: `status` is `paused`, `approved_at` is null, and the step's campaign (`Campaign::where('automation_id', ...)`) is `Draft` with its snapshot still holding the **old** subject.
+    - Then the owner approves and activates. The status is `active`, and the snapshot has the new subject.
 5. **An approver's edit stays live.** Same as 4, but the owner edits. The status stays `active`, `approved_at` is refreshed, and the snapshot has the new subject.
 6. **Fingerprint ignores what isn't sent.** Changing the name, adding a delay step, or changing a webhook URL keeps `fingerprint()` the same. An Editor's save with only those changes leaves a live automation `active` and approved.
 7. **Fingerprint catches what is sent.** Changing an email subject, from address, html or provider, adding an email step, or changing the trigger config (for example another list id) each changes `fingerprint()`. Key order in `trigger_config` doesn't.
 8. **Without the setting, nothing changes.** With `requires_campaign_approval = false`, an Editor can activate without approval, and an Editor's email edit leaves it `active`. Approval being withdrawn is fine here; assert only the status.
 
 Revert checks (restore after each, commit nothing from them):
+
 - Remove the checklist problem from Step 3.1: tests 1 and 2's "can't start" part fail.
 - Remove the `Paused` branch from Step 3.3: test 4 fails.
 - Return a constant from `fingerprint()`: tests 4 and 7 fail.

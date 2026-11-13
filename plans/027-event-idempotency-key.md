@@ -52,18 +52,19 @@ dispatch fails, whether or not a key was sent.
 
 Run these from `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`composer.bat`).
 
-| Purpose | Command | Expected |
-|---|---|---|
-| Tests | `vendor/bin/pest` | all pass |
-| One file | `vendor/bin/pest tests/Feature/ApiTest.php` | all pass |
+| Purpose         | Command                                                                                       | Expected         |
+| --------------- | --------------------------------------------------------------------------------------------- | ---------------- |
+| Tests           | `vendor/bin/pest`                                                                             | all pass         |
+| One file        | `vendor/bin/pest tests/Feature/ApiTest.php`                                                   | all pass         |
 | Static analysis | `vendor/bin/phpstan analyse --memory-limit=1G` (or `composer types:check` from the repo root) | `[OK] No errors` |
-| Style | `vendor/bin/pint --test` (or `composer lint` from the root) | passes |
+| Style           | `vendor/bin/pint --test` (or `composer lint` from the root)                                   | passes           |
 
 CI also runs the core tests on MySQL 8.4 (`.github/workflows/tests.yml:77-85`), so the migration must work on both MySQL and SQLite.
 
 ## Scope
 
 **In scope** (`packages/core/`):
+
 - A new migration: `database/migrations/2026_11_11_000001_add_idempotency_to_events_table.php`
 - `src/Models/ActivityEvent.php`
 - `src/Http/Controllers/Api/EventController.php`
@@ -73,6 +74,7 @@ CI also runs the core tests on MySQL 8.4 (`.github/workflows/tests.yml:77-85`), 
 - If plan 026's OpenAPI spec (`packages/core/docs/openapi.json`) exists by the time you run this, document the header there too.
 
 **Out of scope**:
+
 - Keys on any other route. Only `POST events` is needed. See `plans/007-findings.md` in `nudge-for-laravel` → Decisions, item 2.
 - Rejecting a reused key that arrives with a different body. This was left optional and isn't decided.
 - Pruning old keys. They're UUIDs on rows that are already kept.
@@ -106,11 +108,12 @@ In `StartAutomationsForTrigger`:
 
 - Add a last constructor parameter, `public ?int $eventId = null`. The other dispatch sites (`AutomationTriggers.php:21`, `:31`) don't pass it and behave exactly as before.
 - In `handle()`, inside `runAs(...)`, when `$eventId !== null`: take `Cache::lock("marketing:event-trigger:{$this->eventId}", 60)->block(10, ...)`, the same lock style as `EnrollContact.php:30`. Inside the lock:
-  1. Load the event (`ActivityEvent::query()->whereKey($this->eventId)->first()`). If it's missing or `triggered_at !== null`, return. It was already handled.
-  2. Run the existing matching and enrolment.
-  3. Then set `triggered_at = now()` and save.
+    1. Load the event (`ActivityEvent::query()->whereKey($this->eventId)->first()`). If it's missing or `triggered_at !== null`, return. It was already handled.
+    2. Run the existing matching and enrolment.
+    3. Then set `triggered_at = now()` and save.
 
-  Set `triggered_at` **after** enrolling, not before. Then a job that crashes part-way is retried and finishes the work, and the automations it already enrolled stay protected by `EnrollContact`'s "already in an active or waiting run" check (`EnrollContact.php:33-36`). The lock stops two copies running at the same time.
+    Set `triggered_at` **after** enrolling, not before. Then a job that crashes part-way is retried and finishes the work, and the automations it already enrolled stay protected by `EnrollContact`'s "already in an active or waiting run" check (`EnrollContact.php:33-36`). The lock stops two copies running at the same time.
+
 - When `$eventId === null`, `handle()` behaves exactly as today.
 
 In `AutomationTriggers::event()`, add an `int $eventId` parameter and pass it to the job as `eventId:`.

@@ -53,14 +53,14 @@ Route::prefix(config('marketing.api_prefix'))
 
 **How the controllers (`src/Http/Controllers/Api/`) affect what Scramble can infer:**
 
-| Controller                                      | Input                                                                                                                                                              | Output                                                           | Scramble will infer                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `ContactController@index`                       | inline `$request->validate([...])`                                                                                                                                 | `ContactResource::collection` + `cursorPaginate`                 | well                                                                |
-| `ContactController@upsert`                      | `Validator::make($data, [...$contactRules->rules(), 'resubscribe' => ...])`; `ContactRules::rules()` is built at runtime from the workspace's custom-field definitions | `JsonResponse`                                                   | **poorly: needs annotating**                                         |
-| `ContactListController`                         | inline `validate` (via private `validated()` / `contactsFromRequest()`)                                                                                            | `ContactListResource`                                            | mostly; check the private-method rules come through                 |
-| `CustomFieldController@store`                   | `$request->validate($rules->forCreate())`                                                                                                                          | `JsonResponse`                                                   | **body poorly**                                                      |
-| `EventController`                               | inline `validate`                                                                                                                                                  | `response()->json([...], 202)`                                   | body well; response partly                                           |
-| `TagController`, `SegmentController`, `MeController`, `CustomFieldController@index` | none / `per_page`                                                                                                  | `response()->json(['data' => $collection->map(fn ...)])`         | **response shape poorly**                                            |
+| Controller                                                                          | Input                                                                                                                                                                  | Output                                                   | Scramble will infer                                 |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------- |
+| `ContactController@index`                                                           | inline `$request->validate([...])`                                                                                                                                     | `ContactResource::collection` + `cursorPaginate`         | well                                                |
+| `ContactController@upsert`                                                          | `Validator::make($data, [...$contactRules->rules(), 'resubscribe' => ...])`; `ContactRules::rules()` is built at runtime from the workspace's custom-field definitions | `JsonResponse`                                           | **poorly: needs annotating**                        |
+| `ContactListController`                                                             | inline `validate` (via private `validated()` / `contactsFromRequest()`)                                                                                                | `ContactListResource`                                    | mostly; check the private-method rules come through |
+| `CustomFieldController@store`                                                       | `$request->validate($rules->forCreate())`                                                                                                                              | `JsonResponse`                                           | **body poorly**                                     |
+| `EventController`                                                                   | inline `validate`                                                                                                                                                      | `response()->json([...], 202)`                           | body well; response partly                          |
+| `TagController`, `SegmentController`, `MeController`, `CustomFieldController@index` | none / `per_page`                                                                                                                                                      | `response()->json(['data' => $collection->map(fn ...)])` | **response shape poorly**                           |
 
 `ContactResource` returns `custom_fields` as an object whose keys are defined per workspace, so the spec can only describe it as `object` with `additionalProperties`.
 
@@ -70,15 +70,15 @@ Route::prefix(config('marketing.api_prefix'))
 
 ## Commands you will need
 
-| Purpose                    | Command                                                                        | Expected                         |
-| -------------------------- | ------------------------------------------------------------------------------ | -------------------------------- |
-| Add Scramble (core, dev)   | `composer --working-dir=packages/core require --dev dedoc/scramble`            | resolves against Laravel 13      |
-| Export the spec            | `cd packages/core && vendor/bin/testbench scramble:export --path=docs/openapi.json` | writes the file, exit 0      |
-| Drift check                | `cd packages/core && git diff --exit-code docs/openapi.json`                   | exit 0 right after an export     |
-| Validate the spec          | `npx --yes @redocly/cli@latest lint packages/core/docs/openapi.json`           | no errors (warnings are OK)      |
-| Core tests                 | `cd packages/core && vendor/bin/pest --compact`                                | all pass                         |
-| Host tests                 | `php artisan test --compact`                                                   | all pass                         |
-| PHPStan / Pint             | as usual                                                                       | 0 errors / exit 0                |
+| Purpose                  | Command                                                                             | Expected                     |
+| ------------------------ | ----------------------------------------------------------------------------------- | ---------------------------- |
+| Add Scramble (core, dev) | `composer --working-dir=packages/core require --dev dedoc/scramble`                 | resolves against Laravel 13  |
+| Export the spec          | `cd packages/core && vendor/bin/testbench scramble:export --path=docs/openapi.json` | writes the file, exit 0      |
+| Drift check              | `cd packages/core && git diff --exit-code docs/openapi.json`                        | exit 0 right after an export |
+| Validate the spec        | `npx --yes @redocly/cli@latest lint packages/core/docs/openapi.json`                | no errors (warnings are OK)  |
+| Core tests               | `cd packages/core && vendor/bin/pest --compact`                                     | all pass                     |
+| Host tests               | `php artisan test --compact`                                                        | all pass                     |
+| PHPStan / Pint           | as usual                                                                            | 0 errors / exit 0            |
 
 ## Scope
 
@@ -126,6 +126,7 @@ composer --working-dir=packages/core require --dev dedoc/scramble
 ```
 
 **Verify:**
+
 - It appears under `require-dev` in `packages/core/composer.json`, not `require`.
 - The root `composer.json` is unchanged.
 
@@ -139,17 +140,18 @@ The configuration lives in `workbench/`, which is dev-only, so nothing Scramble-
 
 1. **Create `packages/core/testbench.yaml`.** Its providers should be `Inertia\ServiceProvider`, `Gerenuk\Marketing\MarketingServiceProvider`, `Dedoc\Scramble\ScrambleServiceProvider` and `Workbench\App\Providers\DocsServiceProvider`. Add a `workbench/` PSR-4 entry (`"Workbench\\App\\": "workbench/app/"`) to `autoload-dev` in `packages/core/composer.json`, then run `composer --working-dir=packages/core dump-autoload`.
 2. **In `DocsServiceProvider::register()`, set:**
-   - `scramble.api_path` to `config('marketing.api_prefix')`;
-   - `scramble.info.version` to a fixed string, `'1'`, so the export is deterministic;
-   - `scramble.ui.title` to `'Gerenuk Marketing API'`;
-   - `scramble.servers` to `['Default' => 'api/v1']`. The served copy replaces this per install in Step 5.
+    - `scramble.api_path` to `config('marketing.api_prefix')`;
+    - `scramble.info.version` to a fixed string, `'1'`, so the export is deterministic;
+    - `scramble.ui.title` to `'Gerenuk Marketing API'`;
+    - `scramble.servers` to `['Default' => 'api/v1']`. The served copy replaces this per install in Step 5.
 3. **In `boot()`:**
-   - restrict documented routes to names starting `marketing.api.`;
-   - add a document transformer that registers an HTTP bearer security scheme as the default. Describe it as "A workspace API token (starts `gmk_`), created under Settings → API tokens." Check that wording against the UI and correct it.
-   - register `TokenPermissionExtension` (Step 3).
+    - restrict documented routes to names starting `marketing.api.`;
+    - add a document transformer that registers an HTTP bearer security scheme as the default. Describe it as "A workspace API token (starts `gmk_`), created under Settings → API tokens." Check that wording against the UI and correct it.
+    - register `TokenPermissionExtension` (Step 3).
 4. **Export:** `cd packages/core && vendor/bin/testbench scramble:export --path=docs/openapi.json`.
 
 **Verify:**
+
 - `docs/openapi.json` exists and lists all 22 operations from "Current state".
 - Its paths have **no** `api/v1` prefix; the prefix is in `servers`.
 - Running the export twice gives an identical file (`git diff --exit-code` after the second run). If it doesn't, find the source of the non-determinism (timestamps, ordering) and fix it in `DocsServiceProvider`. If you can't, STOP.
@@ -162,11 +164,11 @@ Create `workbench/app/Scramble/TokenPermissionExtension.php`, a Scramble operati
 
 - If its middleware includes `marketing.token-can:<permission>`, add `x-required-permission: <permission>` to the operation, and put "Requires a token with the `<permission>` permission." at the start of its description.
 - Add these responses to every operation unless Scramble already added them:
-  - `401` (`{"message": "Unauthenticated."}`)
-  - `403` (only for routes with a permission; message as in `EnsureTokenCan`)
-  - `429` ("Too many requests", from either the per-token limit `marketing.api_requests_per_minute` or the 30-bad-tokens-per-IP limit).
+    - `401` (`{"message": "Unauthenticated."}`)
+    - `403` (only for routes with a permission; message as in `EnsureTokenCan`)
+    - `429` ("Too many requests", from either the per-token limit `marketing.api_requests_per_minute` or the 30-bad-tokens-per-IP limit).
 
-  Scramble usually generates `404` and `422` on its own. Check, and add them through the extension if it doesn't.
+    Scramble usually generates `404` and `422` on its own. Check, and add them through the extension if it doesn't.
 
 `GET me` has no permission middleware. It should get `401`/`429` but no `403` and no `x-required-permission`.
 
@@ -177,24 +179,25 @@ Create `workbench/app/Scramble/TokenPermissionExtension.php`, a Scramble operati
 Use docblocks and Scramble attributes only. Don't change any code paths. For each controller, re-export and look at the operation in the generated file before moving on.
 
 1. **Every operation:**
-   - add a one-line summary docblock if it doesn't have one, keeping the existing ones (for example the `upsert` docblock and the class docblock "Contacts are addressed by email address…");
-   - give each controller a tag (Contacts, Lists, Tags, Custom fields, Segments, Events, Account).
+    - add a one-line summary docblock if it doesn't have one, keeping the existing ones (for example the `upsert` docblock and the class docblock "Contacts are addressed by email address…");
+    - give each controller a tag (Contacts, Lists, Tags, Custom fields, Segments, Events, Account).
 2. **The `{email}` path parameter:** document it as an email address that should be URL-encoded and is matched case-insensitively. Check `Contact::normalizeEmail` to confirm the case handling. `{list}` and `{segment}` are integer IDs.
 3. **`ContactController@upsert` body:** describe it with body-parameter attributes that mirror `ContactRules::rules()` exactly:
-   - `email` comes from the path, so leave it out of the body;
-   - `first_name`, `last_name`: string|null, max 255;
-   - `status`: enum of `ContactStatus` values;
-   - `custom_fields`: object, keys defined per workspace; see `GET /custom-fields`;
-   - `tags`: string[], max 50, each max 100;
-   - `lists`: int[] of list IDs;
-   - `resubscribe`: bool.
+    - `email` comes from the path, so leave it out of the body;
+    - `first_name`, `last_name`: string|null, max 255;
+    - `status`: enum of `ContactStatus` values;
+    - `custom_fields`: object, keys defined per workspace; see `GET /custom-fields`;
+    - `tags`: string[], max 50, each max 100;
+    - `lists`: int[] of list IDs;
+    - `resubscribe`: bool.
 
-   Document the 200-versus-201 behaviour (`created`) from the controller body, and the `resubscribe` rule from plan 007.
+    Document the 200-versus-201 behaviour (`created`) from the controller body, and the `resubscribe` rule from plan 007.
+
 4. **`CustomFieldController@store` body:** mirror `CustomFieldRules::forCreate()`.
 5. **Response shapes:** add a response annotation for each of these, mirroring the exact array the code builds:
-   - `TagController@index`, `SegmentController@index` / `show`, `MeController`, `CustomFieldController@index` / `store`;
-   - `EventController@store` (202) and `EventController@index`;
-   - `ContactController@archive`, `ContactListController@destroy`, `addContacts` and `removeContacts`.
+    - `TagController@index`, `SegmentController@index` / `show`, `MeController`, `CustomFieldController@index` / `store`;
+    - `EventController@store` (202) and `EventController@index`;
+    - `ContactController@archive`, `ContactListController@destroy`, `addContacts` and `removeContacts`.
 6. **`custom_fields` in `ContactResource`:** a docblock or attribute that makes it `object` with `additionalProperties: true`.
 7. **Pagination:** check that the cursor-paginated endpoints (`GET contacts`, `GET segments/{segment}/contacts`) show `per_page` (1–500, default 100), `cursor`, and the `links`/`meta` envelope.
 
@@ -207,26 +210,28 @@ Commit 2.
 ### Step 5: Serve the spec and a docs page from the package
 
 1. **Config.** Add to `packages/core/config/marketing.php`, next to `api_prefix`:
-   ```php
-   'api_docs' => [
-       'enabled' => (bool) env('MARKETING_API_DOCS', true),
-   ],
-   ```
-   The spec describes open-source code, so it isn't secret, and it defaults to on. Operators can turn it off.
+    ```php
+    'api_docs' => [
+        'enabled' => (bool) env('MARKETING_API_DOCS', true),
+    ],
+    ```
+    The spec describes open-source code, so it isn't secret, and it defaults to on. Operators can turn it off.
 2. **Controller.** Create `src/Http/Controllers/ApiDocsController.php`:
-   - `spec()`: read `__DIR__.'/../../../docs/openapi.json'`, decode it, set `servers` to `[['url' => url(config('marketing.api_prefix'))]]`, and return it as JSON with `Cache-Control: public, max-age=3600`. If the file is missing, return 404. Don't throw.
-   - `page()`: return the `marketing::api-docs` view.
+    - `spec()`: read `__DIR__.'/../../../docs/openapi.json'`, decode it, set `servers` to `[['url' => url(config('marketing.api_prefix'))]]`, and return it as JSON with `Cache-Control: public, max-age=3600`. If the file is missing, return 404. Don't throw.
+    - `page()`: return the `marketing::api-docs` view.
 3. **View.** Create `resources/views/api-docs.blade.php`. It's a standalone HTML page that loads a viewer from a pinned CDN URL with an exact version, pointed at the spec route. Use Scalar (`@scalar/api-reference`) or Redoc, and record which in the report.
-   - It must **not** use Inertia or the host app's layout, so it works in any install.
-   - Add `$this->loadViewsFrom(__DIR__.'/../resources/views', 'marketing');` in the service provider. Check that the `marketing` view namespace isn't already used by the host app (`grep -rn "marketing::" resources app`).
+    - It must **not** use Inertia or the host app's layout, so it works in any install.
+    - Add `$this->loadViewsFrom(__DIR__.'/../resources/views', 'marketing');` in the service provider. Check that the `marketing` view namespace isn't already used by the host app (`grep -rn "marketing::" resources app`).
 4. **Routes.** In `registerRoutes()`, when `config('marketing.api_docs.enabled')` is true, register these **outside** the token-authenticated group, under the same prefix and `marketing.api.` name prefix, with the `api` middleware and a plain `throttle:60,1`:
-   - `GET {prefix}/openapi.json` → `spec`, named `marketing.api.docs.spec`;
-   - `GET {prefix}/docs` → `page`, named `marketing.api.docs`.
+    - `GET {prefix}/openapi.json` → `spec`, named `marketing.api.docs.spec`;
+    - `GET {prefix}/docs` → `page`, named `marketing.api.docs`.
 
-   Make sure Step 2's route filter (names starting `marketing.api.`) doesn't document these two. Exclude `marketing.api.docs*` explicitly.
+    Make sure Step 2's route filter (names starting `marketing.api.`) doesn't document these two. Exclude `marketing.api.docs*` explicitly.
+
 5. **Security headers.** Plan 021 added security headers; check for a CSP. If there is one and it blocks the CDN viewer on the docs page, relax it for that route only, and say so in the report. If it can only be relaxed globally, STOP.
 
 **Verify:**
+
 - In the host app (Herd), `GET /api/v1/openapi.json` returns the spec with `servers[0].url` equal to `APP_URL` + `/api/v1`.
 - `/api/v1/docs` renders, and "Try it" with a real token can call `GET /me`.
 
@@ -247,19 +252,19 @@ Run the core tests, the host tests, PHPStan and Pint.
 ### Step 7: CI drift check, packaging and docs
 
 1. **CI.** In `.github/workflows/tests.yml` job `core-mysql`, after "Install core dependencies", add:
-   ```yaml
-   - name: API spec is up to date
-     working-directory: packages/core
-     run: |
-       vendor/bin/testbench scramble:export --path=docs/openapi.json
-       git diff --exit-code docs/openapi.json || (echo "::error::Run 'vendor/bin/testbench scramble:export --path=docs/openapi.json' in packages/core and commit the result." && exit 1)
-   ```
-   If the export needs a database, move the step after the MySQL service is ready and give it the same env as the Pest step.
+    ```yaml
+    - name: API spec is up to date
+      working-directory: packages/core
+      run: |
+          vendor/bin/testbench scramble:export --path=docs/openapi.json
+          git diff --exit-code docs/openapi.json || (echo "::error::Run 'vendor/bin/testbench scramble:export --path=docs/openapi.json' in packages/core and commit the result." && exit 1)
+    ```
+    If the export needs a database, move the step after the MySQL service is ready and give it the same env as the Pest step.
 2. **Packaging.** In `packages/core/.gitattributes` (create it if needed), add `/workbench export-ignore` and `/testbench.yaml export-ignore`. **Keep `docs/` shipped.**
 3. **`DEPLOYING.md`.** Add a short "API docs" section covering:
-   - the docs are at `{APP_URL}/api/v1/docs` and the raw spec at `/api/v1/openapi.json`;
-   - `MARKETING_API_DOCS=false` turns them off;
-   - the spec can be imported into Postman, Insomnia or Bruno.
+    - the docs are at `{APP_URL}/api/v1/docs` and the raw spec at `/api/v1/openapi.json`;
+    - `MARKETING_API_DOCS=false` turns them off;
+    - the spec can be imported into Postman, Insomnia or Bruno.
 4. **Contributing note.** Next to the existing developer notes (find where they live; if there's no obvious place, put it in the report), add: "Changing an API endpoint? Re-export the spec: `cd packages/core && vendor/bin/testbench scramble:export --path=docs/openapi.json`."
 
 Commit 4.
