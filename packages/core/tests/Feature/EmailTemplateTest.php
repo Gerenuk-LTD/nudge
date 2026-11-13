@@ -105,6 +105,7 @@ test('a campaign cannot start from an unknown template or one from another works
     expect(Campaign::count())->toBe(0);
 })->with([
     'unknown starter' => ['starter:missing'],
+    'removed starter' => ['starter:letter'],
     'nonsense' => ['saved:abc'],
     'another workspace' => [function () {
         $this->createOwner('Globex');

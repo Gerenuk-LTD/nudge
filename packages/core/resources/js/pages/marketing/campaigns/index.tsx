@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, Send } from 'lucide-react';
 import { useState } from 'react';
 import CampaignController from '@/actions/Gerenuk/Marketing/Http/Controllers/CampaignController';
 import InputError from '@/components/input-error';
@@ -21,6 +21,7 @@ import {
 } from '@/routes/marketing/campaigns';
 import { CampaignStatusBadge } from '@marketing/components/campaign-status-badge';
 import { byId, DataTable } from '@marketing/components/data-table';
+import { EmptyState } from '@marketing/components/empty-state';
 import { PageBody, PageHeader } from '@marketing/components/page-header';
 import { Pagination } from '@marketing/components/pagination';
 import {
@@ -168,6 +169,10 @@ export default function CampaignsIndex({
         },
     ];
 
+    const filtered = Boolean(table.get('search') || table.get('status'));
+    const nothingYet =
+        !filtered && upcoming.length === 0 && campaigns.total === 0;
+
     return (
         <>
             <Head title="Campaigns" />
@@ -179,57 +184,70 @@ export default function CampaignsIndex({
                     actions={canCreate && <NewCampaign />}
                 />
 
-                {(upcoming.length > 0 || canCreate) && (
-                    <section className="space-y-3">
-                        <h2 className="text-base font-semibold">In progress</h2>
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            {upcoming.map((campaign) => (
-                                <UpcomingCard
-                                    key={campaign.id}
-                                    campaign={campaign}
-                                    editable={canCreate}
-                                />
-                            ))}
-                            {canCreate && upcoming.length < 4 && (
-                                <NewCampaign variant="card" />
-                            )}
+                {nothingYet ? (
+                    <EmptyState
+                        icon={Send}
+                        title="No campaigns yet"
+                        description="A campaign is a one-off email to a list, a segment or everyone. Start from a template and send it now or schedule it."
+                        actions={canCreate && <NewCampaign />}
+                    />
+                ) : (
+                    <>
+                        {(upcoming.length > 0 || canCreate) && (
+                            <section className="space-y-3">
+                                <h2 className="text-base font-semibold">
+                                    In progress
+                                </h2>
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                    {upcoming.map((campaign) => (
+                                        <UpcomingCard
+                                            key={campaign.id}
+                                            campaign={campaign}
+                                            editable={canCreate}
+                                        />
+                                    ))}
+                                    {canCreate && upcoming.length < 4 && (
+                                        <NewCampaign variant="card" />
+                                    )}
+                                </div>
+                            </section>
+                        )}
+
+                        <h2 className="text-base font-semibold">Sent</h2>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <TableSearch
+                                value={table.get('search')}
+                                onSearch={(search) => table.update({ search })}
+                                placeholder="Search name or subject"
+                            />
+                            <FacetedFilter
+                                title="Status"
+                                options={STATUSES}
+                                selected={table.values('status')}
+                                onChange={(status) => table.update({ status })}
+                            />
+                            <ResetFilters
+                                active={table.values('status').length > 0}
+                                onReset={() => table.update({ status: null })}
+                            />
                         </div>
-                    </section>
+
+                        <DataTable
+                            columns={columns}
+                            data={campaigns.data}
+                            getRowId={byId}
+                            emptyMessage={
+                                table.get('search') || table.get('status')
+                                    ? 'No campaigns match these filters.'
+                                    : 'Nothing sent yet. Campaigns appear here once they go out.'
+                            }
+                            sort={table.sort}
+                        />
+
+                        <Pagination page={campaigns} query={table} />
+                    </>
                 )}
-
-                <h2 className="text-base font-semibold">Sent</h2>
-
-                <div className="flex flex-wrap items-center gap-2">
-                    <TableSearch
-                        value={table.get('search')}
-                        onSearch={(search) => table.update({ search })}
-                        placeholder="Search name or subject"
-                    />
-                    <FacetedFilter
-                        title="Status"
-                        options={STATUSES}
-                        selected={table.values('status')}
-                        onChange={(status) => table.update({ status })}
-                    />
-                    <ResetFilters
-                        active={table.values('status').length > 0}
-                        onReset={() => table.update({ status: null })}
-                    />
-                </div>
-
-                <DataTable
-                    columns={columns}
-                    data={campaigns.data}
-                    getRowId={byId}
-                    emptyMessage={
-                        table.get('search') || table.get('status')
-                            ? 'No campaigns match these filters.'
-                            : 'Nothing sent yet. Campaigns appear here once they go out.'
-                    }
-                    sort={table.sort}
-                />
-
-                <Pagination page={campaigns} query={table} />
             </PageBody>
         </>
     );

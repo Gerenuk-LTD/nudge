@@ -182,6 +182,16 @@ export function segmentStarters(fields: SegmentField[]): SegmentStarter[] {
                 value: 90,
             },
         ),
+        starter(
+            'quiet',
+            'Gone quiet',
+            "Hasn't opened an email in the last 90 days",
+            {
+                field: 'activity:opened',
+                operator: 'not_in_last_days',
+                value: 90,
+            },
+        ),
         ...(tag
             ? [
                   starter(

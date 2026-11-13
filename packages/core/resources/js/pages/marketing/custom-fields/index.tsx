@@ -82,6 +82,7 @@ const fieldTypes: Record<
 const STARTERS: NewField[] = [
     { label: 'Company', key: 'company', type: 'text' },
     { label: 'Plan', key: 'plan', type: 'text' },
+    { label: 'Country', key: 'country', type: 'text' },
     { label: 'Birthday', key: 'birthday', type: 'date' },
     { label: 'Lifetime value', key: 'lifetime_value', type: 'number' },
     { label: 'VIP', key: 'vip', type: 'boolean' },

@@ -20,7 +20,6 @@ class StarterTemplates
             'simple' => ['name' => __('Simple'), 'description' => __('A greeting, your message and the footer.'), 'editor' => EmailEditor::BLOCKS],
             'newsletter' => ['name' => __('Newsletter'), 'description' => __('A header and a few short stories with links.'), 'editor' => EmailEditor::BLOCKS],
             'announcement' => ['name' => __('Announcement'), 'description' => __('One centred message with a button.'), 'editor' => EmailEditor::BLOCKS],
-            'letter' => ['name' => __('Personal letter'), 'description' => __('Plain text that reads like a note from a person.'), 'editor' => EmailEditor::BLOCKS],
             'custom' => ['name' => __('Custom HTML'), 'description' => __('Write the email in HTML yourself.'), 'editor' => EmailEditor::HTML],
         ];
     }
