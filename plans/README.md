@@ -271,7 +271,7 @@ Covered component reuse, mobile layout (375px), and card surfaces in both themes
 - The provider test may echo SMTP connection errors (`ProviderController.php`). Not re-verified in this reconcile; check before planning. S.
 - Docs: no README for `packages/core` (integration contract, peer deps, required `auth.user` shared prop). `AGENTS.md` is gitignored, so the core/host boundary rule isn't written down anywhere committed.
 - Tech debt: `campaigns/edit.tsx` is now 1935 lines; TS enum unions are copied from PHP by hand (`packages/core/resources/js/types.ts`); web/API contact-list validation is duplicated.
-- Deferred from round 4 (still open): pending email until verified; validating automation steps on save; CSP with nonces; contact erasure; tokens defaulting to "never expires" (`CreateApiToken.php:19`, `?CarbonInterface $expiresAt = null`); email asset quota/EXIF; explicit `auth.user` allowlist; contact data visible to custom roles without `contacts.view`; re-approval when a segment changes; the last-owner race; DSN fragments in stack traces.
+- Deferred from round 4 (still open): pending email until verified; validating automation steps on save; CSP with nonces; contact erasure; tokens defaulting to "never expires" (`CreateApiToken.php:19`, `?CarbonInterface $expiresAt = null`); email asset quota/EXIF; explicit `auth.user` allowlist; contact data visible to custom roles without `contacts.view`; re-approval when a segment changes; the last-owner race; DSN fragments in stack traces. Round 6 re-verified three of these and took them over: re-approval (round 6 item 1), contact data without `contacts.view` (item 6) and the last-owner race (item 9).
 
 **Retired by reconcile (fixed in passing by later plans):**
 
@@ -320,3 +320,117 @@ Not planned yet. The maintainer will choose when to plan these. The advisor reco
     - It needs a contact time zone field fed by imports, the API or forms, so it pairs with 1.
 
 Considered and not suggested: more automation step types. send, wait, condition, update contact, webhook and exit cover the common flows.
+
+## Round 6: security audit (2026-11-14, against `0455a90`)
+
+Not planned yet. The maintainer will choose when to plan these. The audit covered code changed since round 4 (`a86033c`): campaign variables, the engagement and campaign segment fields, resend to non-openers, pause, event idempotency, automation approval, the served API docs, and first-run setup. It also re-checked round 4's deferred items and ran `composer audit` and `npm audit`. It ran three tracks: new features (injection and tenancy), authorization, and host auth and hardening. The advisor checked each finding below against the code.
+
+- **Sound:** everything added since round 4 is safe against injection and keeps workspaces apart:
+    - Variables are escaped once, and the subject's CR/LF can't add headers.
+    - Campaign segment IDs are workspace-scoped, and day counts are bounded.
+    - Pause is a signed POST that accepts only 30 or 90 days.
+    - Idempotency keys are unique per workspace.
+    - The docs page escapes its output, and its CDN script is SRI-pinned.
+    - The setup token is compared with `hash_equals`, and an empty one refuses web setup.
+    - Invitations are hashed, single-use and bound to their email.
+    - Provider secrets are never sent to the browser.
+    - Duplicate and resend copies are never pre-approved.
+- **Not audited:** areas round 4 found sound that haven't changed (webhook signature parsing, the import parser, XSS in the React views); infrastructure and web-server config; frontend dependencies beyond `npm audit` (clean).
+
+**Recommended order:** 5 before 2, because the framework bump fixes host-poisoned URLs at the Symfony level and 2 then pins the host in the app. 4 before 1, because both change automation approval and 1 builds on 4's fingerprint. The rest are independent. The advisor suggests 1–5 first, plus 7 if strangers can sign up to the install.
+
+1. **Editing a segment after approval changes who an approved campaign or automation reaches** (High; M; high confidence). Supersedes round 4's deferred "re-approval when a segment changes".
+    - Evidence:
+        - `SegmentController.php:61` updates the definition and never touches approval.
+        - `CampaignAudience.php:32` resolves the live segment at send time.
+        - The only approval resets are `CampaignController.php:153` (campaign fields) and `AutomationController.php:135`.
+        - `AutomationApproval::fingerprint` hashes the trigger's `segment_id`, not the segment's definition.
+    - Scenario: approval is required. The default Editor role has `segments.manage` and `campaigns.send` but not `campaigns.approve`. An approver approves a campaign aimed at a 40-contact segment. The Editor widens the segment to everyone, then schedules it (or schedules it first, then edits the segment before the send time).
+    - Direction:
+        - When a non-approver changes a segment's definition, withdraw approval from the draft and scheduled campaigns that use it, and return scheduled ones to Draft with a notice.
+        - Pause approved "segment entered" automations that use it, the same way non-approver automation edits do.
+        - `PrepareCampaign` re-checks approval as a backstop.
+        - An approver's own edit keeps approvals, matching `AutomationController`.
+    - Also fold in: Approve applies to whatever version is current when clicked (`CampaignController.php:270-274`). Optionally send the version the approver saw (`updated_at`) and refuse if it has changed.
+2. **Password-reset links (and the API docs' base URL) take their host from the request** (High, depending on how it's deployed; S; high confidence).
+    - Evidence:
+        - `bootstrap/app.php` has no `trustHosts()`, and nothing calls `URL::forceRootUrl`.
+        - Laravel's `ResetPassword::resetUrl` (`vendor/laravel/framework/src/Illuminate/Auth/Notifications/ResetPassword.php:96`) uses `url(...)` and is sent within the request, not queued.
+        - `ApiDocsController.php:25` sets `servers[0].url` from `url()`, with `Cache-Control: public, max-age=3600`.
+        - Workspace invitations are queued (`WorkspaceInvitation implements ShouldQueue`), so their links use `APP_URL`, and tracking links use `app.url`.
+    - Scenario: on a server whose default vhost passes any Host through, an attacker asks for a reset for the victim's email with `Host: evil.example`. The reset token lands at the attacker's host, and the account is taken over.
+    - Direction:
+        - `$middleware->trustHosts()` (defaults to the `APP_URL` host).
+        - Force the root URL from `app.url` outside local.
+        - Consider a `TRUSTED_PROXIES` env var so `X-Forwarded-*` and HSTS work behind a proxy without editing code (`DEPLOYING.md:57-70` currently asks operators to edit `bootstrap/app.php`).
+        - A test with a spoofed Host for the reset mail and the spec.
+3. **An attacker can add a passkey or 2FA to an unverified account, and it survives the real owner's reset** (Medium–High; S–M; high confidence).
+    - Evidence:
+        - `app/Support/Registration.php:57` lets invite mode register any email with a pending invitation, without the token.
+        - Fortify's passkey and 2FA routes (`vendor/laravel/fortify/routes/routes.php`, the `$passkeyAuthMiddleware` and `$twoFactorMiddleware` arrays) need only `auth`, not `verified`.
+        - `vendor/laravel/fortify/src/Actions/CompletePasswordReset.php` only rotates the remember token.
+        - Passkey login (`vendor/laravel/passkeys/src/Http/Controllers/PasskeyLoginController.php:62`) logs straight in.
+    - Scenario: the attacker registers as a pending invitee and adds a passkey while unverified. The invitee resets the password, verifies and accepts. The attacker then signs in with the passkey and holds the invitee's role.
+    - Direction:
+        - Refuse passkey and 2FA setup until the email is verified.
+        - On first verification, delete passkeys and 2FA created before it.
+        - Consider binding invite-mode sign-up to the invitation link's token.
+        - `app:set-password` should be able to clear passkeys and 2FA.
+4. **Automation approval ignores structure, and the webhook step sends contact data without `contacts.view`** (Medium; S; high confidence).
+    - Evidence:
+        - `AutomationApproval.php:9-36` hashes only the trigger and email-step fields, sorted by id. Its docblock says "Delays, conditions, webhooks and the name don't change what recipients see".
+        - `StepRunner.php:148-158` posts each enrolled contact's `email`, names and `custom_fields` to the step's URL.
+    - Scenario: a non-approver removes a condition, moves an email into another branch, turns on `allow_reentry`, or adds a webhook step. With an include-existing segment trigger, the webhook step sends the whole contact base to their server, and the automation stays live and approved.
+    - Direction:
+        - Fingerprint the whole definition (step types, branches, conditions, webhook URLs, update-contact steps, `allow_reentry`), leaving out only names and canvas positions.
+        - Saving or running a webhook step requires `contacts.view`.
+        - Update-contact steps require `contacts.manage`.
+5. **Framework security updates** (Medium; S; high confidence).
+    - Evidence: `composer audit --locked` lists 12 advisories:
+        - Laravel v13.39.0 (CVE-2026-128083; fixed in ≥ 13.40.0);
+        - Symfony 8.1.9 http-foundation, http-kernel, routing, http-client, serializer and yaml (all fixed in ≥ 8.1.11).
+    - Relevant here: "Generated URLs can point to a host chosen by the client", `private_ranges` proxy trust, and the serializer (used by `web-auth/webauthn-lib` for passkeys). Laravel's Concurrency facade isn't used, and core's `WebhookCaller` does its own IP pinning, not `NoPrivateNetworkHttpClient`.
+    - Direction: an approved dependency change like 016 (`composer update laravel/framework "symfony/*" --with-dependencies`), with the full suites.
+6. **Members without `contacts.view` still see contact data** (Medium, custom roles only; M; high confidence). Still open from round 4's deferred list.
+    - Evidence:
+        - `CampaignController.php:370-381`: the `recipients` prop returns email and error, and can be searched by email. It's gated only by `campaigns.view`, and also works for automation emails.
+        - `SegmentController.php:89`: `segments/preview` returns id, email and names for any definition, so it can be used to probe the contact table.
+        - `ImportController.php:73-91, 107, 164-167`: raw rows of any member's pending import, and failed-row emails.
+        - `SuppressionController.php:112`: the toast names the deleted email.
+    - Direction: return emails only with `contacts.view` (otherwise counts only), and scope import previews to the uploader or `contacts.view`.
+7. **In invite or closed mode, users with no membership can start their own tenant** (Medium on shared installs; S–M; high confidence).
+    - Evidence: `WorkspaceController.php:46-48` returns `null` (a new account) for any user with no membership. That covers revoked invitees and members removed from every workspace. `SetCurrentWorkspace.php:29-30` sends them to `workspaces.create`.
+    - Direction: core asks the host whether a user may start an account, through a contract or config hook, since registration mode is host-only. In invite and closed mode, only existing account owners (and the first user) may.
+    - Related option (rejected as a finding below): make `REGISTRATION_MODE=open` imply `MARKETING_ALLOW_PRIVATE_SMTP_HOSTS=false`.
+8. **The key-rotation guide doesn't contain a leaked key** (Medium, only after a leak; S–M; medium-high confidence).
+    - Evidence:
+        - `DEPLOYING.md:116-122` is framed for "may have leaked" but tells operators to keep the old key in `APP_PREVIOUS_KEYS`.
+        - Laravel checks signed URLs against previous keys too (`RoutingServiceProvider.php:81`), so email-verification links stay forgeable.
+        - Stored provider credentials stay encrypted under the old key.
+    - Direction: separate routine rotation from leak response. For a leak: re-encrypt provider credentials and webhook secrets with a command, then drop the old key. Accept that old unsubscribe links break, or keep a separate unsubscribe-signing key (plan 025's rotation design).
+9. **Last-owner race** (Low–Medium; S; high confidence). Still open from round 4.
+    - Evidence: `EnsureWorkspaceKeepsAnOwner.php:15-19` is a plain `exists()` with no lock. It is called outside the transaction in `ChangeMemberRole.php:15-19` and `RemoveMember.php:15-17`, and in a loop before a separate transaction in `RemoveUserFromWorkspaces.php:68-82`.
+    - Direction: lock the workspace row (`lockForUpdate`) and re-check inside the same transaction.
+10. **Small hardening bundle** (Low; S; high confidence):
+    - A long variable value can push the filled subject, subject B or preheader past 255 characters, so the real send fails on MySQL, while the test send still works because it isn't saved. Evidence: `CampaignRequest.php:49` lets each value be 1000 characters; `PrepareCampaign.php:95-97` writes 255-character snapshot columns. The checklist should check filled lengths.
+    - Variable names have no length cap (`CampaignRequest.php:41`).
+    - `setup_token` isn't in `dontFlash`, so a failed sign-up saves it to the session.
+    - Narrowing a role (`RoleController.php:56-63`) doesn't revoke invitations its members sent for higher roles. `ChangeMemberRole.php:51-57` does.
+    - `POST events` `properties` has no size or depth limit (`EventController.php:46`; already listed above).
+    - `SecurityHeaders` is only appended to `web`, so the `api` group (including the docs page) and `routes/public.php` get no nosniff or X-Frame-Options.
+
+Not security, found in passing: the Campaign segment field only accepts the latest 100 sent broadcasts (`SegmentFieldCatalog.php:52-54`). Resend to non-openers fails for older campaigns, and saved segments that refer to them become invalid (S).
+
+**Considered and rejected (round 6):**
+
+- Private SMTP hosts allowed by default (`config/marketing.php:87`): a deliberate self-hosting default from 014, documented in `DEPLOYING.md:49`. After 023 it only matters for strangers in open mode; see item 7's related option.
+- Variable values whose merge tags get filled in per recipient: only editors set values, who can already write those tags, and the output is escaped.
+- Approval switched on doesn't affect already-scheduled campaigns or active automations: arguably by design; turning it on is a policy going forward.
+- Resend to non-openers creates a segment without `segments.manage`: the definition is fixed and validated, and the copy starts as an unapproved draft.
+- Contact merge-tag data changing approved content: that's how personalisation works.
+- Login throttle per email and IP only: Fortify's default. A per-account limit would let anyone lock a victim out.
+- `app:set-password --password=`: a convenience option. It prompts when left out and never echoes.
+- Unsafe config fallbacks (`SESSION_ENCRYPT`, `LOG_LEVEL`, `MAIL_MAILER`): `.env.example` sets safe values.
+- Email change doesn't end other sessions: it already needs the current password, and the old address is notified.
+- DSN fragments in stack traces (`ProviderTransports.php:19`): production PHP sets `zend.exception_ignore_args=On`. Still listed in the round 4 deferred list.
+- Still deferred, not re-planned: a CSP with nonces, and API tokens defaulting to never expiring (`CreateApiToken.php:19`).
