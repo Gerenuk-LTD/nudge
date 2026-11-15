@@ -11,6 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,6 +56,7 @@ class ApiRequestController extends Controller
             'ip' => $apiRequest->ip,
             'user_agent' => $apiRequest->user_agent,
             'route' => $apiRequest->route,
+            'request_id' => $apiRequest->publicId(),
             'bodies_missing' => $missing,
         ]);
     }
@@ -62,12 +64,12 @@ class ApiRequestController extends Controller
     /**
      * One page of the log, newest first, filtered from the query string. Bodies are left out.
      *
-     * @return LengthAwarePaginator<int, array{id: int, token_name: string, method: string, path: string, status: int, duration_ms: int, created_at: string|null}>
+     * @return LengthAwarePaginator<int, array{id: int, token_name: string, method: string, path: string, status: int, duration_ms: int, request_id: string|null, created_at: string|null}>
      */
     private function requests(Request $request): LengthAwarePaginator
     {
         $search = trim($request->string('search')->toString());
-        $byId = preg_match('/^#?\d+$/', $search) === 1;
+        $byId = preg_match('/^(req_)?[0-9a-hjkmnp-tv-z]{26}$/i', $search) === 1;
 
         $query = ApiRequest::query()
             // A request looked up by its ID is found whatever its age.
@@ -100,7 +102,7 @@ class ApiRequestController extends Controller
             });
 
         if ($byId) {
-            $query->whereKey((int) ltrim($search, '#'));
+            $query->where('ulid', Str::of($search)->lower()->after('req_')->toString());
         } else {
             TableQuery::search($query, $search, ['path']);
         }
@@ -108,10 +110,11 @@ class ApiRequestController extends Controller
         return $query
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate(TableQuery::perPage($request, 50), ['id', 'created_at', 'token_name', 'method', 'path', 'status', 'duration_ms'])
+            ->paginate(TableQuery::perPage($request), ['id', 'ulid', 'created_at', 'token_name', 'method', 'path', 'status', 'duration_ms'])
             ->withQueryString()
             ->through(fn (ApiRequest $row) => [
                 ...$row->only(['id', 'token_name', 'method', 'path', 'status', 'duration_ms']),
+                'request_id' => $row->publicId(),
                 'created_at' => $row->created_at?->toIso8601String(),
             ]);
     }

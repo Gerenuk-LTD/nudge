@@ -33,6 +33,7 @@ import type { Paginated } from '@marketing/types';
 
 type LogRow = {
     id: number;
+    request_id: string | null;
     created_at: string | null;
     token_name: string;
     method: string;
@@ -42,6 +43,7 @@ type LogRow = {
 };
 
 type Detail = {
+    request_id: string | null;
     request_body: string | null;
     response_body: string | null;
     ip: string | null;
@@ -242,7 +244,7 @@ export default function ApiLog({
                     <TableSearch
                         value={query.get('search')}
                         onSearch={(search) => query.update({ search })}
-                        placeholder="Search paths or #ID"
+                        placeholder="Search paths or request ID"
                     />
                     <FacetedFilter
                         title="Token"
@@ -285,12 +287,17 @@ export default function ApiLog({
                             })
                         }
                     />
+                    {requests && requests.total > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                            {requests.from}–{requests.to} of {requests.total}
+                        </span>
+                    )}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="ml-auto size-8"
+                                className="size-8"
                                 aria-label="Refresh"
                                 disabled={refreshing}
                                 onClick={() =>
@@ -397,14 +404,18 @@ function RequestDetail({
                 </div>
             )}
             <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                Request #{id}
-                <CopyButton
-                    text={String(id)}
-                    label="Copy request ID"
-                    className="size-5"
-                />
+                {detail.request_id && (
+                    <>
+                        <span className="font-mono">{detail.request_id}</span>
+                        <CopyButton
+                            text={detail.request_id}
+                            label="Copy request ID"
+                            className="size-5"
+                        />
+                    </>
+                )}
                 {[detail.ip, detail.user_agent].filter(Boolean).length > 0 &&
-                    ` · ${[detail.ip, detail.user_agent].filter(Boolean).join(' · ')}`}
+                    `${detail.request_id ? ' · ' : ''}${[detail.ip, detail.user_agent].filter(Boolean).join(' · ')}`}
             </p>
         </div>
     );

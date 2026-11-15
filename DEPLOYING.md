@@ -109,7 +109,7 @@ Set `MARKETING_API_DOCS=false` to turn both off. The docs page loads its viewer 
 
 ## API log
 
-Every request made with an API token is recorded under Workspace settings, API log: time, token, endpoint, status and duration. Request and response bodies, which hold contact data, are kept only for writes and errors, cut to 16 KB, and cleared after `MARKETING_API_LOG_BODY_DAYS` days (default 7). The rows themselves are deleted after `MARKETING_API_LOG_DAYS` days (default 30), by a daily job in the scheduler. The token itself is never stored. Set `MARKETING_API_LOG=false` to turn the log off.
+Every request made with an API token is recorded under Workspace settings, API log: time, token, endpoint, status and duration. Request and response bodies, which hold contact data, are kept only for writes and errors, cut to 16 KB, and cleared after `MARKETING_API_LOG_BODY_DAYS` days (default 7). The rows themselves are deleted after `MARKETING_API_LOG_DAYS` days (default 30), by a daily job in the scheduler. The token itself is never stored. Every logged API response carries an `X-Request-Id` header (`req_…`), and pasting it into the log's search box finds that request. Set `MARKETING_API_LOG=false` to turn the log off.
 
 ## Keys
 

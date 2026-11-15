@@ -20,11 +20,14 @@ class LogApiRequest
     public function handle(Request $request, Closure $next): Response
     {
         $started = hrtime(true);
+        $ulid = strtolower((string) Str::ulid());
         $response = $next($request);
+
+        $response->headers->set('X-Request-Id', 'req_'.$ulid);
 
         if (config('marketing.api_log.enabled')) {
             try {
-                $this->record($request, $response, (int) ((hrtime(true) - $started) / 1_000_000));
+                $this->record($request, $response, $ulid, (int) ((hrtime(true) - $started) / 1_000_000));
             } catch (Throwable $exception) {
                 report($exception);
             }
@@ -33,7 +36,7 @@ class LogApiRequest
         return $response;
     }
 
-    private function record(Request $request, Response $response, int $durationMs): void
+    private function record(Request $request, Response $response, string $ulid, int $durationMs): void
     {
         $token = $request->attributes->get('marketing_api_token');
 
@@ -46,6 +49,7 @@ class LogApiRequest
         $agent = $request->userAgent();
 
         ApiRequest::create([
+            'ulid' => $ulid,
             'workspace_id' => $token->workspace_id,
             'api_token_id' => $token->id,
             'token_name' => $token->name,

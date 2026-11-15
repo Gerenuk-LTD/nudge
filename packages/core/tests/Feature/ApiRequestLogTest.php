@@ -225,14 +225,47 @@ test('failed reads keep their bodies', function () {
         ->and($row->response_body)->toContain('Not found');
 });
 
-test('a request can be found by its ID', function () {
+test('a request can be found by its request ID', function () {
     logRow($this->workspace);
     $second = logRow($this->workspace, ['path' => '/api/v1/me', 'created_at' => now()->subDays(10)]);
 
-    foreach (["#{$second->id}", (string) $second->id] as $search) {
+    foreach (["req_{$second->ulid}", $second->ulid, strtoupper("req_{$second->ulid}")] as $search) {
         $this->actingAs($this->owner)->get(route('marketing.api-log.index', ['search' => $search]))
             ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload
                 ->where('requests.total', 1)
-                ->where('requests.data.0.id', $second->id)));
+                ->where('requests.data.0.id', $second->id)
+                ->where('requests.data.0.request_id', $second->publicId())));
     }
+
+    $this->actingAs($this->owner)->get(route('marketing.api-log.index', ['search' => (string) $second->id]))
+        ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload->where('requests.total', 0)));
+});
+
+test('API responses carry the logged request ID', function () {
+    $token = logToken($this->workspace, $this->owner);
+
+    $header = putContact($token)->assertSuccessful()->headers->get('X-Request-Id');
+
+    expect($header)->toMatch('/^req_[0-9a-z]{26}$/')
+        ->and(ApiRequest::sole()->publicId())->toBe($header);
+});
+
+test('the header is sent even when logging is off', function () {
+    config(['marketing.api_log.enabled' => false]);
+    $token = logToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.me'))->assertSuccessful()->assertHeader('X-Request-Id');
+
+    expect(ApiRequest::withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('the log shows 25 rows a page', function () {
+    foreach (range(1, 30) as $ignored) {
+        logRow($this->workspace);
+    }
+
+    $this->actingAs($this->owner)->get(route('marketing.api-log.index'))
+        ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload
+            ->where('requests.per_page', 25)
+            ->has('requests.data', 25)));
 });
