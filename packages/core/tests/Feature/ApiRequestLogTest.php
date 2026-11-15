@@ -158,9 +158,23 @@ test('the log can be filtered', function () {
     $expectTotal(['token' => (string) $tokenA->id], 1);
     $expectTotal(['status' => 'client_error'], 1);
     $expectTotal(['status' => 'success,server_error'], 2);
-    $expectTotal(['route' => 'POST events'], 1);
-    $expectTotal(['route' => 'GET contacts/{email}'], 1);
+    $expectTotal(['route' => 'events'], 1);
+    $expectTotal(['route' => 'contacts/{email}'], 2);
+    $expectTotal(['method' => 'POST'], 1);
+    $expectTotal(['method' => 'get,post'], 2);
+    $expectTotal(['method' => 'GET', 'route' => 'contacts/{email}'], 1);
     $expectTotal(['period' => '30d'], 4);
+});
+
+test("the method and endpoint options come from this workspace's log", function () {
+    logRow($this->workspace, ['method' => 'PATCH', 'route' => 'contacts/{email}']);
+    logRow($this->workspace, ['method' => 'GET', 'route' => 'me']);
+    logRow($this->workspace, ['method' => 'PATCH', 'route' => 'me']);
+
+    $this->actingAs($this->owner)->get(route('marketing.api-log.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('methods', [['value' => 'GET', 'label' => 'GET'], ['value' => 'PATCH', 'label' => 'PATCH']])
+            ->where('routes', [['value' => 'contacts/{email}', 'label' => 'contacts/{email}'], ['value' => 'me', 'label' => 'me']]));
 });
 
 test('pruning clears old bodies and deletes old rows', function () {

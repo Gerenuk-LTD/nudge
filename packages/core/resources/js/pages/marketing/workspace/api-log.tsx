@@ -142,19 +142,23 @@ const columns: ColumnDef<LogRow>[] = [
         cell: ({ row }) => row.original.token_name,
     },
     {
-        id: 'request',
-        header: 'Request',
+        id: 'method',
+        header: 'Method',
         cell: ({ row }) => (
-            <span className="flex items-center gap-2 font-mono text-xs">
-                <span className="rounded border px-1.5 py-0.5 font-medium">
-                    {row.original.method}
-                </span>
-                <span
-                    className="max-w-72 truncate sm:max-w-md"
-                    title={row.original.path}
-                >
-                    {row.original.path}
-                </span>
+            <span className="rounded border px-1.5 py-0.5 font-mono text-xs font-medium">
+                {row.original.method}
+            </span>
+        ),
+    },
+    {
+        id: 'request',
+        header: 'Path',
+        cell: ({ row }) => (
+            <span
+                className="block max-w-72 truncate font-mono text-xs sm:max-w-md"
+                title={row.original.path}
+            >
+                {row.original.path}
             </span>
         ),
     },
@@ -208,12 +212,14 @@ export default function ApiLog({
     requests,
     tokens,
     routes,
+    methods,
     retentionDays,
     bodyRetentionDays,
 }: {
     requests?: Paginated<LogRow>;
     tokens: FacetOption[];
     routes: FacetOption[];
+    methods: FacetOption[];
     retentionDays: number;
     bodyRetentionDays: number;
 }) {
@@ -222,7 +228,7 @@ export default function ApiLog({
     const filtered =
         query.get('search') !== '' ||
         query.get('period') !== '' ||
-        ['token', 'route', 'status'].some(
+        ['token', 'method', 'route', 'status'].some(
             (key) => query.values(key).length > 0,
         );
 
@@ -253,6 +259,12 @@ export default function ApiLog({
                         onChange={(token) => query.update({ token })}
                     />
                     <FacetedFilter
+                        title="Method"
+                        options={methods}
+                        selected={query.values('method')}
+                        onChange={(method) => query.update({ method })}
+                    />
+                    <FacetedFilter
                         title="Endpoint"
                         options={routes}
                         selected={query.values('route')}
@@ -281,6 +293,7 @@ export default function ApiLog({
                             query.update({
                                 search: null,
                                 token: null,
+                                method: null,
                                 route: null,
                                 status: null,
                                 period: null,
@@ -302,7 +315,7 @@ export default function ApiLog({
                                 disabled={refreshing}
                                 onClick={() =>
                                     router.reload({
-                                        only: ['requests', 'routes'],
+                                        only: ['requests', 'routes', 'methods'],
                                         onStart: () => setRefreshing(true),
                                         onFinish: () => setRefreshing(false),
                                     })
@@ -318,7 +331,7 @@ export default function ApiLog({
                 </div>
 
                 {!requests ? (
-                    <DataTableSkeleton columns={5} />
+                    <DataTableSkeleton columns={6} />
                 ) : requests.total === 0 && !filtered ? (
                     <EmptyState
                         icon={ScrollText}

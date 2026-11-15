@@ -11,6 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,13 +27,29 @@ class ApiRequestController extends Controller
             'tokens' => ApiToken::query()->orderBy('name')->get(['id', 'name'])
                 ->map(fn (ApiToken $token) => ['value' => (string) $token->id, 'label' => $token->name])
                 ->values(),
-            'routes' => ApiRequest::query()->select('method', 'route')->distinct()->orderBy('route')->orderBy('method')->get()
-                ->map(fn (ApiRequest $row) => ['value' => $row->method.' '.$row->route, 'label' => $row->method.' '.$row->route])
+            'routes' => ApiRequest::query()->whereNotNull('route')->distinct()->orderBy('route')->pluck('route')
+                ->map(fn (string $route) => ['value' => $route, 'label' => $route])
                 ->values(),
+            'methods' => $this->methods(),
             'retentionDays' => (int) config('marketing.api_log.retention_days'),
             'bodyRetentionDays' => (int) config('marketing.api_log.body_retention_days'),
             'canViewBodies' => $this->canViewBodies($request),
         ]);
+    }
+
+    /**
+     * The methods in this workspace's log: the common ones in their usual order, then any others alphabetically.
+     *
+     * @return Collection<int, array{value: string, label: string}>
+     */
+    private function methods(): Collection
+    {
+        $order = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
+        return ApiRequest::query()->distinct()->pluck('method')
+            ->sortBy(fn (string $method) => [in_array($method, $order, true) ? array_search($method, $order, true) : count($order), $method])
+            ->map(fn (string $method) => ['value' => $method, 'label' => $method])
+            ->values();
     }
 
     /**
@@ -79,15 +96,8 @@ class ApiRequestController extends Controller
                 default => now()->subDays(7),
             }))
             ->when(TableQuery::values($request->input('token')), fn (Builder $query, array $ids) => $query->whereIn('api_token_id', $ids))
-            ->when(TableQuery::values($request->input('route')), function (Builder $query, array $routes): void {
-                $query->where(function (Builder $query) use ($routes): void {
-                    foreach ($routes as $value) {
-                        [$method, $route] = array_pad(explode(' ', $value, 2), 2, '');
-
-                        $query->orWhere(fn (Builder $query) => $query->where('method', $method)->where('route', $route));
-                    }
-                });
-            })
+            ->when(TableQuery::values($request->input('route')), fn (Builder $query, array $routes) => $query->whereIn('route', $routes))
+            ->when(TableQuery::values($request->input('method')), fn (Builder $query, array $methods) => $query->whereIn('method', array_map('strtoupper', $methods)))
             ->when(TableQuery::values($request->input('status')), function (Builder $query, array $statuses): void {
                 $ranges = array_intersect_key(
                     ['success' => [200, 399], 'client_error' => [400, 499], 'server_error' => [500, 599]],
