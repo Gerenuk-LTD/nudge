@@ -77,12 +77,12 @@ DB::transaction(function () use ($membership, $role): void {
 
 From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`composer.bat`), unless they say "root".
 
-| Purpose        | Command                                                  | Expected                                      |
-| -------------- | -------------------------------------------------------- | --------------------------------------------- |
-| Core tests     | `vendor/bin/pest`                                        | all pass, except the 7 Windows-only SES tests |
-| One file       | `vendor/bin/pest tests/Feature/MembersAndRolesTest.php`  | all pass                                      |
-| PHPStan (root) | `vendor/bin/phpstan analyse --memory-limit=1G`           | 0 errors                                      |
-| Pint (root)    | `vendor/bin/pint --test packages/core`                   | passes                                        |
+| Purpose        | Command                                                 | Expected                                      |
+| -------------- | ------------------------------------------------------- | --------------------------------------------- |
+| Core tests     | `vendor/bin/pest`                                       | all pass, except the 7 Windows-only SES tests |
+| One file       | `vendor/bin/pest tests/Feature/MembersAndRolesTest.php` | all pass                                      |
+| PHPStan (root) | `vendor/bin/phpstan analyse --memory-limit=1G`          | 0 errors                                      |
+| Pint (root)    | `vendor/bin/pint --test packages/core`                  | passes                                        |
 
 ## Scope
 

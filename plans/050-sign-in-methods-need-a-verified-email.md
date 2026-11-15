@@ -66,13 +66,13 @@ $middleware->web(append: [
 
 From the repo root (Git Bash: `php.bat`).
 
-| Purpose    | Command                                                         | Expected   |
-| ---------- | --------------------------------------------------------------- | ---------- |
-| Host tests | `php artisan test --compact`                                    | all pass   |
-| One file   | `php artisan test --compact tests/Feature/Auth/SignInMethodsNeedVerificationTest.php` | all pass |
-| Routes     | `php artisan route:list --name=passkey`                         | lists the passkey routes |
-| PHPStan    | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress`    | 0 errors   |
-| Pint       | `vendor/bin/pint --test`                                        | passes     |
+| Purpose    | Command                                                                               | Expected                 |
+| ---------- | ------------------------------------------------------------------------------------- | ------------------------ |
+| Host tests | `php artisan test --compact`                                                          | all pass                 |
+| One file   | `php artisan test --compact tests/Feature/Auth/SignInMethodsNeedVerificationTest.php` | all pass                 |
+| Routes     | `php artisan route:list --name=passkey`                                               | lists the passkey routes |
+| PHPStan    | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress`                          | 0 errors                 |
+| Pint       | `vendor/bin/pint --test`                                                              | passes                   |
 
 ## Scope
 

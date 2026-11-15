@@ -118,12 +118,12 @@ Invitation::withoutGlobalScopes()
 
 From the repo root (Git Bash: `php.bat`/`composer.bat`).
 
-| Purpose         | Command                                                       | Expected                                      |
-| --------------- | ------------------------------------------------------------- | --------------------------------------------- |
-| Host tests      | `php artisan test --compact`                                  | all pass                                      |
-| Core tests      | `cd packages/core && vendor/bin/pest`                         | all pass, except the 7 Windows-only SES tests |
-| PHPStan         | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress`  | 0 errors                                      |
-| Pint            | `vendor/bin/pint --test`                                      | passes                                        |
+| Purpose    | Command                                                      | Expected                                      |
+| ---------- | ------------------------------------------------------------ | --------------------------------------------- |
+| Host tests | `php artisan test --compact`                                 | all pass                                      |
+| Core tests | `cd packages/core && vendor/bin/pest`                        | all pass, except the 7 Windows-only SES tests |
+| PHPStan    | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress` | 0 errors                                      |
+| Pint       | `vendor/bin/pint --test`                                     | passes                                        |
 
 ## Scope
 

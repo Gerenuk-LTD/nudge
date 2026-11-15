@@ -42,16 +42,16 @@ Not relevant, but fixed anyway: Laravel's Concurrency-facade advisory (the app d
 
 From the repo root. In Git Bash on Windows, use `composer.bat` and `php.bat`; in PowerShell, `composer` and `php`.
 
-| Purpose    | Command                                                                        | Expected                                                                                     |
-| ---------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Update     | `composer update laravel/framework "symfony/*" --with-dependencies --no-interaction` | updates only Laravel, Symfony and packages Laravel requires                         |
-| Audit      | `composer audit --locked`                                                      | "No security vulnerability advisories found"                                                 |
-| Core deps  | `composer --working-dir=packages/core update laravel/framework "symfony/*" --with-dependencies --no-interaction` | core's local vendor matches, so its tests run against the fix |
-| Host tests | `php artisan test --compact`                                                   | all pass                                                                                     |
-| Core tests | `cd packages/core && vendor/bin/pest --compact`                                | all pass except the 7 "Amazon SES through SNS" tests that fail on Windows (OpenSSL config)   |
-| PHPStan    | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress`                   | 0 errors                                                                                     |
-| Pint       | `vendor/bin/pint --test`                                                       | passes                                                                                       |
-| Frontend   | `npm run check` and `npm run types:check`                                      | pass (Wayfinder output may regenerate; it's gitignored)                                      |
+| Purpose    | Command                                                                                                          | Expected                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Update     | `composer update laravel/framework "symfony/*" --with-dependencies --no-interaction`                             | updates only Laravel, Symfony and packages Laravel requires                                |
+| Audit      | `composer audit --locked`                                                                                        | "No security vulnerability advisories found"                                               |
+| Core deps  | `composer --working-dir=packages/core update laravel/framework "symfony/*" --with-dependencies --no-interaction` | core's local vendor matches, so its tests run against the fix                              |
+| Host tests | `php artisan test --compact`                                                                                     | all pass                                                                                   |
+| Core tests | `cd packages/core && vendor/bin/pest --compact`                                                                  | all pass except the 7 "Amazon SES through SNS" tests that fail on Windows (OpenSSL config) |
+| PHPStan    | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress`                                                     | 0 errors                                                                                   |
+| Pint       | `vendor/bin/pint --test`                                                                                         | passes                                                                                     |
+| Frontend   | `npm run check` and `npm run types:check`                                                                        | pass (Wayfinder output may regenerate; it's gitignored)                                    |
 
 ## Scope
 

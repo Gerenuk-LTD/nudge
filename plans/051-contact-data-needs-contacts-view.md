@@ -81,13 +81,13 @@ Inertia::flash('toast', ['type' => 'success', 'message' => __(':email can be ema
 
 From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`composer.bat`), unless they say "root".
 
-| Purpose         | Command                                                     | Expected                                      |
-| --------------- | ----------------------------------------------------------- | --------------------------------------------- |
-| Core tests      | `vendor/bin/pest`                                           | all pass, except the 7 Windows-only SES tests |
-| One file        | `vendor/bin/pest tests/Feature/ContactDataPermissionTest.php` | all pass                                    |
-| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`              | 0 errors                                      |
-| Pint (root)     | `vendor/bin/pint --test packages/core`                      | passes                                        |
-| Frontend (root) | `npm run check` and `npm run types:check`                   | pass                                          |
+| Purpose         | Command                                                       | Expected                                      |
+| --------------- | ------------------------------------------------------------- | --------------------------------------------- |
+| Core tests      | `vendor/bin/pest`                                             | all pass, except the 7 Windows-only SES tests |
+| One file        | `vendor/bin/pest tests/Feature/ContactDataPermissionTest.php` | all pass                                      |
+| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`                | 0 errors                                      |
+| Pint (root)     | `vendor/bin/pint --test packages/core`                        | passes                                        |
+| Frontend (root) | `npm run check` and `npm run types:check`                     | pass                                          |
 
 ## Scope
 

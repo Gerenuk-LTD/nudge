@@ -36,30 +36,31 @@ The maintainer's other app, Rallyboard, does this well. They shared three screen
 **The reference (Rallyboard), described:**
 
 1. **Role list** (a card titled "Roles", with the text "Built-in roles can't be renamed or deleted, but you can change what Admin, Member, and Viewer are allowed to do. Create a custom role for anything else."). It has one row per role. Each row shows:
-   - the role name in semibold, with a small outlined monospaced uppercase `BUILT-IN` badge;
-   - a one-line description below it ("Runs the team day to day: members, roles, activities, scoreboards, and scores.");
-   - a muted line, "0 members · 16 of 25 permissions";
-   - a `⋯` menu on the right, except on the Owner row.
+    - the role name in semibold, with a small outlined monospaced uppercase `BUILT-IN` badge;
+    - a one-line description below it ("Runs the team day to day: members, roles, activities, scoreboards, and scores.");
+    - a muted line, "0 members · 16 of 25 permissions";
+    - a `⋯` menu on the right, except on the Owner row.
 
-   After the built-ins comes "No custom roles yet." (or the custom roles).
+    After the built-ins comes "No custom roles yet." (or the custom roles).
+
 2. **Compare roles** (a second card, "What each role can do. Expand a group to see its individual permissions."). It has an "Expand all" button, then a table:
-   - The first column is "PERMISSION" (uppercase, muted, monospaced), followed by one column per role.
-   - Each group row has a chevron and the group name in semibold. For each role it shows "All", "None" or "4 of 5".
-   - Expanding a group shows its permissions as rows: a label, a muted description, then a check mark (primary colour) or a muted dash for each role.
+    - The first column is "PERMISSION" (uppercase, muted, monospaced), followed by one column per role.
+    - Each group row has a chevron and the group name in semibold. For each role it shows "All", "None" or "4 of 5".
+    - Expanding a group shows its permissions as rows: a label, a muted description, then a check mark (primary colour) or a muted dash for each role.
 3. **Edit dialog** (titled "Edit 'Admin' permissions", with the text "Built-in roles keep their name, but you can choose what they're allowed to do. Changes apply straight away to 0 members with this role."):
-   - A single-column, scrolling list, with a header row per group: a checkbox for the whole group, a small uppercase monospaced name and "0 of 5" on the right.
-   - Under each header, its permissions: a checkbox, the label, and a muted description.
-   - A footer: "No changes" on the left (or "3 changes"), then "Cancel" and "Save changes".
+    - A single-column, scrolling list, with a header row per group: a checkbox for the whole group, a small uppercase monospaced name and "0 of 5" on the right.
+    - Under each header, its permissions: a checkbox, the label, and a muted description.
+    - A footer: "No changes" on the left (or "3 changes"), then "Cancel" and "Save changes".
 
 ## Decisions made in this plan (the maintainer can override before execution)
 
 1. **Built-in roles** are the four that every workspace starts with: Owner, Admin, Editor, Viewer. A new nullable `roles.key` column (`owner`, `admin`, `editor`, `viewer`) marks them; custom roles have `key = null`. Built-in roles:
-   - **can't be renamed** (422 "Built-in roles keep their name.");
-   - **can't be deleted** (403);
-   - **can have their permissions changed**, except Owner, whose permissions still can't be changed.
+    - **can't be renamed** (422 "Built-in roles keep their name.");
+    - **can't be deleted** (403);
+    - **can have their permissions changed**, except Owner, whose permissions still can't be changed.
 2. **Descriptions:** a new nullable `roles.description` column (max 255).
-   - Built-ins get fixed descriptions when the workspace is created, and the edit dialog doesn't show the field for them.
-   - Custom roles get an optional "Description" field in the dialog.
+    - Built-ins get fixed descriptions when the workspace is created, and the edit dialog doesn't show the field for them.
+    - Custom roles get an optional "Description" field in the dialog.
 3. **Permission labels and descriptions:** `Permission::label()` becomes a short name ("Send campaigns"), and a new `Permission::description()` explains what the permission covers. The texts are in Step 2. They're grounded in what each permission guards in `routes/web.php`.
 4. **Groups** stay as they are in `permission-picker.tsx`: Contacts, Campaigns, Automations, Sending, Workspace.
 5. **Permissions you don't hold:** in the roles dialog, they're shown but disabled. A tooltip says "You can't give out a permission you don't have." The server already refuses them, in `RoleController::validated()`. The API tokens dialog keeps its current behaviour: it only lists grantable permissions.
@@ -126,14 +127,14 @@ public static function defaultRoles(): array
 **`src/Http/Controllers/RoleController.php`**:
 
 - `index()` renders `marketing/workspace/roles` with:
-  - `roles`: `id`, `name`, `permissions` (all of them for the owner), `is_owner` and `members_count`, ordered by id;
-  - `permissions`: `{value, label}`.
+    - `roles`: `id`, `name`, `permissions` (all of them for the owner), `is_owner` and `members_count`, ordered by id;
+    - `permissions`: `{value, label}`.
 - `update()` aborts 403 for the owner role and for roles above the actor (`isWithin`), validates through `validated()`, then updates and narrows members' API tokens in a transaction.
 - `destroy()` aborts 403 for the owner role and for roles above the actor, and refuses (422) when the role has members.
 - `validated()`:
-  - checks `name` (required, max 50, unique per workspace) and `permissions` (present, array, valid enum values);
-  - de-duplicates the permissions;
-  - throws 422 "You can only give out permissions you have yourself." when a non-owner actor grants something they lack.
+    - checks `name` (required, max 50, unique per workspace) and `permissions` (present, array, valid enum values);
+    - de-duplicates the permissions;
+    - throws 422 "You can only give out permissions you have yourself." when a non-owner actor grants something they lack.
 - `actingRole()` returns the actor's role.
 
 **`resources/js/pages/marketing/workspace/roles.tsx`** (380 lines):
@@ -174,13 +175,13 @@ test('the owner role cannot be edited or deleted', function () {
 
 From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`composer.bat`), unless they say "root".
 
-| Purpose         | Command                                                     | Expected                                      |
-| --------------- | ----------------------------------------------------------- | --------------------------------------------- |
-| Core tests      | `vendor/bin/pest`                                           | all pass, except the 7 Windows-only SES tests |
-| One file        | `vendor/bin/pest tests/Feature/MembersAndRolesTest.php`     | all pass                                      |
-| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`              | 0 errors                                      |
-| Pint (root)     | `vendor/bin/pint --test packages/core`                      | passes                                        |
-| Frontend (root) | `npm run check`, `npm run types:check`, `npm run test`      | pass                                          |
+| Purpose         | Command                                                 | Expected                                      |
+| --------------- | ------------------------------------------------------- | --------------------------------------------- |
+| Core tests      | `vendor/bin/pest`                                       | all pass, except the 7 Windows-only SES tests |
+| One file        | `vendor/bin/pest tests/Feature/MembersAndRolesTest.php` | all pass                                      |
+| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`          | 0 errors                                      |
+| Pint (root)     | `vendor/bin/pint --test packages/core`                  | passes                                        |
+| Frontend (root) | `npm run check`, `npm run types:check`, `npm run test`  | pass                                          |
 
 ## Scope
 
@@ -260,23 +261,23 @@ Update the loop to `foreach (self::defaultRoles() as $key => $role)` and create 
 
 In `Permission`, replace `label()`'s texts and add `description()`:
 
-| Case                | `label()`            | `description()`                                                                                       |
-| ------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| `contacts.view`     | View contacts        | See contacts, lists, tags, custom fields, segments and suppressions.                                  |
-| `contacts.manage`   | Manage contacts      | Add, edit, archive and unsubscribe contacts, and edit lists, tags, custom fields and suppressions.    |
-| `contacts.import`   | Import contacts      | Upload CSV files of contacts and see past imports.                                                    |
-| `segments.manage`   | Manage segments      | Create, edit and delete segments.                                                                     |
-| `campaigns.view`    | View campaigns       | See campaigns, their reports and email templates.                                                     |
-| `campaigns.manage`  | Edit campaigns       | Create, edit, duplicate, test and delete draft campaigns, and manage email templates.                 |
-| `campaigns.send`    | Send campaigns       | Schedule, unschedule and cancel campaigns, and pick A/B test winners.                                 |
-| `campaigns.approve` | Approve campaigns    | Approve campaigns and automations when the workspace requires approval.                               |
-| `providers.manage`  | Manage sending       | Connect and test sending providers, and change sending settings.                                      |
-| `automations.view`  | View automations     | See automations and their reports.                                                                    |
-| `automations.manage`| Manage automations   | Create, edit, start, pause and delete automations.                                                    |
-| `members.manage`    | Manage members       | Invite people, remove members and change their roles.                                                 |
-| `roles.manage`      | Manage roles         | Create, edit and delete roles. Nobody can give out a permission they don't have.                      |
-| `api_tokens.manage` | Manage API tokens    | Create and revoke API tokens. A token can only do what its creator can.                               |
-| `workspace.manage`  | Rename workspace     | Change the workspace's name.                                                                          |
+| Case                 | `label()`          | `description()`                                                                                    |
+| -------------------- | ------------------ | -------------------------------------------------------------------------------------------------- |
+| `contacts.view`      | View contacts      | See contacts, lists, tags, custom fields, segments and suppressions.                               |
+| `contacts.manage`    | Manage contacts    | Add, edit, archive and unsubscribe contacts, and edit lists, tags, custom fields and suppressions. |
+| `contacts.import`    | Import contacts    | Upload CSV files of contacts and see past imports.                                                 |
+| `segments.manage`    | Manage segments    | Create, edit and delete segments.                                                                  |
+| `campaigns.view`     | View campaigns     | See campaigns, their reports and email templates.                                                  |
+| `campaigns.manage`   | Edit campaigns     | Create, edit, duplicate, test and delete draft campaigns, and manage email templates.              |
+| `campaigns.send`     | Send campaigns     | Schedule, unschedule and cancel campaigns, and pick A/B test winners.                              |
+| `campaigns.approve`  | Approve campaigns  | Approve campaigns and automations when the workspace requires approval.                            |
+| `providers.manage`   | Manage sending     | Connect and test sending providers, and change sending settings.                                   |
+| `automations.view`   | View automations   | See automations and their reports.                                                                 |
+| `automations.manage` | Manage automations | Create, edit, start, pause and delete automations.                                                 |
+| `members.manage`     | Manage members     | Invite people, remove members and change their roles.                                              |
+| `roles.manage`       | Manage roles       | Create, edit and delete roles. Nobody can give out a permission they don't have.                   |
+| `api_tokens.manage`  | Manage API tokens  | Create and revoke API tokens. A token can only do what its creator can.                            |
+| `workspace.manage`   | Rename workspace   | Change the workspace's name.                                                                       |
 
 Before writing them, check each description against `routes/web.php`: grep for `can:<permission>` and read the routes in that group. If a description promises something the routes don't support, or misses something major, correct the text and list the change in your report. If plan 056 has landed, add "and see the API log" to `api_tokens.manage`.
 
@@ -287,15 +288,15 @@ Add a `description` key next to `label` in both `RoleController::index()` and `A
 ### Step 3: Built-in rules in `RoleController`
 
 - `index()`:
-  - Order built-ins first in `defaultRoles()` order (owner, admin, editor, viewer), then custom roles by name. Sort the collection in PHP using `array_keys(CreateWorkspace::defaultRoles())` for the built-in order.
-  - Add `key`, `description` and `is_builtin` to each role.
-  - Add the prop `grantable`: every permission value for an owner actor, otherwise the actor role's `permissions`.
+    - Order built-ins first in `defaultRoles()` order (owner, admin, editor, viewer), then custom roles by name. Sort the collection in PHP using `array_keys(CreateWorkspace::defaultRoles())` for the built-in order.
+    - Add `key`, `description` and `is_builtin` to each role.
+    - Add the prop `grantable`: every permission value for an owner actor, otherwise the actor role's `permissions`.
 - `update()`: after the existing checks, if `$role->isBuiltIn()` and the submitted `name` differs from `$role->name`, throw `ValidationException::withMessages(['name' => __('Built-in roles keep their name.')])`.
 - `destroy()`: `abort_if($role->isBuiltIn(), 403);` next to the owner check.
 - `validated()`:
-  - accept `description` (`['nullable', 'string', 'max:255']`) and return it;
-  - for built-in roles, return the role's existing description instead of the submitted one;
-  - update the return type's docblock.
+    - accept `description` (`['nullable', 'string', 'max:255']`) and return it;
+    - for built-in roles, return the role's existing description instead of the submitted one;
+    - update the return type's docblock.
 - `store()` is unchanged apart from saving the description. New roles never get a `key`.
 
 **Verify**: `vendor/bin/pest tests/Feature/MembersAndRolesTest.php` → all pass.
@@ -306,10 +307,10 @@ Create `resources/js/lib/permissions.ts`:
 
 1. Move `GROUPS`, `NEEDS`, `permissionSummary`, `PERMISSION_AREAS` and `permissionLevels` there from `permission-picker.tsx`. Export `GROUPS` as `PERMISSION_GROUPS`. Re-export the moved functions from `permission-picker.tsx`, so `api-tokens.tsx` keeps working unchanged, or update its imports; either is fine.
 2. Add these pure functions:
-   - `togglePermission(value: Permission[], permission: Permission, on: boolean, order: Permission[]): Permission[]`: the current `set` logic from the picker (ticking adds what it needs; unticking a needed permission removes its dependents), returning the result in `order`.
-   - `toggleGroup(value, permissions, on, order)`: the current `setGroup` logic, plus: turning a group on also adds what each permission needs.
-   - `groupCoverage(permissions: Permission[], group: Permission[]): { granted: number; total: number; label: 'All' | 'None' | string }`. The label is "All" when everything is granted, "None" when nothing is, and otherwise "`granted` of `total`".
-   - `countChanges(before: Permission[], after: Permission[]): number`: the size of the symmetric difference.
+    - `togglePermission(value: Permission[], permission: Permission, on: boolean, order: Permission[]): Permission[]`: the current `set` logic from the picker (ticking adds what it needs; unticking a needed permission removes its dependents), returning the result in `order`.
+    - `toggleGroup(value, permissions, on, order)`: the current `setGroup` logic, plus: turning a group on also adds what each permission needs.
+    - `groupCoverage(permissions: Permission[], group: Permission[]): { granted: number; total: number; label: 'All' | 'None' | string }`. The label is "All" when everything is granted, "None" when nothing is, and otherwise "`granted` of `total`".
+    - `countChanges(before: Permission[], after: Permission[]): number`: the size of the symmetric difference.
 
 `resources/js/lib/permissions.test.ts` covers:
 
@@ -338,12 +339,13 @@ Rewrite `PermissionPicker` (same props, plus an optional `grantable?: Permission
 
 - A single-column list (no border around the whole list), grouped by `PERMISSION_GROUPS`, skipping permissions not in `options`, as now.
 - **Group header row**:
-  - a `Checkbox` with `checked` set to `true`, `false` or `'indeterminate'` from `groupCoverage`, which calls `toggleGroup`;
-  - the group title in `text-xs font-medium uppercase tracking-wide text-muted-foreground font-mono`;
-  - "`granted` of `total`" on the right, in `text-xs text-muted-foreground tabular-nums`;
-  - a bottom border, `pb-2`.
+    - a `Checkbox` with `checked` set to `true`, `false` or `'indeterminate'` from `groupCoverage`, which calls `toggleGroup`;
+    - the group title in `text-xs font-medium uppercase tracking-wide text-muted-foreground font-mono`;
+    - "`granted` of `total`" on the right, in `text-xs text-muted-foreground tabular-nums`;
+    - a bottom border, `pb-2`.
 
-  Wrap the checkbox and title in a `<label>` so clicking the title toggles the group.
+    Wrap the checkbox and title in a `<label>` so clicking the title toggles the group.
+
 - **Permission rows** under the header (`grid gap-3 py-3`): a `Checkbox` (`mt-0.5`), then the label (`text-sm`) with the description under it (`text-xs text-muted-foreground`). The whole row is a `<label>`. They call `togglePermission`.
 - **Not grantable**: when `grantable` is given and a permission isn't in it, its checkbox is `disabled` and wrapped in a `Tooltip` with "You can't give out a permission you don't have." Copy the Tooltip usage from `components/sending-status.tsx`. A group's checkbox only toggles the grantable permissions in it.
 - Remove the "Allow all / Allow none" buttons; the group checkbox replaces them.
@@ -359,27 +361,27 @@ Rewrite `roles.tsx` as two cards, matching the reference. Use the same card shel
 **Card 1, "Roles":**
 
 - **Header:**
-  - title "Roles";
-  - description "Built-in roles can't be renamed or deleted, but you can change what Admin, Editor and Viewer are allowed to do. Create a custom role for anything else.";
-  - a "New role" button on the right, as now.
+    - title "Roles";
+    - description "Built-in roles can't be renamed or deleted, but you can change what Admin, Editor and Viewer are allowed to do. Create a custom role for anything else.";
+    - a "New role" button on the right, as now.
 - **Role rows**, one per role (`divide-y`), each `px-5 py-4 sm:px-6`:
-  - Line 1: the name in `font-medium`, with the `Crown` icon for Owner as now. Built-ins get a `Badge` with `variant="outline"` and `className="font-mono text-[10px] uppercase tracking-wide"` reading "Built-in".
-  - Line 2: the description in `text-sm text-muted-foreground`, when there is one.
-  - Line 3: `text-xs text-muted-foreground`, reading "`n` member(s) · `granted` of `total` permissions". `total` is `permissions.length` from the props; Owner shows `total` of `total`.
-  - The `RoleMenu` on the right:
-    - **Edit** for every role except Owner. The label is "Edit permissions" for built-ins and "Edit" for custom roles.
-    - **Duplicate** for every role.
-    - **Delete** only for custom roles, still disabled when the role has members.
+    - Line 1: the name in `font-medium`, with the `Crown` icon for Owner as now. Built-ins get a `Badge` with `variant="outline"` and `className="font-mono text-[10px] uppercase tracking-wide"` reading "Built-in".
+    - Line 2: the description in `text-sm text-muted-foreground`, when there is one.
+    - Line 3: `text-xs text-muted-foreground`, reading "`n` member(s) · `granted` of `total` permissions". `total` is `permissions.length` from the props; Owner shows `total` of `total`.
+    - The `RoleMenu` on the right:
+        - **Edit** for every role except Owner. The label is "Edit permissions" for built-ins and "Edit" for custom roles.
+        - **Duplicate** for every role.
+        - **Delete** only for custom roles, still disabled when the role has members.
 - After the built-ins: if there are no custom roles, a muted row reading "No custom roles yet."
 
 **Card 2, "Compare roles"** (header description "What each role can do. Expand a group to see its individual permissions."):
 
 - Below the header, a `Button variant="outline" size="sm"` toggling "Expand all" / "Collapse all". Keep the expanded group titles in `useState<Set<string>>`.
 - A table in `overflow-x-auto`:
-  - Header row (`bg-muted/40`): "Permission" (`font-mono text-xs uppercase tracking-wide text-muted-foreground`), then one centred column per role with its name.
-  - The first column is `sticky left-0 bg-card` (`bg-muted/40` in the header), with a right border and `min-w-64`, so it stays visible when many roles scroll sideways.
-  - Per group: a row with a chevron button (`ChevronRight`, rotated 90° when open, `aria-expanded`, `aria-controls`) and the group title in `font-medium`. Each role's cell shows `groupCoverage(role.permissions, group).label`, with "None" muted.
-  - When a group is open: one row per permission. The first cell is indented to line up with the group title, showing the label (`text-sm`) and the description (`text-xs text-muted-foreground`). Each role's cell shows a `Check` icon (`size-4 text-primary`, with `<span className="sr-only">Allowed</span>`) or a muted `—` (with `<span className="sr-only">Not allowed</span>`).
+    - Header row (`bg-muted/40`): "Permission" (`font-mono text-xs uppercase tracking-wide text-muted-foreground`), then one centred column per role with its name.
+    - The first column is `sticky left-0 bg-card` (`bg-muted/40` in the header), with a right border and `min-w-64`, so it stays visible when many roles scroll sideways.
+    - Per group: a row with a chevron button (`ChevronRight`, rotated 90° when open, `aria-expanded`, `aria-controls`) and the group title in `font-medium`. Each role's cell shows `groupCoverage(role.permissions, group).label`, with "None" muted.
+    - When a group is open: one row per permission. The first cell is indented to line up with the group title, showing the label (`text-sm`) and the description (`text-xs text-muted-foreground`). Each role's cell shows a `Check` icon (`size-4 text-primary`, with `<span className="sr-only">Allowed</span>`) or a muted `—` (with `<span className="sr-only">Not allowed</span>`).
 - Remove the old area-columns table, `AccessLevel`, and the footer note about owners.
 
 **Dialog (`RoleForm`):**
@@ -387,14 +389,14 @@ Rewrite `roles.tsx` as two cards, matching the reference. Use the same card shel
 - **Title:** "Edit '{name}' permissions" for a built-in role, "Edit {name}" for an existing custom role, "New role" otherwise.
 - **Description:** for built-ins, "Built-in roles keep their name, but you can choose what they're allowed to do." Then, for any existing role, "Changes apply straight away to {n} member(s) with this role." New roles get "Choose what people with this role can do in the workspace."
 - **Fields:**
-  - Custom and new roles: the name field, as now, and a new "Description" field (`Input`, optional, max 255, placeholder "What this role is for"), with errors shown by `InputError`.
-  - Built-ins: neither field. Still submit `name: role.name` and `description: role.description`.
+    - Custom and new roles: the name field, as now, and a new "Description" field (`Input`, optional, max 255, placeholder "What this role is for"), with errors shown by `InputError`.
+    - Built-ins: neither field. Still submit `name: role.name` and `description: role.description`.
 - **Layout:** the header and footer stay put, and the permissions scroll. Make `DialogContent` `flex max-h-[calc(100svh-2rem)] flex-col sm:max-w-xl`, and put the picker in a `min-h-0 flex-1 overflow-y-auto` area. Remove `overflow-y-auto` from `DialogContent` itself.
 - **Picker:** `PermissionPicker` with `grantable={grantable}`.
 - **Footer:**
-  - on the left, a muted change count: "No changes" or "{n} change(s)", from `countChanges(initial, current)` plus 1 each if the name or description changed;
-  - on the right, "Cancel" and "Save changes" ("Create role" for a new role);
-  - "Save changes" is disabled while processing, or when an existing role has no changes.
+    - on the left, a muted change count: "No changes" or "{n} change(s)", from `countChanges(initial, current)` plus 1 each if the name or description changed;
+    - on the right, "Cancel" and "Save changes" ("Create role" for a new role);
+    - "Save changes" is disabled while processing, or when an existing role has no changes.
 - **Duplicating** copies the description too.
 
 Per the project's UI rule, explanations of controls go in tooltips, not notes under fields. The descriptions under permissions are content, not hints, so they stay.

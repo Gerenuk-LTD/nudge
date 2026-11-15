@@ -111,13 +111,13 @@ $schedule->call(new PruneStaleImports)->daily()->name('marketing:prune-stale-imp
 
 From `packages/core` (PowerShell: `php`/`composer`; Git Bash: `php.bat`/`composer.bat`), unless they say "root".
 
-| Purpose         | Command                                                   | Expected                                      |
-| --------------- | --------------------------------------------------------- | --------------------------------------------- |
-| Core tests      | `vendor/bin/pest`                                         | all pass, except the 7 Windows-only SES tests |
-| One file        | `vendor/bin/pest tests/Feature/ApiRequestLogTest.php`     | all pass                                      |
-| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`            | 0 errors                                      |
-| Pint (root)     | `vendor/bin/pint --test packages/core`                    | passes                                        |
-| Frontend (root) | `npm run check`, `npm run types:check`, `npm run test`    | pass                                          |
+| Purpose         | Command                                                | Expected                                      |
+| --------------- | ------------------------------------------------------ | --------------------------------------------- |
+| Core tests      | `vendor/bin/pest`                                      | all pass, except the 7 Windows-only SES tests |
+| One file        | `vendor/bin/pest tests/Feature/ApiRequestLogTest.php`  | all pass                                      |
+| PHPStan (root)  | `vendor/bin/phpstan analyse --memory-limit=1G`         | 0 errors                                      |
+| Pint (root)     | `vendor/bin/pint --test packages/core`                 | passes                                        |
+| Frontend (root) | `npm run check`, `npm run types:check`, `npm run test` | pass                                          |
 
 ## Scope
 
@@ -273,13 +273,15 @@ Use `ApiRequest::withoutGlobalScopes()` for both, and work in chunks (`->chunkBy
         - `period`: `24h`, `7d` (default) or `30d` → `created_at >= now()->sub...`;
         - `search` on `path` via `TableQuery::search`.
 
-      Each row: `id`, `created_at` (ISO), `token_name`, `method`, `path`, `status`, `duration_ms`. **No bodies.**
+        Each row: `id`, `created_at` (ISO), `token_name`, `method`, `path`, `status`, `duration_ms`. **No bodies.**
+
     - `tokens`: `ApiToken::query()->orderBy('name')->get(['id', 'name'])` as facet options `{ value: string(id), label: name }`.
     - `routes`: distinct `method` + `route` pairs from this workspace's log (`ApiRequest::query()->select('method', 'route')->distinct()->orderBy('route')->get()`), as `{ value: "PUT contacts/{email}", label: same }`.
     - `retentionDays` and `bodyRetentionDays`: from config.
     - `canViewBodies`: the user has `contacts.view` in the current workspace.
 
     Use `Inertia::defer` for `requests`, as the recipients table does.
+
 - `show(Request $request, ApiRequest $apiRequest): JsonResponse` returns `request_body`, `response_body`, `ip`, `user_agent`, `route`, and `bodies_missing`, one of:
     - `'hidden'`: the user lacks `contacts.view`. Return both bodies as null, even when they're stored. Check this first.
     - `'not_kept'`: a successful read (`GET`/`HEAD`, status < 400), whose bodies are never stored.
