@@ -162,7 +162,10 @@ const columns: ColumnDef<LogRow>[] = [
         cell: ({ row }) => (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <span tabIndex={0} className="flex items-center gap-2">
+                    <span
+                        tabIndex={0}
+                        className="inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium text-foreground tabular-nums ring-1 ring-border ring-inset"
+                    >
                         <span
                             aria-hidden
                             className={cn(
