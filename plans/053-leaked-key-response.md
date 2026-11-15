@@ -14,7 +14,7 @@
 
 ## Status
 
-- **Priority**: P2. Only matters after a leak, but then it matters a lot.
+- **Priority**: P2, **deferred until before release**. Until then, a leaked key means resetting the database and generating a new key. After release it matters a lot, and the tooling must exist before an incident.
 - **Effort**: S–M
 - **Risk**: LOW. Nothing changes until an operator runs the new command or sets the new variable.
 - **Depends on**: none

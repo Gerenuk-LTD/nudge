@@ -89,7 +89,7 @@ From the repo root (Git Bash: `php.bat`).
 
 - Vendor files, and Fortify's config.
 - Binding invite-mode sign-up to the invitation token. It's a larger flow change (the register page would need the token). With this plan the attack no longer works, because the attacker can't verify. Recorded as a follow-up.
-- Deleting existing passkeys or 2FA automatically. See Step 4.
+- Deleting or auditing existing passkeys or 2FA. The app isn't released, so there are none.
 - Disabling or deleting existing passkeys/2FA (`two-factor.disable`, `passkey.destroy`). Removing a sign-in method is always allowed.
 
 ## Git workflow
@@ -161,19 +161,13 @@ and print `Passkeys and two-factor authentication removed for [email].` Use the 
 
 **Verify**: `php artisan test --compact tests/Feature/SetPasswordCommandTest.php` → all pass.
 
-### Step 4: Docs and existing accounts
+### Step 4: Docs
 
 Add to `DEPLOYING.md`, in the section that mentions `app:set-password` if there is one (`grep -n "set-password" DEPLOYING.md`), otherwise next to "First run":
 
 - `php artisan app:set-password someone@example.com --clear-sign-in-methods` resets a locked-out user's password and removes their passkeys and two-factor authentication.
 
-Don't add an automatic cleanup. Before this release, an unverified account could add passkeys; an operator who wants to check can list accounts that have them while unverified. Put this one-liner in your report (not in the docs) for the maintainer:
-
-```sh
-php artisan tinker --execute="dump(App\Models\User::whereNull('email_verified_at')->where(fn (\$q) => \$q->whereHas('passkeys')->orWhereNotNull('two_factor_secret'))->pluck('email', 'id'))"
-```
-
-(It prints emails, so it's for the operator's terminal only.) Note that someone who changed their email and hasn't re-verified yet also shows up, legitimately.
+Don't add any cleanup or audit of existing accounts. The app isn't released, so there are none to check (refreshed 2026-11-15 at the maintainer's request).
 
 **Verify**: `grep -n "clear-sign-in-methods" DEPLOYING.md` → 1 match.
 

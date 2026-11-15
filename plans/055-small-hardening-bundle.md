@@ -8,7 +8,7 @@
 > a reviewer dispatched you and told you they maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 6982215..HEAD -- packages/core/src/Campaigns/CampaignChecklist.php packages/core/src/Http/Requests/CampaignRequest.php packages/core/src/Http/Controllers/RoleController.php packages/core/src/Http/Controllers/Api/EventController.php bootstrap/app.php`
+> `git diff --stat 6982215..HEAD -- packages/core/database/migrations/2026_10_29_000001_create_sending_tables.php packages/core/database/migrations/2026_10_30_000001_create_automation_tables.php packages/core/src/Http/Requests/CampaignRequest.php packages/core/src/Http/Controllers/RoleController.php packages/core/src/Http/Controllers/Api/EventController.php bootstrap/app.php`
 > If any of these changed, compare them with the "Current state" excerpts.
 > On a mismatch, STOP. Plans 047 and 050 add lines to `bootstrap/app.php`
 > (`trustHosts`, `trustProxies`, one middleware); that's expected.
@@ -26,7 +26,7 @@
 
 Six small gaps from the round 6 audit. None is serious alone:
 
-- **A.** A long variable value can push the filled subject, variant B subject or preheader past 255 characters. Test sends work (nothing is saved), but the real send fails when `PrepareCampaign` writes the 255-character snapshot columns on MySQL. The campaign gets stuck at preparation.
+- **A.** A long variable value can push the filled subject, variant B subject or preheader past 255 characters. Test sends work (nothing is saved), but the real send fails when `PrepareCampaign` writes the 255-character snapshot columns on MySQL. The campaign gets stuck at preparation. The fix widens the snapshot columns to `text`.
 - **B.** Variable names have no length limit.
 - **C.** The first-run `setup_token` isn't excluded from flashing, so a failed sign-up stores it in the session.
 - **D.** Narrowing a role doesn't revoke invitations its members sent for higher roles, though changing one member's role does.
@@ -45,16 +45,6 @@ Six small gaps from the round 6 audit. None is serious alone:
 
 The snapshot columns are `string` (255): `subject`, `preheader` (`packages/core/database/migrations/2026_10_29_000001_create_sending_tables.php:97-98`) and `subject_b` (`2026_10_30_000001_create_automation_tables.php:66`). `MergeTags::fill(string $template, array $values, bool $escapeHtml): string` fills variables only; per-recipient tags like `{{ first_name }}` are filled later at send time (they stay as tags, so they still count toward the length here, which is fine).
 
-`packages/core/src/Campaigns/CampaignChecklist.php::for()` returns a list of `new ChecklistItem($key, $label, $passed, $blocking, $message)`. Examples:
-
-```php
-new ChecklistItem('subject', 'Subject line written', filled($campaign->subject), true, 'Write a subject line.'),
-...
-new ChecklistItem('variables', 'Variables have values', $missing === [], true,
-    $missing === [] ? null : (string) __('Give these a value in Variables: :tags.', [...])),
-```
-
-`$values = $campaign->variables ?? [];` is already computed in `for()`.
 
 **B. `packages/core/src/Http/Requests/CampaignRequest.php:41`**, inside the `variables` closure:
 
@@ -112,7 +102,7 @@ Invitation::withoutGlobalScopes()
 
 **F. `bootstrap/app.php`**: `SecurityHeaders::class` is in `$middleware->web(append: [...])`. Core registers its other routes in `packages/core/src/MarketingServiceProvider.php::registerRoutes()`: `routes/public.php` with **no** middleware group, `routes/public-pages.php` with `web`, `routes/api.php` with `api`, and the docs routes with `api`. `app/Http/Middleware/SecurityHeaders.php` never overwrites a header the response already set.
 
-**Tests**: checklist tests in `packages/core/tests/Feature/SendingTest.php:339` ("the checklist flags merge tags that nothing will fill"); role tests in `packages/core/tests/Feature/MembersAndRolesTest.php`; event tests in `packages/core/tests/Feature/ApiTest.php` and `EventIdempotencyTest.php`; headers in `tests/Feature/SecurityHeadersTest.php` (host); registration in `tests/Feature/Auth/RegistrationTest.php`.
+**Tests**: preparation and checklist tests in `packages/core/tests/Feature/SendingTest.php:339` ("the checklist flags merge tags that nothing will fill"); role tests in `packages/core/tests/Feature/MembersAndRolesTest.php`; event tests in `packages/core/tests/Feature/ApiTest.php` and `EventIdempotencyTest.php`; headers in `tests/Feature/SecurityHeadersTest.php` (host); registration in `tests/Feature/Auth/RegistrationTest.php`.
 
 ## Commands
 
@@ -127,34 +117,32 @@ From the repo root (Git Bash: `php.bat`/`composer.bat`).
 
 ## Scope
 
-**In scope:** `CampaignChecklist.php`, `CampaignRequest.php`, `RoleController.php` (`update()` only), `Api/EventController.php` (the `properties` rule and its docs attributes), `packages/core/docs/openapi.json` (regenerated only), `bootstrap/app.php`, and the test files named in each part.
+**In scope:** the two migrations named in Part A (`campaign_snapshots` columns only), `CampaignRequest.php`, `RoleController.php` (`update()` only), `Api/EventController.php` (the `properties` rule and its docs attributes), `packages/core/docs/openapi.json` (regenerated only), `bootstrap/app.php`, and the test files named in each part.
 
-**Out of scope:** widening the snapshot columns (a migration; the checklist is the cheaper fix), the campaign editor UI (checklist items already show there), CSP headers, `SecurityHeaders` itself.
+**Out of scope:** `CampaignChecklist.php`, a new migration (edit the original ones; the app isn't released), the `campaigns` and `email_templates` columns, the campaign editor UI (checklist items already show there), CSP headers, `SecurityHeaders` itself.
 
 ## Git workflow
 
 - Branch off `dev`: `advisor/055-hardening-bundle`.
-- One commit per part, e.g. `fix(core): the checklist blocks subjects too long once filled`, each ending with the Co-Authored-By trailer you're given.
+- One commit per part, e.g. `fix(core): campaign snapshots fit subjects that grow once variables are filled`, each ending with the Co-Authored-By trailer you're given.
 - Don't push.
 
 ## Steps
 
-### Part A: Filled lengths
+### Part A: Widen the snapshot columns
 
-In `CampaignChecklist::for()`, compute the filled lengths with `mb_strlen(MergeTags::fill(..., $values, escapeHtml: false))` for the subject, the preheader (when not null) and variant B's subject (when A/B is on and it's filled). Add a **blocking** item after `variables`:
+The app isn't released, so change the original migrations in place instead of adding a new one or a checklist item. (Refreshed 2026-11-15: the maintainer chose this over the checklist warning; local databases get `php artisan migrate:fresh --seed`.)
 
-```php
-new ChecklistItem('lengths', 'Subject and preheader fit', $tooLong === [], true,
-    $tooLong === [] ? null : (string) __('With variables filled in, these are longer than 255 characters: :fields. Shorten them or their variables.', ['fields' => implode(', ', $tooLong)])),
-```
+1. `packages/core/database/migrations/2026_10_29_000001_create_sending_tables.php`, in `Schema::create('campaign_snapshots', ...)` (lines 97-98): change `$table->string('subject');` to `$table->text('subject');` and `$table->string('preheader')->nullable();` to `$table->text('preheader')->nullable();`.
+2. `packages/core/database/migrations/2026_10_30_000001_create_automation_tables.php:66`, in `Schema::table('campaign_snapshots', ...)`: change `$table->string('subject_b')->nullable()->after('subject');` to `$table->text('subject_b')->nullable()->after('subject');`.
 
-where `$tooLong` lists `'subject'`, `'variant B subject'` and `'preheader'` as applicable. Wrap the field labels in `__()` too.
+Change **only** the `campaign_snapshots` columns. The `campaigns` and `email_templates` columns stay `string`; `CampaignRequest` still limits what people type to 255. Only the filled-in snapshot can get longer. Don't touch the `down()` methods: `dropColumn` doesn't care about the type.
 
-Check the subject column length is 255 on MySQL (`string()` default). Use `mb_strlen`, because MySQL's `VARCHAR(255)` counts characters.
+Before editing, check that no other code depends on the snapshot being at most 255: `grep -rn "255" packages/core/src --include=*.php`. The hits should be validation rules only. If something truncates or checks snapshot lengths, STOP and report.
 
-Test, in `SendingTest.php`: a campaign whose subject is `'{{ long }}'` with variable `long` set to 300 `a`s fails `lengths` and can't be scheduled (`assertSessionHasErrors('campaign')`). With 200, it passes. Revert check: remove the item → the test fails.
+Test, in `packages/core/tests/Feature/SendingTest.php` (next to "the checklist flags merge tags that nothing will fill", around line 339; copy how that test builds a campaign): a campaign whose subject is `'{{ long }}'` with variable `long` set to 300 `a`s prepares, and its snapshot's `subject` is the 300-character string (`expect(mb_strlen($snapshot->subject))->toBe(300)`). Do the same for the preheader in the same test. The test suite uses SQLite, which doesn't enforce `VARCHAR` lengths, so this test can't fail by reverting the migration. Say so in your report rather than inventing a revert check. MySQL CI is the real gate.
 
-**Verify**: core tests pass.
+**Verify**: `php artisan migrate:fresh` succeeds and core tests pass.
 
 ### Part B: Variable name length
 
@@ -218,13 +206,13 @@ Test, in `tests/Feature/SecurityHeadersTest.php`, following its existing asserti
 
 ## Done criteria
 
-- [ ] A: the checklist blocks a subject, variant B subject or preheader longer than 255 characters once variables are filled
+- [ ] A: `campaign_snapshots.subject`, `subject_b` and `preheader` are `text` in the original migrations, and a 300-character filled subject prepares
 - [ ] B: variable names longer than 50 characters are refused
 - [ ] C: `setup_token` is never in the session's old input
 - [ ] D: narrowing a role deletes its members' invitations for roles above it
 - [ ] E: `properties` is limited to 50 keys, 4 levels and 16 KB, and the spec is regenerated
 - [ ] F: API and public responses carry the security headers
-- [ ] Each part's test passes, and the revert checks in A and C fail as described
+- [ ] Each part's test passes, and the revert check in C fails as described (A has none on SQLite)
 - [ ] Host tests, core tests, PHPStan and Pint pass
 - [ ] `plans/README.md` row updated
 
@@ -237,6 +225,6 @@ Test, in `tests/Feature/SecurityHeadersTest.php`, following its existing asserti
 
 ## Maintenance notes
 
-- If the snapshot columns are ever widened, Part A's limit should follow them.
+- Part A edits the original migrations because the app isn't released. After release, any further change to these columns needs a new migration.
 - If clients send larger event properties legitimately, raise the 16 KB limit in one place, and the docs with it.
 - Round 6 also found, not part of this plan: the Campaign segment field only lists the latest 100 sent broadcasts (`packages/core/src/Segments/SegmentFieldCatalog.php:52-54`), so "resend to non-openers" fails for older campaigns. Still in the backlog.
