@@ -5,8 +5,11 @@ namespace Gerenuk\Marketing\Http\Controllers;
 use Gerenuk\Marketing\Actions\Automations\ActivateAutomation;
 use Gerenuk\Marketing\Automations\ActivationChecklist;
 use Gerenuk\Marketing\Automations\AutomationApproval;
+use Gerenuk\Marketing\Automations\AutomationDefinition;
 use Gerenuk\Marketing\Automations\AutomationDefinitionValidator;
+use Gerenuk\Marketing\Automations\StepType;
 use Gerenuk\Marketing\Automations\SyncAutomationEmails;
+use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Enums\AutomationRunStatus;
 use Gerenuk\Marketing\Enums\AutomationStatus;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
@@ -20,6 +23,7 @@ use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Tag;
+use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Segments\SegmentField;
 use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
 use Gerenuk\Marketing\Support\MergeTagOptions;
@@ -28,6 +32,7 @@ use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -113,6 +118,7 @@ class AutomationController extends Controller
 
         $workspace = $this->currentWorkspace->getOrFail();
         $user = $this->user($request);
+        $this->ensureCanUseSteps($validated['definition'], $user, $workspace);
         $pausedForApproval = false;
 
         DB::transaction(function () use ($automation, $validated, $emails, $workspace, $user, &$pausedForApproval): void {
@@ -162,8 +168,9 @@ class AutomationController extends Controller
         return back();
     }
 
-    public function activate(Automation $automation, ActivateAutomation $activate): RedirectResponse
+    public function activate(Request $request, Automation $automation, ActivateAutomation $activate): RedirectResponse
     {
+        $this->ensureCanUseSteps($automation->definition, $this->user($request), $this->currentWorkspace->getOrFail());
         $activate->handle($automation, $this->currentWorkspace->getOrFail());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Automation is live.')]);
@@ -190,6 +197,25 @@ class AutomationController extends Controller
         $automation->delete();
 
         return to_route('marketing.automations.index');
+    }
+
+    /**
+     * Webhook steps send contact data out, and update-contact steps change contacts, so they need the matching
+     * contact permission on top of managing automations.
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    private function ensureCanUseSteps(array $definition, MarketingUser $user, Workspace $workspace): void
+    {
+        $steps = AutomationDefinition::from($definition);
+
+        if ($steps->ofType(StepType::Webhook) !== [] && ! $user->hasWorkspacePermission($workspace, Permission::ContactsView)) {
+            throw ValidationException::withMessages(['definition' => __('Webhook steps send contact details, so they need permission to view contacts.')]);
+        }
+
+        if ($steps->ofType(StepType::UpdateContact) !== [] && ! $user->hasWorkspacePermission($workspace, Permission::ContactsManage)) {
+            throw ValidationException::withMessages(['definition' => __('Update contact steps need permission to edit contacts.')]);
+        }
     }
 
     /**

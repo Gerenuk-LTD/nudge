@@ -141,25 +141,14 @@ test('an approver changing the emails keeps it live and re-stamps the approval',
         ->and($campaign->snapshot->subject)->toBe('Changed');
 });
 
-test('changes that do not alter what is sent leave the fingerprint and approval alone', function () {
+test('renaming leaves the fingerprint and approval alone', function () {
     $automation = approvalLive($this);
     $original = AutomationApproval::fingerprint($automation);
 
-    $steps = [
-        approvalEmail('Hello', $this->provider->id),
-        ['id' => 'w1', 'type' => 'wait', 'config' => ['amount' => 2, 'unit' => 'days']],
-        ['id' => 'h1', 'type' => 'webhook', 'config' => ['url' => 'https://example.com/a']],
-    ];
-    $renamed = (clone $automation)->fill(['name' => 'Other', 'definition' => ['steps' => $steps]]);
-    $moved = (clone $renamed)->fill(['definition' => ['steps' => [...array_slice($steps, 1, 2), $steps[0]]]]);
-    $webhook = (clone $renamed)->fill(['definition' => ['steps' => [$steps[0], $steps[1], [...$steps[2], 'config' => ['url' => 'https://example.com/b']]]]]);
-
-    expect(AutomationApproval::fingerprint($renamed))->toBe($original)
-        ->and(AutomationApproval::fingerprint($moved))->toBe($original)
-        ->and(AutomationApproval::fingerprint($webhook))->toBe($original);
+    expect(AutomationApproval::fingerprint((clone $automation)->fill(['name' => 'Other'])))->toBe($original);
 
     $this->actingAs($this->editor)
-        ->put(route('marketing.automations.update', $automation), approvalPayload($automation, ['name' => 'Other', 'definition' => ['steps' => $steps]]))
+        ->put(route('marketing.automations.update', $automation), approvalPayload($automation, ['name' => 'Other']))
         ->assertSessionHasNoErrors();
 
     $fresh = $automation->fresh();
@@ -167,6 +156,45 @@ test('changes that do not alter what is sent leave the fingerprint and approval 
     expect($fresh->name)->toBe('Other')
         ->and($fresh->status)->toBe(AutomationStatus::Active)
         ->and($fresh->approved_at)->not->toBeNull();
+});
+
+test('structure changes change the fingerprint', function () {
+    $condition = fn (array $yes, array $no = []) => [
+        'id' => 'c1', 'type' => 'condition',
+        'config' => ['definition' => ['match' => 'all', 'conditions' => [['type' => 'condition', 'field' => 'custom:plan', 'operator' => 'equals', 'value' => 'pro']]]],
+        'yes' => $yes, 'no' => $no,
+    ];
+    $email = approvalEmail('Hello', $this->provider->id);
+    $wait = ['id' => 'w1', 'type' => 'wait', 'config' => ['amount' => 2, 'unit' => 'days']];
+    $webhook = ['id' => 'h1', 'type' => 'webhook', 'config' => ['url' => 'https://example.com/a']];
+
+    $automation = approvalDraft($this, [$condition([$email])]);
+    $original = AutomationApproval::fingerprint($automation);
+    $with = fn (array $steps) => AutomationApproval::fingerprint((clone $automation)->fill(['definition' => ['steps' => $steps]]));
+
+    expect($with([$email]))->not->toBe($original, 'condition removed')
+        ->and($with([$condition([], [$email])]))->not->toBe($original, 'moved branch')
+        ->and(AutomationApproval::fingerprint((clone $automation)->fill(['allow_reentry' => true])))->not->toBe($original, 'reentry')
+        ->and($with([$condition([$email]), $webhook]))->not->toBe($original, 'webhook added')
+        ->and($with([$condition([$email]), $webhook]))->not->toBe($with([$condition([$email]), [...$webhook, 'config' => ['url' => 'https://example.com/b']]]), 'webhook url')
+        ->and($with([$condition([$email]), $wait]))->not->toBe($original, 'wait added')
+        ->and($with([$condition([$email]), $wait]))->not->toBe($with([$condition([$email]), [...$wait, 'config' => ['amount' => 3, 'unit' => 'days']]]), 'wait amount')
+        ->and($with([$wait, $webhook]))->not->toBe($with([$webhook, $wait]), 'reordered')
+        ->and($with([$condition([$email]), ['id' => 'w1', 'type' => 'wait', 'config' => ['unit' => 'days', 'amount' => 2]]]))->toBe($with([$condition([$email]), $wait]), 'config key order');
+});
+
+test('an editor adding a webhook pauses a live approved automation', function () {
+    $automation = approvalLive($this);
+    $steps = [...$automation->definition['steps'], ['id' => 'h1', 'type' => 'webhook', 'config' => ['url' => 'https://example.com/a']]];
+
+    $this->actingAs($this->editor)
+        ->put(route('marketing.automations.update', $automation), approvalPayload($automation, ['definition' => ['steps' => $steps]]))
+        ->assertSessionHasNoErrors();
+
+    $fresh = $automation->fresh();
+
+    expect($fresh->status)->toBe(AutomationStatus::Paused)
+        ->and($fresh->approved_at)->toBeNull();
 });
 
 test('changes to what is sent or to whom change the fingerprint', function () {
