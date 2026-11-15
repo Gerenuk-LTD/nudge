@@ -29,9 +29,25 @@ class EventResource extends JsonResource
              *
              * @var array<string, mixed>
              */
-            'data' => (object) ($this->data ?? []),
+            'data' => (object) $this->details(),
             'campaign_id' => $this->campaign_id,
             'occurred_at' => $this->occurred_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * An empty `properties` must still encode as an object, not `[]`.
+     *
+     * @return array<string, mixed>
+     */
+    private function details(): array
+    {
+        $data = $this->data ?? [];
+
+        if (isset($data['properties']) && is_array($data['properties'])) {
+            $data['properties'] = (object) $data['properties'];
+        }
+
+        return $data;
     }
 }

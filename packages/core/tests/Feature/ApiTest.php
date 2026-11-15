@@ -10,6 +10,8 @@ use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Models\Workspace;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
@@ -426,4 +428,22 @@ test('a segment has its definition on the list and its contact count only when f
     $this->withToken($token)->getJson(route('marketing.api.segments.show', $segment))
         ->assertOk()
         ->assertJsonPath('data.contacts_count', 2);
+});
+
+test('an event with no properties sends them as an empty object', function () {
+    $token = apiToken($this->workspace, $this->owner);
+    Contact::factory()->create(['email' => 'ada@example.com']);
+
+    $response = $this->withToken($token)->postJson(route('marketing.api.events.store'), ['email' => 'ada@example.com', 'event' => 'ping'])
+        ->assertStatus(202);
+
+    expect($response->getContent())->toContain('"properties":{}');
+});
+
+test('an authentication exception on the API answers unauthenticated', function () {
+    Route::middleware('api')->get(trim((string) config('marketing.api_prefix'), '/').'/_test-auth', fn () => throw new AuthenticationException);
+
+    $this->get('/'.trim((string) config('marketing.api_prefix'), '/').'/_test-auth')
+        ->assertUnauthorized()
+        ->assertExactJson(['code' => 'unauthenticated', 'message' => 'Unauthenticated.']);
 });

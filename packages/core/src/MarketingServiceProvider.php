@@ -20,6 +20,7 @@ use Gerenuk\Marketing\Jobs\PruneStaleImports;
 use Gerenuk\Marketing\Jobs\RecoverStalledSends;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Debug\ExceptionHandler;
@@ -89,6 +90,7 @@ class MarketingServiceProvider extends ServiceProvider
                 }
 
                 return match (true) {
+                    $e instanceof AuthenticationException => ApiError::response(ApiErrorCode::Unauthenticated, 'Unauthenticated.', 401),
                     $e instanceof ValidationException => ApiError::response(ApiErrorCode::ValidationFailed, $e->getMessage(), 422, errors: $e->errors()),
                     $e instanceof NotFoundHttpException, $e instanceof ModelNotFoundException => ApiError::response(ApiErrorCode::NotFound, 'Not found.', 404),
                     $e instanceof MethodNotAllowedHttpException => ApiError::response(ApiErrorCode::MethodNotAllowed, $e->getMessage(), 405, $e->getHeaders()),
