@@ -1,8 +1,15 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ScrollText } from 'lucide-react';
+import { Check, Copy, RefreshCw, ScrollText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ApiRequestController from '@/actions/Gerenuk/Marketing/Http/Controllers/ApiRequestController';
+import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useClipboard } from '@/hooks/use-clipboard';
 import { cn } from '@/lib/utils';
 import { index as apiLogIndex } from '@/routes/marketing/api-log';
 import {
@@ -21,7 +28,7 @@ import {
 import type { FacetOption } from '@marketing/components/table-toolbar';
 import { useTableQuery } from '@marketing/hooks/use-table-query';
 import { getJson } from '@marketing/lib/http';
-import { formatDateTime } from '@marketing/lib/format';
+import { formatDateTime, formatRelative } from '@marketing/lib/format';
 import type { Paginated } from '@marketing/types';
 
 type LogRow = {
@@ -65,6 +72,39 @@ function statusDot(status: number): string {
           : 'bg-emerald-500 dark:bg-emerald-400';
 }
 
+const STATUS_TEXT: Record<number, string> = {
+    200: 'OK',
+    201: 'Created',
+    202: 'Accepted',
+    204: 'No content',
+    400: 'Bad request',
+    401: 'Not signed in',
+    403: 'Missing permission',
+    404: 'Not found',
+    405: 'Method not allowed',
+    409: 'Conflict',
+    413: 'Too large',
+    422: 'Validation failed',
+    429: 'Rate limited',
+    500: 'Server error',
+    502: 'Bad gateway',
+    503: 'Unavailable',
+};
+
+/** What a status code means, in a few words. Codes the API doesn't return today fall back to their class. */
+function statusText(status: number): string {
+    return (
+        STATUS_TEXT[status] ??
+        (status >= 500
+            ? 'Server error'
+            : status >= 400
+              ? 'Client error'
+              : status >= 300
+                ? 'Redirect'
+                : 'Success')
+    );
+}
+
 /** JSON is shown indented; anything else, such as a cut body, as it was sent. */
 function pretty(body: string): string {
     try {
@@ -79,9 +119,19 @@ const columns: ColumnDef<LogRow>[] = [
         id: 'time',
         header: 'Time',
         cell: ({ row }) => (
-            <span className="whitespace-nowrap text-muted-foreground">
-                {formatDateTime(row.original.created_at)}
-            </span>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <time
+                        dateTime={row.original.created_at ?? undefined}
+                        className="whitespace-nowrap text-muted-foreground"
+                    >
+                        {formatRelative(row.original.created_at)}
+                    </time>
+                </TooltipTrigger>
+                <TooltipContent>
+                    {formatDateTime(row.original.created_at)}
+                </TooltipContent>
+            </Tooltip>
         ),
     },
     {
@@ -110,23 +160,42 @@ const columns: ColumnDef<LogRow>[] = [
         id: 'status',
         header: 'Status',
         cell: ({ row }) => (
-            <span className="flex items-center gap-2">
-                <span
-                    aria-hidden
-                    className={cn(
-                        'size-1.5 rounded-full',
-                        statusDot(row.original.status),
-                    )}
-                />
-                {row.original.status}
-            </span>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span tabIndex={0} className="flex items-center gap-2">
+                        <span
+                            aria-hidden
+                            className={cn(
+                                'size-1.5 rounded-full',
+                                statusDot(row.original.status),
+                            )}
+                        />
+                        {row.original.status}
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                    {row.original.status} · {statusText(row.original.status)}
+                </TooltipContent>
+            </Tooltip>
         ),
     },
     {
         id: 'duration',
         header: 'Duration',
         meta: { numeric: true },
-        cell: ({ row }) => `${row.original.duration_ms} ms`,
+        cell: ({ row }) =>
+            row.original.duration_ms >= 1000 ? (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="text-amber-600 dark:text-amber-400">
+                            {(row.original.duration_ms / 1000).toFixed(1)} s
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Slow request</TooltipContent>
+                </Tooltip>
+            ) : (
+                `${row.original.duration_ms} ms`
+            ),
     },
 ];
 
@@ -142,9 +211,9 @@ export default function ApiLog({
     routes: FacetOption[];
     retentionDays: number;
     bodyRetentionDays: number;
-    canViewBodies: boolean;
 }) {
     const query = useTableQuery({ only: ['requests'] });
+    const [refreshing, setRefreshing] = useState(false);
     const filtered =
         query.get('search') !== '' ||
         query.get('period') !== '' ||
@@ -170,7 +239,7 @@ export default function ApiLog({
                     <TableSearch
                         value={query.get('search')}
                         onSearch={(search) => query.update({ search })}
-                        placeholder="Search paths"
+                        placeholder="Search paths or #ID"
                     />
                     <FacetedFilter
                         title="Token"
@@ -213,6 +282,29 @@ export default function ApiLog({
                             })
                         }
                     />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="ml-auto size-8"
+                                aria-label="Refresh"
+                                disabled={refreshing}
+                                onClick={() =>
+                                    router.reload({
+                                        only: ['requests', 'routes'],
+                                        onStart: () => setRefreshing(true),
+                                        onFinish: () => setRefreshing(false),
+                                    })
+                                }
+                            >
+                                <RefreshCw
+                                    className={cn(refreshing && 'animate-spin')}
+                                />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Refresh</TooltipContent>
+                    </Tooltip>
                 </div>
 
                 {!requests ? (
@@ -230,6 +322,11 @@ export default function ApiLog({
                             data={requests.data}
                             getRowId={byId}
                             emptyMessage="No requests match."
+                            rowClassName={(row) =>
+                                row.status >= 500
+                                    ? 'bg-destructive/5 hover:bg-destructive/10'
+                                    : undefined
+                            }
                             renderExpanded={(row) => (
                                 <RequestDetail
                                     id={row.id}
@@ -296,23 +393,76 @@ function RequestDetail({
                     <Body title="Response" body={detail.response_body} />
                 </div>
             )}
-            <p className="text-xs text-muted-foreground">
-                {[detail.ip, detail.user_agent].filter(Boolean).join(' · ') ||
-                    'No connection details'}
+            <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                Request #{id}
+                <CopyButton
+                    text={String(id)}
+                    label="Copy request ID"
+                    className="size-5"
+                />
+                {[detail.ip, detail.user_agent].filter(Boolean).length > 0 &&
+                    ` · ${[detail.ip, detail.user_agent].filter(Boolean).join(' · ')}`}
             </p>
         </div>
     );
 }
 
+/** A small icon button that copies `text`, showing a tick for a moment afterwards. */
+function CopyButton({
+    text,
+    label,
+    className,
+}: {
+    text: string;
+    label: string;
+    className?: string;
+}) {
+    const [copied, copy] = useClipboard();
+    const done = copied === text;
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn('text-muted-foreground', className)}
+                    aria-label={label}
+                    onClick={() => copy(text)}
+                >
+                    {done ? (
+                        <Check className="size-3.5" />
+                    ) : (
+                        <Copy className="size-3.5" />
+                    )}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>{done ? 'Copied' : 'Copy'}</TooltipContent>
+        </Tooltip>
+    );
+}
+
 function Body({ title, body }: { title: string; body: string | null }) {
+    const text = body === null ? null : pretty(body);
+
     return (
         <div className="min-w-0 space-y-1.5">
             <h3 className="text-xs font-medium text-muted-foreground">
                 {title}
             </h3>
-            <pre className="max-h-96 overflow-auto rounded-lg border bg-card p-3 font-mono text-xs">
-                {body === null ? 'No body' : pretty(body)}
-            </pre>
+            <div className="group relative">
+                <pre className="max-h-96 overflow-auto rounded-lg border bg-card p-3 font-mono text-xs">
+                    {text ?? 'No body'}
+                </pre>
+                {text !== null && (
+                    <CopyButton
+                        text={text}
+                        label={`Copy ${title.toLowerCase()} body`}
+                        className="absolute top-2 right-2 size-7"
+                    />
+                )}
+            </div>
         </div>
     );
 }

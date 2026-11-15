@@ -95,7 +95,13 @@ class ApiRequestController extends Controller
                 });
             });
 
-        TableQuery::search($query, $request->string('search')->toString(), ['path']);
+        $search = trim($request->string('search')->toString());
+
+        if (preg_match('/^#?\d+$/', $search) === 1) {
+            $query->whereKey((int) ltrim($search, '#'));
+        } else {
+            TableQuery::search($query, $search, ['path']);
+        }
 
         return $query
             ->orderByDesc('created_at')

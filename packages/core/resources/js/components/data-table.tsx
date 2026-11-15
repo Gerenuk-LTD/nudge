@@ -63,6 +63,7 @@ export function DataTable<TData>({
     sortable = false,
     sort,
     renderExpanded,
+    rowClassName,
 }: {
     columns: ColumnDef<TData>[];
     data: TData[];
@@ -72,6 +73,8 @@ export function DataTable<TData>({
     sort?: TableSort;
     /** When given, each row gets a chevron that shows this under it. Only the row's own content is rendered, on demand. */
     renderExpanded?: (row: TData) => ReactNode;
+    /** Extra classes for a row, such as a tint for failed requests. */
+    rowClassName?: (row: TData) => string | undefined;
 }) {
     'use no memo'; // The table instance is mutable, so React Compiler must not memoize around it.
 
@@ -207,7 +210,33 @@ export function DataTable<TData>({
                     {table.getRowModel().rows.length > 0 ? (
                         table.getRowModel().rows.map((row) => (
                             <Fragment key={row.id}>
-                                <TableRow>
+                                <TableRow
+                                    className={cn(
+                                        renderExpanded && 'cursor-pointer',
+                                        rowClassName?.(row.original),
+                                    )}
+                                    onClick={
+                                        renderExpanded
+                                            ? (event) => {
+                                                  const target =
+                                                      event.target as HTMLElement;
+
+                                                  if (
+                                                      target.closest(
+                                                          'button, a, input, select, textarea, [role="menuitem"], [role="checkbox"]',
+                                                      ) ||
+                                                      window
+                                                          .getSelection()
+                                                          ?.toString()
+                                                  ) {
+                                                      return;
+                                                  }
+
+                                                  row.toggleExpanded();
+                                              }
+                                            : undefined
+                                    }
+                                >
                                     {renderExpanded && (
                                         <TableCell className="w-10 px-2 py-2.5">
                                             <Button

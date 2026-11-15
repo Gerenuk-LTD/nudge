@@ -224,3 +224,15 @@ test('failed reads keep their bodies', function () {
     expect($row->status)->toBe(404)
         ->and($row->response_body)->toContain('Not found');
 });
+
+test('a request can be found by its ID', function () {
+    logRow($this->workspace);
+    $second = logRow($this->workspace, ['path' => '/api/v1/me']);
+
+    foreach (["#{$second->id}", (string) $second->id] as $search) {
+        $this->actingAs($this->owner)->get(route('marketing.api-log.index', ['search' => $search]))
+            ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload
+                ->where('requests.total', 1)
+                ->where('requests.data.0.id', $second->id)));
+    }
+});

@@ -1,5 +1,5 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { Ellipsis, KeyRound, Plus, Trash2 } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Ellipsis, KeyRound, Plus, ScrollText, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import ApiTokenController from '@/actions/Gerenuk/Marketing/Http/Controllers/ApiTokenController';
@@ -18,6 +18,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { CopyField } from '@marketing/components/copy-field';
 import { cn } from '@/lib/utils';
+import { index as apiLogIndex } from '@/routes/marketing/api-log';
 import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
 import {
     PermissionPicker,
@@ -165,6 +167,22 @@ export default function ApiTokens({
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
+                                            <DropdownMenuItem asChild>
+                                                <Link
+                                                    href={apiLogIndex({
+                                                        query: {
+                                                            token: String(
+                                                                token.id,
+                                                            ),
+                                                            period: '30d',
+                                                        },
+                                                    })}
+                                                >
+                                                    <ScrollText />
+                                                    View requests
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                                 variant="destructive"
                                                 onSelect={() =>
