@@ -60,11 +60,11 @@ This file uses double quotes and no semicolons (shadcn style), unlike the app's 
 
 From the repo root.
 
-| Purpose  | Command               | Expected   |
-| -------- | --------------------- | ---------- |
-| Lint     | `npm run check`       | passes     |
-| Types    | `npm run types:check` | no errors  |
-| JS tests | `npm test`            | all pass   |
+| Purpose  | Command               | Expected  |
+| -------- | --------------------- | --------- |
+| Lint     | `npm run check`       | passes    |
+| Types    | `npm run types:check` | no errors |
+| JS tests | `npm test`            | all pass  |
 
 ## Scope
 
@@ -82,7 +82,7 @@ From the repo root.
 
 ### Step 1: Let Radix avoid collisions
 
-In `SelectContent`, add `avoidCollisions = true,` to the destructured props, after `align = "center",`. Replace `avoidCollisions={false}` with `avoidCollisions={avoidCollisions}`. Keep the prop *before* `{...props}`, as it is now. Callers can still turn it off, and the default flips the menu.
+In `SelectContent`, add `avoidCollisions = true,` to the destructured props, after `align = "center",`. Replace `avoidCollisions={false}` with `avoidCollisions={avoidCollisions}`. Keep the prop _before_ `{...props}`, as it is now. Callers can still turn it off, and the default flips the menu.
 
 **Verify**: `grep -n "avoidCollisions" resources/js/components/ui/select.tsx` → two lines, the default `avoidCollisions = true,` and `avoidCollisions={avoidCollisions}`. No `{false}`.
 

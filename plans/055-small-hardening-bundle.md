@@ -45,7 +45,6 @@ Six small gaps from the round 6 audit. None is serious alone:
 
 The snapshot columns are `string` (255): `subject`, `preheader` (`packages/core/database/migrations/2026_10_29_000001_create_sending_tables.php:97-98`) and `subject_b` (`2026_10_30_000001_create_automation_tables.php:66`). `MergeTags::fill(string $template, array $values, bool $escapeHtml): string` fills variables only; per-recipient tags like `{{ first_name }}` are filled later at send time (they stay as tags, so they still count toward the length here, which is fine).
 
-
 **B. `packages/core/src/Http/Requests/CampaignRequest.php:41`**, inside the `variables` closure:
 
 ```php
