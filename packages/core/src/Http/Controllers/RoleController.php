@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Http\Controllers;
 
+use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
 use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Role;
@@ -18,19 +19,28 @@ class RoleController extends Controller
 {
     public function __construct(private readonly CurrentWorkspace $currentWorkspace) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $order = array_flip(array_keys(CreateWorkspace::defaultRoles()));
+        $actor = $this->actingRole($request);
+
         return Inertia::render('marketing/workspace/roles', [
             'roles' => Role::query()->withCount('memberships')->orderBy('id')->get()
+                ->sortBy(fn (Role $role) => [$order[$role->key] ?? count($order), $role->name])
+                ->values()
                 ->map(fn (Role $role) => [
                     'id' => $role->id,
                     'name' => $role->name,
+                    'key' => $role->key,
+                    'description' => $role->description,
                     'permissions' => $role->is_owner ? Permission::values() : $role->permissions,
                     'is_owner' => $role->is_owner,
+                    'is_builtin' => $role->isBuiltIn(),
                     'members_count' => $role->memberships_count,
                 ]),
             'permissions' => collect(Permission::cases())
-                ->map(fn (Permission $permission) => ['value' => $permission->value, 'label' => $permission->label()]),
+                ->map(fn (Permission $permission) => ['value' => $permission->value, 'label' => $permission->label(), 'description' => $permission->description()]),
+            'grantable' => $actor->is_owner ? Permission::values() : $actor->permissions,
         ]);
     }
 
@@ -53,6 +63,10 @@ class RoleController extends Controller
 
         $validated = $this->validated($request, $actor, $role);
 
+        if ($role->isBuiltIn() && $validated['name'] !== $role->name) {
+            throw ValidationException::withMessages(['name' => __('Built-in roles keep their name.')]);
+        }
+
         DB::transaction(function () use ($role, $validated): void {
             $role->update($validated);
 
@@ -67,7 +81,7 @@ class RoleController extends Controller
 
     public function destroy(Request $request, Role $role): RedirectResponse
     {
-        abort_if($role->is_owner, 403);
+        abort_if($role->is_owner || $role->isBuiltIn(), 403);
         abort_unless($role->isWithin($this->actingRole($request)), 403);
 
         if ($role->memberships()->exists()) {
@@ -89,7 +103,7 @@ class RoleController extends Controller
     }
 
     /**
-     * @return array{name: string, permissions: list<string>}
+     * @return array{name: string, description: string|null, permissions: list<string>}
      */
     private function validated(Request $request, Role $actor, ?Role $role = null): array
     {
@@ -98,6 +112,7 @@ class RoleController extends Controller
                 'required', 'string', 'max:50',
                 Rule::unique('roles', 'name')->where('workspace_id', $this->currentWorkspace->id())->ignore($role?->id),
             ],
+            'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['present', 'array'],
             'permissions.*' => ['string', Rule::enum(Permission::class)],
         ]);
@@ -108,6 +123,10 @@ class RoleController extends Controller
             throw ValidationException::withMessages(['permissions' => __('You can only give out permissions you have yourself.')]);
         }
 
-        return ['name' => $validated['name'], 'permissions' => $permissions];
+        return [
+            'name' => $validated['name'],
+            'description' => $role?->isBuiltIn() ? $role->description : ($validated['description'] ?? null),
+            'permissions' => $permissions,
+        ];
     }
 }

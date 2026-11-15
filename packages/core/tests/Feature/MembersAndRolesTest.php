@@ -2,6 +2,7 @@
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
 use Gerenuk\Marketing\Actions\Workspaces\RemoveUserFromWorkspaces;
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Invitation;
 use Gerenuk\Marketing\Models\Membership;
@@ -59,9 +60,9 @@ test('the owner role cannot be edited or deleted', function () {
 
 test('a role in use cannot be deleted', function () {
     [$owner, $workspace] = $this->createOwner();
-    $this->addMember($workspace, 'Editor');
+    memberWithCustomRole($owner, $workspace, 'Importer', ['contacts.view']);
 
-    $this->actingAs($owner)->delete(route('marketing.roles.destroy', roleNamed('Editor')))->assertSessionHasErrors('role');
+    $this->actingAs($owner)->delete(route('marketing.roles.destroy', roleNamed('Importer')))->assertSessionHasErrors('role');
 });
 
 test('inviting someone emails them a link', function () {
@@ -306,4 +307,111 @@ test('removing permissions from a role narrows its members\' tokens', function (
         ->assertRedirect();
 
     expect(ApiToken::withoutGlobalScopes()->where('created_by', $editor->id)->first()->permissions)->toBe(['contacts.view']);
+});
+
+test('a new workspace\'s built-in roles have keys and descriptions', function () {
+    $this->createOwner();
+
+    $roles = Role::all()->keyBy('key');
+
+    expect($roles->keys()->all())->toEqualCanonicalizing(['owner', 'admin', 'editor', 'viewer'])
+        ->and($roles->every(fn (Role $role) => $role->description !== null && $role->description !== ''))->toBeTrue()
+        ->and($roles['owner']->is_owner)->toBeTrue()
+        ->and($roles['editor']->isBuiltIn())->toBeTrue();
+});
+
+test('built-in roles keep their name', function () {
+    [$owner] = $this->createOwner();
+    $editor = roleNamed('Editor');
+    $permissions = array_values(array_diff($editor->permissions, ['contacts.import']));
+
+    $this->actingAs($owner)->put(route('marketing.roles.update', $editor), ['name' => 'Writers', 'permissions' => $editor->permissions])
+        ->assertSessionHasErrors('name');
+
+    expect($editor->fresh()->name)->toBe('Editor');
+
+    $this->actingAs($owner)->put(route('marketing.roles.update', $editor), ['name' => 'Editor', 'permissions' => $permissions])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($editor->fresh()->permissions)->not->toContain('contacts.import');
+});
+
+test('built-in roles can\'t be deleted', function () {
+    [$owner] = $this->createOwner();
+    $viewer = roleNamed('Viewer');
+
+    $this->actingAs($owner)->delete(route('marketing.roles.destroy', $viewer))->assertForbidden();
+
+    expect(Role::whereKey($viewer->id)->exists())->toBeTrue();
+});
+
+test('custom roles save a description', function () {
+    [$owner] = $this->createOwner();
+
+    $this->actingAs($owner)->post(route('marketing.roles.store'), [
+        'name' => 'Importer',
+        'description' => 'Helps with imports',
+        'permissions' => ['contacts.view', 'contacts.import'],
+    ])->assertRedirect();
+
+    $role = roleNamed('Importer');
+
+    expect($role->description)->toBe('Helps with imports')
+        ->and($role->key)->toBeNull();
+
+    $this->actingAs($owner)->put(route('marketing.roles.update', $role), [
+        'name' => 'Importer',
+        'description' => 'Runs the CSV imports',
+        'permissions' => ['contacts.view', 'contacts.import'],
+    ])->assertRedirect();
+
+    expect($role->fresh()->description)->toBe('Runs the CSV imports');
+});
+
+test('a built-in role\'s description can\'t be changed', function () {
+    [$owner] = $this->createOwner();
+    $editor = roleNamed('Editor');
+    $description = $editor->description;
+
+    $this->actingAs($owner)->put(route('marketing.roles.update', $editor), [
+        'name' => 'Editor',
+        'description' => 'Changed',
+        'permissions' => $editor->permissions,
+    ])->assertRedirect();
+
+    expect($editor->fresh()->description)->toBe($description);
+});
+
+test('the roles page lists built-ins first and describes each permission', function () {
+    [$owner] = $this->createOwner();
+    $this->actingAs($owner)->post(route('marketing.roles.store'), ['name' => 'Aardvark', 'permissions' => ['contacts.view']]);
+
+    $props = $this->actingAs($owner)->get(route('marketing.roles.index'))->assertOk()->inertiaProps();
+
+    expect(array_column($props['roles'], 'key'))->toBe(['owner', 'admin', 'editor', 'viewer', null])
+        ->and(collect($props['roles'])->last()['name'])->toBe('Aardvark')
+        ->and(collect($props['roles'])->last()['is_builtin'])->toBeFalse()
+        ->and($props['permissions'])->toHaveCount(15)
+        ->and(collect($props['permissions'])->every(fn (array $permission) => $permission['label'] !== '' && $permission['description'] !== ''))->toBeTrue();
+});
+
+test('the roles page passes what the actor can grant', function () {
+    [$owner, $workspace] = $this->createOwner();
+    $admin = $this->addMember($workspace, 'Admin');
+    $adminRole = roleNamed('Admin');
+    $adminRole->update(['permissions' => array_values(array_diff($adminRole->permissions, ['campaigns.approve']))]);
+
+    $adminGrantable = $this->actingAs($admin)->get(route('marketing.roles.index'))->inertiaProps('grantable');
+    $ownerGrantable = $this->actingAs($owner)->get(route('marketing.roles.index'))->inertiaProps('grantable');
+
+    expect($adminGrantable)->not->toContain('campaigns.approve')->toContain('contacts.view')
+        ->and($ownerGrantable)->toHaveCount(15);
+});
+
+test('every permission has a label and a description', function () {
+    foreach (Permission::cases() as $permission) {
+        expect($permission->label())->not->toBe('')
+            ->and($permission->description())->not->toBe('');
+    }
 });

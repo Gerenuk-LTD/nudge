@@ -14,10 +14,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $workspace_id
  * @property string $name
+ * @property string|null $key
+ * @property string|null $description
  * @property list<string> $permissions
  * @property bool $is_owner
  */
-#[Fillable(['workspace_id', 'name', 'permissions', 'is_owner'])]
+#[Fillable(['workspace_id', 'name', 'key', 'description', 'permissions', 'is_owner'])]
 class Role extends Model
 {
     use BelongsToWorkspace;
@@ -49,6 +51,11 @@ class Role extends Model
         }
 
         return ! $this->is_owner && array_diff($this->permissions, $actor->permissions) === [];
+    }
+
+    public function isBuiltIn(): bool
+    {
+        return $this->key !== null;
     }
 
     public function grants(Permission $permission): bool

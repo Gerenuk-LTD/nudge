@@ -28,7 +28,7 @@ class ApiTokenController extends Controller
                 'created_at' => $token->created_at?->toIso8601String(),
             ]),
             'permissions' => collect($this->grantablePermissions($request))
-                ->map(fn (Permission $permission) => ['value' => $permission->value, 'label' => $permission->label()])
+                ->map(fn (Permission $permission) => ['value' => $permission->value, 'label' => $permission->label(), 'description' => $permission->description()])
                 ->values(),
         ]);
     }
