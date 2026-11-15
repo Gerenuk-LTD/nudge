@@ -271,8 +271,8 @@ function CompareRoles({
                 </Button>
             </header>
 
-            <div className="overflow-x-auto">
-                <table className="w-full border-separate border-spacing-0 text-sm">
+            <div className="overflow-x-auto rounded-b-xl">
+                <table className="w-full border-separate border-spacing-0 text-sm [&_tbody_tr:last-child>*]:border-b-0">
                     <thead>
                         <tr>
                             <th
