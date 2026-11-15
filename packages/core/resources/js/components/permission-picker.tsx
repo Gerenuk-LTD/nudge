@@ -1,227 +1,164 @@
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import {
+    PERMISSION_GROUPS,
+    groupCoverage,
+    toggleGroup,
+    togglePermission,
+} from '@marketing/lib/permissions';
 import type { Permission } from '@marketing/types';
 
-type PermissionOption = { value: Permission; label: string };
-
-/** Permissions by the area they cover, each with a short name for summaries. */
-const GROUPS: { title: string; permissions: [Permission, string][] }[] = [
-    {
-        title: 'Contacts',
-        permissions: [
-            ['contacts.view', 'view'],
-            ['contacts.manage', 'edit'],
-            ['contacts.import', 'import'],
-            ['segments.manage', 'segments'],
-        ],
-    },
-    {
-        title: 'Campaigns',
-        permissions: [
-            ['campaigns.view', 'view'],
-            ['campaigns.manage', 'edit'],
-            ['campaigns.send', 'send'],
-            ['campaigns.approve', 'approve'],
-        ],
-    },
-    {
-        title: 'Automations',
-        permissions: [
-            ['automations.view', 'view'],
-            ['automations.manage', 'edit'],
-        ],
-    },
-    {
-        title: 'Sending',
-        permissions: [['providers.manage', 'providers and settings']],
-    },
-    {
-        title: 'Workspace',
-        permissions: [
-            ['members.manage', 'members'],
-            ['roles.manage', 'roles'],
-            ['api_tokens.manage', 'API tokens'],
-            ['workspace.manage', 'rename'],
-        ],
-    },
-];
-
-/** Doing something needs seeing it, so these switch on the permission they rely on, and off with it. */
-const NEEDS: Partial<Record<Permission, Permission>> = {
-    'contacts.manage': 'contacts.view',
-    'contacts.import': 'contacts.view',
-    'segments.manage': 'contacts.view',
-    'campaigns.manage': 'campaigns.view',
-    'campaigns.send': 'campaigns.view',
-    'campaigns.approve': 'campaigns.view',
-    'automations.manage': 'automations.view',
+export type PermissionOption = {
+    value: Permission;
+    label: string;
+    description: string;
 };
 
 /**
- * What a set of permissions allows, one line per area, such as "Contacts: view, edit, import".
- */
-export function permissionSummary(permissions: Permission[]): string[] {
-    return GROUPS.flatMap((group) => {
-        const granted = group.permissions
-            .filter(([permission]) => permissions.includes(permission))
-            .map(([, short]) => short);
-
-        return granted.length === 0
-            ? []
-            : [`${group.title}: ${granted.join(', ')}`];
-    });
-}
-
-/** The areas permissions are grouped into, in order. */
-export const PERMISSION_AREAS = GROUPS.map((group) => group.title);
-
-/**
- * How much of each area a set of permissions covers: everything, nothing, or the short names of what it grants.
- */
-export function permissionLevels(
-    permissions: Permission[],
-): { area: string; level: 'full' | 'none' | 'some'; label: string }[] {
-    return GROUPS.map((group) => {
-        const granted = group.permissions.filter(([permission]) =>
-            permissions.includes(permission),
-        );
-
-        if (granted.length === 0) {
-            return { area: group.title, level: 'none', label: 'No access' };
-        }
-
-        if (granted.length === group.permissions.length) {
-            return { area: group.title, level: 'full', label: 'Full' };
-        }
-
-        const label = granted.map(([, short]) => short).join(', ');
-
-        return {
-            area: group.title,
-            level: 'some',
-            label: label.charAt(0).toUpperCase() + label.slice(1),
-        };
-    });
-}
-
-/**
- * The permissions as checkboxes grouped by area, with a switch for each whole area. Granting something also
- * grants seeing it, and taking away seeing something takes away what relies on it.
+ * The permissions as a list grouped by area, with a checkbox for each whole area and a description under each
+ * permission. Granting something also grants seeing it, and taking away seeing something takes away what relies
+ * on it. When `grantable` is given, anything outside it is shown but can't be ticked.
  */
 export function PermissionPicker({
     options,
     value,
     onChange,
+    grantable,
 }: {
     options: PermissionOption[];
     value: Permission[];
     onChange: (permissions: Permission[]) => void;
+    grantable?: Permission[];
 }) {
-    const label = (permission: Permission) =>
-        options.find((option) => option.value === permission)?.label ??
-        permission;
-
-    const set = (permission: Permission, on: boolean) => {
-        const next = new Set(value);
-
-        if (on) {
-            next.add(permission);
-
-            if (NEEDS[permission]) {
-                next.add(NEEDS[permission]);
-            }
-        } else {
-            next.delete(permission);
-
-            for (const [dependent, needed] of Object.entries(NEEDS)) {
-                if (needed === permission) {
-                    next.delete(dependent as Permission);
-                }
-            }
-        }
-
-        onChange(
-            options
-                .map((option) => option.value)
-                .filter((option) => next.has(option)),
-        );
-    };
-
-    const setGroup = (permissions: Permission[], on: boolean) => {
-        const next = new Set(value);
-        permissions.forEach((permission) =>
-            on ? next.add(permission) : next.delete(permission),
-        );
-        onChange(
-            options
-                .map((option) => option.value)
-                .filter((option) => next.has(option)),
-        );
-    };
+    const order = options.map((option) => option.value);
+    const canGrant = (permission: Permission) =>
+        grantable === undefined || grantable.includes(permission);
 
     return (
-        <div className="divide-y rounded-lg border">
-            {GROUPS.map((group) => {
-                const permissions = group.permissions
-                    .map(([permission]) => permission)
-                    .filter((permission) =>
-                        options.some((option) => option.value === permission),
-                    );
-                const granted = permissions.filter((permission) =>
-                    value.includes(permission),
-                ).length;
+        <div className="grid gap-5">
+            {PERMISSION_GROUPS.map((group) => {
+                const permissions = options.filter((option) =>
+                    group.permissions.some(
+                        ([permission]) => permission === option.value,
+                    ),
+                );
 
                 if (permissions.length === 0) {
                     return null;
                 }
 
+                const groupValues = permissions.map((option) => option.value);
+                const coverage = groupCoverage(value, groupValues);
+                const grantableValues = groupValues.filter(canGrant);
+
                 return (
-                    <fieldset key={group.title} className="px-4 py-3">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                            <legend className="text-13 font-semibold">
-                                {group.title}
-                            </legend>
-                            {permissions.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setGroup(
-                                            permissions,
-                                            granted < permissions.length,
+                    <fieldset key={group.title} className="grid">
+                        <div className="flex items-center justify-between gap-3 border-b pb-2">
+                            <label className="flex items-center gap-2">
+                                <Checkbox
+                                    disabled={grantableValues.length === 0}
+                                    checked={
+                                        coverage.granted === coverage.total
+                                            ? true
+                                            : coverage.granted === 0
+                                              ? false
+                                              : 'indeterminate'
+                                    }
+                                    onCheckedChange={() =>
+                                        onChange(
+                                            toggleGroup(
+                                                value,
+                                                grantableValues,
+                                                coverage.granted !==
+                                                    coverage.total,
+                                                order,
+                                            ),
                                         )
                                     }
-                                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                                >
-                                    {granted < permissions.length
-                                        ? 'Allow all'
-                                        : 'Allow none'}
-                                </button>
-                            )}
+                                />
+                                <span className="font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                    {group.title}
+                                </span>
+                            </label>
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                                {coverage.granted} of {coverage.total}
+                            </span>
                         </div>
-                        <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                            {permissions.map((permission) => (
-                                <label
-                                    key={permission}
-                                    className={cn(
-                                        'flex items-start gap-2 text-sm',
-                                        !value.includes(permission) &&
-                                            'text-muted-foreground',
-                                    )}
-                                >
-                                    <Checkbox
-                                        className="mt-0.5"
-                                        checked={value.includes(permission)}
-                                        onCheckedChange={(checked) =>
-                                            set(permission, checked === true)
-                                        }
-                                    />
-                                    {label(permission)}
-                                </label>
+                        <div className="divide-y">
+                            {permissions.map((option) => (
+                                <PermissionRow
+                                    key={option.value}
+                                    option={option}
+                                    checked={value.includes(option.value)}
+                                    disabled={!canGrant(option.value)}
+                                    onChange={(on) =>
+                                        onChange(
+                                            togglePermission(
+                                                value,
+                                                option.value,
+                                                on,
+                                                order,
+                                            ),
+                                        )
+                                    }
+                                />
                             ))}
                         </div>
                     </fieldset>
                 );
             })}
         </div>
+    );
+}
+
+function PermissionRow({
+    option,
+    checked,
+    disabled,
+    onChange,
+}: {
+    option: PermissionOption;
+    checked: boolean;
+    disabled: boolean;
+    onChange: (on: boolean) => void;
+}) {
+    const row = (
+        <label
+            className={cn(
+                'grid grid-cols-[auto_1fr] items-start gap-x-3 py-3',
+                disabled && 'cursor-not-allowed',
+            )}
+        >
+            <Checkbox
+                className="mt-0.5"
+                checked={checked}
+                disabled={disabled}
+                onCheckedChange={(state) => onChange(state === true)}
+            />
+            <span className={cn('grid gap-0.5', disabled && 'opacity-50')}>
+                <span className="text-sm">{option.label}</span>
+                <span className="text-xs text-muted-foreground">
+                    {option.description}
+                </span>
+            </span>
+        </label>
+    );
+
+    if (!disabled) {
+        return row;
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>{row}</TooltipTrigger>
+            <TooltipContent>
+                You can't give out a permission you don't have.
+            </TooltipContent>
+        </Tooltip>
     );
 }

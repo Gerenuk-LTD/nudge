@@ -29,12 +29,11 @@ import { CopyField } from '@marketing/components/copy-field';
 import { cn } from '@/lib/utils';
 import { index as apiLogIndex } from '@/routes/marketing/api-log';
 import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
-import {
-    PermissionPicker,
-    permissionSummary,
-} from '@marketing/components/permission-picker';
+import { PermissionPicker } from '@marketing/components/permission-picker';
+import type { PermissionOption } from '@marketing/components/permission-picker';
 import { StatusBadge } from '@marketing/components/status-badge';
 import { formatDate, formatDateTime } from '@marketing/lib/format';
+import { permissionSummary } from '@marketing/lib/permissions';
 import type { Permission } from '@marketing/types';
 
 type Token = {
@@ -45,8 +44,6 @@ type Token = {
     expires_at: string | null;
     created_at: string | null;
 };
-
-type PermissionOption = { value: Permission; label: string };
 
 /** The API reads with contacts.view and writes contacts, lists and events with contacts.manage. */
 const PRESETS: { label: string; hint: string; permissions: Permission[] }[] = [
