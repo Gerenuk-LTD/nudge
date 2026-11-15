@@ -2,11 +2,13 @@
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
 use Gerenuk\Marketing\Enums\EventType;
+use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
 use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Marketing\Models\Tag;
 use Gerenuk\Marketing\Models\Workspace;
 use Illuminate\Support\Str;
 
@@ -23,8 +25,12 @@ function apiToken(Workspace $workspace, $user, array $permissions = ['contacts.v
 }
 
 test('requests without a valid token are rejected', function () {
-    $this->getJson(route('marketing.api.contacts.index'))->assertUnauthorized();
-    $this->withToken('gmk_nope')->getJson(route('marketing.api.contacts.index'))->assertUnauthorized();
+    $this->getJson(route('marketing.api.contacts.index'))
+        ->assertUnauthorized()
+        ->assertExactJson(['code' => 'unauthenticated', 'message' => 'Unauthenticated.']);
+    $this->withToken('gmk_nope')->getJson(route('marketing.api.contacts.index'))
+        ->assertUnauthorized()
+        ->assertExactJson(['code' => 'unauthenticated', 'message' => 'Unauthenticated.']);
 });
 
 test('a missing record returns a plain not found message', function () {
@@ -32,7 +38,94 @@ test('a missing record returns a plain not found message', function () {
 
     $this->withToken($token)->getJson(route('marketing.api.contacts.show', 'nobody@example.com'))
         ->assertNotFound()
-        ->assertExactJson(['message' => 'Not found.']);
+        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
+});
+
+test('a record that does not bind answers not found', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.lists.show', 999))
+        ->assertNotFound()
+        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
+});
+
+test('an unknown path under the prefix answers not found as JSON', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson('/'.config('marketing.api_prefix').'/nothing-here')
+        ->assertNotFound()
+        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
+});
+
+test('an unknown contact on the event timeline answers not found', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.contacts.events', 'nobody@example.com'))
+        ->assertNotFound()
+        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
+});
+
+test('an unknown segment filter answers not found', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.contacts.index', ['segment' => 999]))
+        ->assertNotFound()
+        ->assertJsonPath('code', 'not_found');
+});
+
+test('a wrong method answers method not allowed', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->deleteJson(route('marketing.api.me'))
+        ->assertStatus(405)
+        ->assertJsonPath('code', 'method_not_allowed')
+        ->assertJsonStructure(['code', 'message']);
+});
+
+test('an unknown contact on an event without create_contact has its own code', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->postJson(route('marketing.api.events.store'), ['email' => 'nobody@example.com', 'event' => 'ping'])
+        ->assertNotFound()
+        ->assertJsonPath('code', 'contact_not_found');
+});
+
+test('a bad idempotency key has its own code', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->withHeader('Idempotency-Key', 'has space')
+        ->postJson(route('marketing.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true])
+        ->assertUnprocessable()
+        ->assertExactJson([
+            'code' => 'invalid_idempotency_key',
+            'message' => 'The Idempotency-Key header must be 1 to 255 visible ASCII characters.',
+        ]);
+});
+
+test('a token without the permission answers with a code', function () {
+    $token = apiToken($this->workspace, $this->owner, ['contacts.view']);
+
+    $this->withToken($token)->putJson(route('marketing.api.contacts.upsert', 'jane@example.com'))
+        ->assertForbidden()
+        ->assertExactJson(['code' => 'missing_permission', 'message' => 'This token does not have the contacts.manage permission.']);
+});
+
+test('validation errors carry a code and the field errors', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->putJson(route('marketing.api.contacts.upsert', 'not-an-email'))
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'validation_failed')
+        ->assertJsonStructure(['code', 'message', 'errors' => ['email']]);
+});
+
+test('the package renders JSON errors for its prefix without an Accept header', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $response = $this->withToken($token)->put(route('marketing.api.contacts.upsert', 'not-an-email'), ['first_name' => 'Jane']);
+
+    $response->assertUnprocessable()->assertJsonPath('code', 'validation_failed');
+    expect($response->headers->get('Content-Type'))->toContain('application/json');
 });
 
 test('repeated bad tokens from one address are rate limited', function () {
@@ -40,7 +133,10 @@ test('repeated bad tokens from one address are rate limited', function () {
         $this->withToken('gmk_'.Str::random(40))->getJson(route('marketing.api.me'))->assertUnauthorized();
     }
 
-    $this->withToken('gmk_'.Str::random(40))->getJson(route('marketing.api.me'))->assertStatus(429);
+    $this->withToken('gmk_'.Str::random(40))->getJson(route('marketing.api.me'))
+        ->assertStatus(429)
+        ->assertExactJson(['code' => 'rate_limited', 'message' => 'Too many requests.'])
+        ->assertHeader('Retry-After');
 });
 
 test('expired tokens are rejected', function () {
@@ -166,7 +262,10 @@ test('requests are rate limited per token', function () {
 
     $this->withToken($token)->getJson(route('marketing.api.me'))->assertOk();
     $this->withToken($token)->getJson(route('marketing.api.me'))->assertOk();
-    $this->withToken($token)->getJson(route('marketing.api.me'))->assertTooManyRequests();
+    $this->withToken($token)->getJson(route('marketing.api.me'))
+        ->assertTooManyRequests()
+        ->assertExactJson(['code' => 'rate_limited', 'message' => 'Too many requests.'])
+        ->assertHeader('Retry-After');
 
     // Another token from the same address has its own allowance.
     $this->withToken(apiToken($this->workspace, $this->owner))->getJson(route('marketing.api.me'))->assertOk();
@@ -231,4 +330,100 @@ test('an api resubscribe is recorded with the token', function () {
 
     expect($event->type)->toBe(EventType::Resubscribed)
         ->and($event->data)->toBe(['via' => 'api', 'token_id' => ApiToken::firstOrFail()->id]);
+});
+
+dataset('paginated list routes', [
+    'contacts' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.contacts.index')],
+    'segment contacts' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.segments.contacts', $segment)],
+    'contact events' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.contacts.events', $contact->email)],
+    'lists' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.lists.index')],
+    'tags' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.tags.index')],
+    'segments' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.segments.index')],
+    'custom fields' => [fn (Segment $segment, Contact $contact): string => route('marketing.api.custom-fields.index')],
+]);
+
+test('every list is cursor-paginated with data, links and meta', function (Closure $url) {
+    $contact = Contact::factory()->create(['email' => 'a@example.com']);
+    Contact::factory()->create(['email' => 'b@example.com']);
+
+    foreach (['one', 'two'] as $name) {
+        ContactList::factory()->create(['name' => $name]);
+        Tag::create(['name' => $name]);
+        CustomFieldDefinition::create(['key' => $name, 'label' => $name, 'type' => 'text']);
+        ActivityEvent::create(['contact_id' => $contact->id, 'type' => EventType::Custom, 'data' => ['name' => $name], 'occurred_at' => now()]);
+    }
+
+    $segment = Segment::create(['name' => 'One', 'definition' => ['match' => 'all', 'conditions' => []]]);
+    Segment::create(['name' => 'Two', 'definition' => ['match' => 'all', 'conditions' => []]]);
+    $token = apiToken($this->workspace, $this->owner);
+
+    $page = $this->withToken($token)->getJson($url($segment, $contact).'?per_page=1')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonStructure(['data', 'links' => ['first', 'last', 'prev', 'next'], 'meta' => ['path', 'per_page', 'next_cursor', 'prev_cursor']]);
+
+    expect($page->json('meta.per_page'))->toBe(1)
+        ->and($page->json('meta.next_cursor'))->not->toBeNull();
+
+    $this->withToken($token)->getJson($page->json('links.next'))->assertOk()->assertJsonCount(1, 'data');
+    $this->withToken($token)->getJson($url($segment, $contact).'?per_page=0')->assertUnprocessable()->assertJsonPath('code', 'validation_failed');
+})->with('paginated list routes');
+
+test('creating and updating a list answers with its contact count and updated_at', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $id = $this->withToken($token)->postJson(route('marketing.api.lists.store'), ['name' => 'News'])
+        ->assertCreated()
+        ->assertJsonPath('data.contacts_count', 0)
+        ->assertJsonStructure(['data' => ['id', 'name', 'description', 'contacts_count', 'created_at', 'updated_at']])
+        ->json('data.id');
+
+    $this->withToken($token)->putJson(route('marketing.api.lists.update', $id), ['name' => 'Updates'])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Updates')
+        ->assertJsonPath('data.contacts_count', 0)
+        ->assertJsonStructure(['data' => ['updated_at']]);
+});
+
+test('the event timeline has ids that match the recorded event', function () {
+    $token = apiToken($this->workspace, $this->owner);
+
+    $recorded = $this->withToken($token)
+        ->postJson(route('marketing.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true])
+        ->assertAccepted()
+        ->assertJsonStructure(['data' => ['id', 'type', 'data', 'campaign_id', 'occurred_at']])
+        ->assertJsonPath('data.type', 'custom')
+        ->assertJsonPath('data.data.name', 'ping');
+
+    $this->withToken($token)->getJson(route('marketing.api.contacts.events', 'ann@example.com'))
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $recorded->json('data.id'));
+});
+
+test('an unknown contact status filter is a validation error', function () {
+    Contact::factory()->create();
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.contacts.index', ['status' => 'subscibed']))
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'validation_failed')
+        ->assertJsonStructure(['errors' => ['status']]);
+
+    $this->withToken($token)->getJson(route('marketing.api.contacts.index', ['status' => 'subscribed,unsubscribed']))->assertOk();
+});
+
+test('a segment has its definition on the list and its contact count only when fetched', function () {
+    $segment = Segment::create(['name' => 'All', 'definition' => ['match' => 'all', 'conditions' => []]]);
+    Contact::factory()->count(2)->create();
+    $token = apiToken($this->workspace, $this->owner);
+
+    $this->withToken($token)->getJson(route('marketing.api.segments.index'))
+        ->assertOk()
+        ->assertJsonPath('data.0.definition.match', 'all')
+        ->assertJsonMissingPath('data.0.contacts_count')
+        ->assertJsonStructure(['data' => [['id', 'name', 'definition', 'created_at', 'updated_at']]]);
+
+    $this->withToken($token)->getJson(route('marketing.api.segments.show', $segment))
+        ->assertOk()
+        ->assertJsonPath('data.contacts_count', 2);
 });

@@ -3,6 +3,8 @@
 namespace Gerenuk\Marketing\Http\Middleware;
 
 use Closure;
+use Gerenuk\Marketing\Http\ApiError;
+use Gerenuk\Marketing\Http\ApiErrorCode;
 use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
@@ -22,7 +24,7 @@ class AuthenticateApiToken
         $failureKey = 'marketing-api-auth:'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($failureKey, 30)) {
-            return response()->json(['message' => 'Too many attempts.'], 429);
+            return ApiError::response(ApiErrorCode::RateLimited, 'Too many requests.', 429, ['Retry-After' => (string) RateLimiter::availableIn($failureKey)]);
         }
 
         $plainToken = $request->bearerToken();
@@ -31,7 +33,7 @@ class AuthenticateApiToken
         if ($token === null || $token->isExpired()) {
             RateLimiter::hit($failureKey, 60);
 
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            return ApiError::response(ApiErrorCode::Unauthenticated, 'Unauthenticated.', 401);
         }
 
         if ($token->last_used_at === null || $token->last_used_at->lt(now()->subMinute())) {

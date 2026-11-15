@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Models;
 
+use Carbon\CarbonInterface;
 use Gerenuk\Marketing\Enums\CustomFieldType;
 use Gerenuk\Marketing\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $key
  * @property string $label
  * @property CustomFieldType $type
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
  */
 #[Fillable(['workspace_id', 'key', 'label', 'type'])]
 class CustomFieldDefinition extends Model

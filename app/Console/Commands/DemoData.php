@@ -725,13 +725,13 @@ class DemoData extends Command
         ];
 
         $errors = [
-            [422, 'PUT', 'contacts/{email}', 'contacts/not-an-email', ['message' => 'The email field must be a valid email address.', 'errors' => ['email' => ['The email field must be a valid email address.']]]],
-            [422, 'POST', 'events', 'events', ['message' => 'The event field is required.', 'errors' => ['event' => ['The event field is required.']]]],
-            [404, 'POST', 'events', 'events', ['message' => 'No contact with that email. Send create_contact: true to create one.']],
-            [404, 'GET', 'contacts/{email}', 'contacts/nobody@example.org', ['message' => 'Not found.']],
-            [403, 'GET', 'segments', 'segments', ['message' => 'This token cannot do that.']],
-            [429, 'PUT', 'contacts/{email}', 'contacts/busy@example.org', ['message' => 'Too many requests.']],
-            [500, 'POST', 'events', 'events', ['message' => 'Server error.']],
+            [422, 'PUT', 'contacts/{email}', 'contacts/not-an-email', ['code' => 'validation_failed', 'message' => 'The email field must be a valid email address.', 'errors' => ['email' => ['The email field must be a valid email address.']]]],
+            [422, 'POST', 'events', 'events', ['code' => 'validation_failed', 'message' => 'The event field is required.', 'errors' => ['event' => ['The event field is required.']]]],
+            [404, 'POST', 'events', 'events', ['code' => 'contact_not_found', 'message' => 'No contact with that email. Send create_contact: true to create one.']],
+            [404, 'GET', 'contacts/{email}', 'contacts/nobody@example.org', ['code' => 'not_found', 'message' => 'Not found.']],
+            [403, 'GET', 'segments', 'segments', ['code' => 'missing_permission', 'message' => 'This token does not have the contacts.view permission.']],
+            [429, 'PUT', 'contacts/{email}', 'contacts/busy@example.org', ['code' => 'rate_limited', 'message' => 'Too many requests.']],
+            [500, 'POST', 'events', 'events', ['code' => 'server_error', 'message' => 'Server Error.']],
         ];
 
         $log = function (int $status, string $method, string $route, string $path, ?array $response, ?array $request) use ($faker, $tokens): void {
@@ -759,8 +759,8 @@ class DemoData extends Command
             $email = $faker->randomElement($emails);
 
             match (true) {
-                $i % 10 < 5 => $log($faker->boolean(80) ? 200 : 201, 'PUT', 'contacts/{email}', "contacts/{$email}", ['data' => ['email' => $email, 'status' => 'subscribed']], ['first_name' => $faker->firstName(), 'tags' => ['customer']]),
-                $i % 10 < 7 => $log(202, 'POST', 'events', 'events', ['data' => ['event' => 'order_placed', 'email' => $email]], ['email' => $email, 'event' => 'order_placed', 'properties' => ['total' => $faker->numberBetween(10, 400)]]),
+                $i % 10 < 5 => $log($faker->boolean(80) ? 200 : 201, 'PUT', 'contacts/{email}', "contacts/{$email}", ['data' => ['email' => $email, 'first_name' => null, 'last_name' => null, 'status' => 'subscribed', 'source' => 'api', 'custom_fields' => (object) [], 'tags' => ['customer'], 'lists' => [], 'unsubscribed_at' => null, 'archived_at' => null, 'created_at' => now()->subDays(30)->toIso8601String(), 'updated_at' => now()->toIso8601String()]], ['first_name' => $faker->firstName(), 'tags' => ['customer']]),
+                $i % 10 < 7 => $log(202, 'POST', 'events', 'events', ['data' => ['id' => $faker->numberBetween(1000, 99999), 'type' => 'custom', 'data' => ['name' => 'order_placed', 'properties' => (object) []], 'campaign_id' => null, 'occurred_at' => now()->toIso8601String()]], ['email' => $email, 'event' => 'order_placed', 'properties' => ['total' => $faker->numberBetween(10, 400)]]),
                 $i % 10 < 9 => $log(200, 'GET', 'contacts', 'contacts', null, null),
                 default => $log(200, 'GET', 'me', 'me', null, null),
             };

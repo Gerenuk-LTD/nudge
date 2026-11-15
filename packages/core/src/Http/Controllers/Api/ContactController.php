@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Http\Controllers\Api;
 
+use Closure;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
@@ -9,12 +10,14 @@ use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Enums\ContactSource;
+use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Http\Controllers\Controller;
 use Gerenuk\Marketing\Http\Resources\ContactResource;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Support\ContactData;
 use Gerenuk\Marketing\Support\ContactFilter;
 use Gerenuk\Marketing\Support\ContactRules;
+use Gerenuk\Marketing\Support\TableQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -39,11 +42,20 @@ class ContactController extends Controller
     #[QueryParameter('search', 'Matches against email address, first name and last name.', type: 'string')]
     #[QueryParameter('per_page', 'Contacts per page, from 1 to 500. Defaults to 100.', type: 'integer', default: 100)]
     #[QueryParameter('cursor', 'The `meta.next_cursor` value from the previous page.', type: 'string')]
-    #[Response(404, 'The `segment` filter names a segment that does not exist.', type: 'array{message: string}')]
+    #[Response(404, 'The `segment` filter names a segment that does not exist.', type: 'array{code: string, message: string}')]
+    #[Response(422, 'A filter failed validation, such as an unknown `status`.', type: 'array{code: string, message: string, errors: array<string, list<string>>}')]
     public function index(Request $request, ContactFilter $filter): AnonymousResourceCollection
     {
         $filters = $request->validate([
-            'status' => ['nullable', 'string'],
+            'status' => ['nullable', 'string', function (string $attribute, mixed $value, Closure $fail): void {
+                foreach (TableQuery::values($value) as $status) {
+                    if (ContactStatus::tryFrom($status) === null) {
+                        $fail('The status must be subscribed or unsubscribed, or a comma-separated list of them.');
+
+                        return;
+                    }
+                }
+            }],
             'list' => ['nullable', 'integer'],
             'tag' => ['nullable', 'integer'],
             'segment' => ['nullable', 'integer'],
@@ -65,7 +77,7 @@ class ContactController extends Controller
      * Get a contact
      */
     #[PathParameter('email', 'The contact\'s email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.', type: 'string', format: 'email')]
-    #[Response(404, 'No contact with that email.', type: 'array{message: string}')]
+    #[Response(404, 'No contact with that email.', type: 'array{code: string, message: string}')]
     public function show(string $email): ContactResource
     {
         return new ContactResource($this->find($email)->load(['tags:id,name', 'lists:id']));
@@ -82,6 +94,7 @@ class ContactController extends Controller
     #[PathParameter('email', 'The contact\'s email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.', type: 'string', format: 'email')]
     #[Response(200, 'The contact already existed and was updated.', type: 'array{data: ContactResource}')]
     #[Response(201, 'The contact was created.', type: 'array{data: ContactResource}')]
+    #[Response(422, 'The body failed validation.', type: 'array{code: string, message: string, errors: array<string, list<string>>}')]
     #[BodyParameter('first_name', type: 'string', required: false)]
     #[BodyParameter('last_name', type: 'string', required: false)]
     #[BodyParameter('status', 'Whether the contact is subscribed. See `resubscribe` for turning an unsubscribed contact back on.', type: 'string', required: false)]
@@ -113,7 +126,7 @@ class ContactController extends Controller
      */
     #[PathParameter('email', 'The contact\'s email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.', type: 'string', format: 'email')]
     #[Response(204, 'Archived. No body.')]
-    #[Response(404, 'No contact with that email.', type: 'array{message: string}')]
+    #[Response(404, 'No contact with that email.', type: 'array{code: string, message: string}')]
     public function archive(string $email): JsonResponse
     {
         $this->find($email)->update(['archived_at' => now()]);

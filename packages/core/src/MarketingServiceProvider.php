@@ -5,6 +5,8 @@ namespace Gerenuk\Marketing;
 use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
 use Gerenuk\Marketing\Enums\Permission;
+use Gerenuk\Marketing\Http\ApiError;
+use Gerenuk\Marketing\Http\ApiErrorCode;
 use Gerenuk\Marketing\Http\Controllers\ApiDocsController;
 use Gerenuk\Marketing\Http\Middleware\AuthenticateApiToken;
 use Gerenuk\Marketing\Http\Middleware\EnsureTokenCan;
@@ -22,7 +24,9 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
@@ -31,7 +35,12 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Throwable;
 
 class MarketingServiceProvider extends ServiceProvider
 {
@@ -65,7 +74,7 @@ class MarketingServiceProvider extends ServiceProvider
     }
 
     /**
-     * Missing records on API routes answer with a plain message, not the internal model name.
+     * Every error on the API prefix is rendered as `{code, message}`, whatever the host app does for its own routes.
      */
     private function registerApiErrors(): void
     {
@@ -74,12 +83,25 @@ class MarketingServiceProvider extends ServiceProvider
                 return;
             }
 
-            $handler->renderable(function (NotFoundHttpException $e, Request $request): ?JsonResponse {
+            $handler->renderable(function (Throwable $e, Request $request): ?JsonResponse {
                 if (! $request->is(trim((string) config('marketing.api_prefix'), '/').'/*')) {
                     return null;
                 }
 
-                return response()->json(['message' => 'Not found.'], 404);
+                return match (true) {
+                    $e instanceof ValidationException => ApiError::response(ApiErrorCode::ValidationFailed, $e->getMessage(), 422, errors: $e->errors()),
+                    $e instanceof NotFoundHttpException, $e instanceof ModelNotFoundException => ApiError::response(ApiErrorCode::NotFound, 'Not found.', 404),
+                    $e instanceof MethodNotAllowedHttpException => ApiError::response(ApiErrorCode::MethodNotAllowed, $e->getMessage(), 405, $e->getHeaders()),
+                    $e instanceof ThrottleRequestsException => ApiError::response(ApiErrorCode::RateLimited, 'Too many requests.', 429, $e->getHeaders()),
+                    $e instanceof HttpExceptionInterface => ApiError::response(
+                        ApiErrorCode::HttpError,
+                        $e->getMessage() !== '' ? $e->getMessage() : (Response::$statusTexts[$e->getStatusCode()] ?? 'Error'),
+                        $e->getStatusCode(),
+                        $e->getHeaders(),
+                    ),
+                    config('app.debug') => null,
+                    default => ApiError::response(ApiErrorCode::ServerError, 'Server Error.', 500),
+                };
             });
         });
     }

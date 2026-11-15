@@ -13,6 +13,7 @@ use Dedoc\Scramble\Support\Generator\RequestBodyObject;
 use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Dedoc\Scramble\Support\Generator\Types\ArrayType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
 use Gerenuk\Marketing\Support\ContactRules;
@@ -40,6 +41,7 @@ class DocsServiceProvider extends ServiceProvider
             'scramble.info.description' => implode("\n\n", [
                 'Manage contacts, lists, custom fields and events in a workspace.',
                 'Every request needs a workspace API token, sent as `Authorization: Bearer <token>`. A token carries permissions; each operation says which one it needs. Requests are limited per token each minute.',
+                'Request bodies are flat JSON. A record comes back inside `data`. Lists are cursor-paginated: pass `per_page` and `cursor`, and follow `meta.next_cursor` until it is null. Errors have a stable `code` and a `message`, and 422 adds `errors` keyed by field. A 429 response includes a `Retry-After` header.',
             ]),
             // The served copy replaces this with each install's own base URL.
             'scramble.servers' => ['Default' => 'api/v1'],
@@ -112,12 +114,36 @@ class DocsServiceProvider extends ServiceProvider
 
         $openApi->components->removeSchema(ContactRules::class);
 
+        $this->describeValidationError($openApi);
+
         // Scramble also registers empty schemas for models it could not read columns from; drop any nothing refers to.
         $document = json_encode($openApi->toArray(), JSON_UNESCAPED_SLASHES);
 
         foreach (array_keys($openApi->components->schemas) as $name) {
             if (! str_contains((string) $document, '#/components/schemas/'.$name.'"')) {
                 $openApi->components->removeSchema($name);
+            }
+        }
+    }
+
+    /**
+     * Scramble documents every validation failure with its own `message` and `errors` body; the API also sends a `code`.
+     */
+    private function describeValidationError(OpenApi $openApi): void
+    {
+        $errors = (new ObjectType)
+            ->additionalProperties((new ArrayType)->setItems(new StringType))
+            ->setDescription('A detailed description of each field that failed validation.');
+
+        $body = (new ObjectType)
+            ->addProperty('code', (new StringType)->example('validation_failed'))
+            ->addProperty('message', (new StringType)->setDescription('Errors overview.'))
+            ->addProperty('errors', $errors)
+            ->setRequired(['code', 'message', 'errors']);
+
+        foreach ($openApi->components->responses as $response) {
+            if ($response instanceof Response && $response->description === 'Validation error') {
+                $response->setContent('application/json', Schema::fromType($body));
             }
         }
     }

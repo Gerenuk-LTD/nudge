@@ -22,6 +22,7 @@ class ContactListResource extends JsonResource
             'description' => $this->description,
             'contacts_count' => $this->whenCounted('contacts'),
             'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

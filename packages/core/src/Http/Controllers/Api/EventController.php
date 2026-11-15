@@ -12,13 +12,17 @@ use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
 use Gerenuk\Marketing\Automations\AutomationTriggers;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\EventType;
+use Gerenuk\Marketing\Http\ApiError;
+use Gerenuk\Marketing\Http\ApiErrorCode;
 use Gerenuk\Marketing\Http\Controllers\Controller;
+use Gerenuk\Marketing\Http\Resources\EventResource;
 use Gerenuk\Marketing\Models\ActivityEvent;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Support\ContactData;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Named events from a customer's app, such as "signed_up" or "order_placed". They appear on the
@@ -35,9 +39,9 @@ class EventController extends Controller
     #[BodyParameter('properties', 'Free-form data about the event, such as an order total. Available to automations that this event triggers.', type: 'object', required: false)]
     #[BodyParameter('create_contact', 'Set to true to create the contact when no contact has this email. Otherwise an unknown email answers 404.', type: 'boolean', required: false)]
     #[HeaderParameter('Idempotency-Key', 'Send the same key when retrying. A repeat within the workspace returns the original response and records nothing new. Must be 1 to 255 visible ASCII characters.', required: false, type: 'string')]
-    #[Response(202, 'Accepted. `email` is only null when a repeated request finds that its contact has since been deleted.', type: 'array{data: array{id: int, event: string, email: string|null}}')]
-    #[Response(404, 'No contact with that email, and `create_contact` was not true.', type: 'array{message: string}')]
-    #[Response(422, 'The body failed validation, or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    #[Response(202, 'Accepted. `data` is the recorded event; a repeated request with the same `Idempotency-Key` answers with the original event.', type: 'array{data: EventResource}')]
+    #[Response(404, 'No contact with that email, and `create_contact` was not true.', type: 'array{code: string, message: string}')]
+    #[Response(422, 'The body failed validation, or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).', type: 'array{code: string, message: string, errors?: array<string, list<string>>}')]
     public function store(Request $request, UpsertContact $upsert, AutomationTriggers $triggers): JsonResponse
     {
         $validated = $request->validate([
@@ -50,7 +54,7 @@ class EventController extends Controller
         $key = $request->headers->has('Idempotency-Key') ? (string) $request->header('Idempotency-Key') : null;
 
         if ($key !== null && preg_match('/^[\x21-\x7E]{1,255}$/', $key) !== 1) {
-            return response()->json(['message' => 'The Idempotency-Key header must be 1 to 255 visible ASCII characters.'], 422);
+            return ApiError::response(ApiErrorCode::InvalidIdempotencyKey, 'The Idempotency-Key header must be 1 to 255 visible ASCII characters.', 422);
         }
 
         // A repeat returns the stored event even if its body differs: the key wins.
@@ -65,7 +69,7 @@ class EventController extends Controller
         }
 
         if ($contact === null) {
-            return response()->json(['message' => 'No contact with that email. Send create_contact: true to create one.'], 404);
+            return ApiError::response(ApiErrorCode::ContactNotFound, 'No contact with that email. Send create_contact: true to create one.', 404);
         }
 
         $properties = $validated['properties'] ?? [];
@@ -91,7 +95,7 @@ class EventController extends Controller
 
         $triggers->event($contact, $validated['event'], $properties, $event->id);
 
-        return response()->json(['data' => ['id' => $event->id, 'event' => $validated['event'], 'email' => $contact->email]], 202);
+        return (new EventResource($event))->response()->setStatusCode(202);
     }
 
     /**
@@ -107,32 +111,26 @@ class EventController extends Controller
             $triggers->event($contact, $name, $event->data['properties'] ?? [], $event->id);
         }
 
-        return response()->json(['data' => ['id' => $event->id, 'event' => $name, 'email' => $contact?->email]], 202);
+        return (new EventResource($event))->response()->setStatusCode(202);
     }
 
     /**
      * A contact's activity, newest first.
      *
-     * Cursor-paginated, 100 events per page. Pass `next_cursor` as `cursor` to read the next page; it is null on the last page.
+     * Cursor-paginated, 100 events per page by default. Pass `meta.next_cursor` as `cursor` to read the next page; it is null on the last page.
      */
     #[PathParameter('email', 'The contact\'s email address, URL-encoded. Matched case-insensitively: it is trimmed and lowercased before lookup.', type: 'string', format: 'email')]
-    #[QueryParameter('cursor', 'The `next_cursor` value from the previous page.', type: 'string')]
-    #[Response(200, 'The contact\'s events.', type: "array{data: list<array{type: 'sent'|'delivered'|'deferred'|'bounced'|'dropped'|'complained'|'opened'|'clicked'|'unsubscribed'|'resubscribed'|'paused'|'custom'|'automation_entered'|'automation_completed'|'automation_exited', data: array<string, mixed>, campaign_id: int|null, occurred_at: string}>, next_cursor: string|null}")]
-    #[Response(404, 'No contact with that email.', type: 'array{message: string}')]
-    public function index(Request $request, string $email): JsonResponse
+    #[QueryParameter('per_page', 'Events per page, from 1 to 500. Defaults to 100.', type: 'integer', default: 100)]
+    #[QueryParameter('cursor', 'The `meta.next_cursor` value from the previous page.', type: 'string')]
+    #[Response(404, 'No contact with that email.', type: 'array{code: string, message: string}')]
+    public function index(Request $request, string $email): AnonymousResourceCollection
     {
+        $perPage = $request->validate(['per_page' => ['nullable', 'integer', 'min:1', 'max:500']])['per_page'] ?? 100;
+
         $contact = Contact::query()->forEmail($email)->firstOrFail();
 
-        $events = $contact->events()->orderByDesc('occurred_at')->orderByDesc('id')->cursorPaginate(100);
-
-        return response()->json([
-            'data' => collect($events->items())->map(fn (ActivityEvent $event) => [
-                'type' => $event->type->value,
-                'data' => (object) ($event->data ?? []),
-                'campaign_id' => $event->campaign_id,
-                'occurred_at' => $event->occurred_at->toIso8601String(),
-            ]),
-            'next_cursor' => $events->nextCursor()?->encode(),
-        ]);
+        return EventResource::collection(
+            ActivityEvent::query()->where('contact_id', $contact->id)->orderByDesc('occurred_at')->orderByDesc('id')->cursorPaginate($perPage)->withQueryString(),
+        );
     }
 }

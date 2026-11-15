@@ -57,8 +57,8 @@ test('a repeat with the same key returns the same event and adds no row', functi
     $second = postEvent($this, key: 'key-1')->assertAccepted();
 
     expect($second->json('data.id'))->toBe($first->json('data.id'))
-        ->and($second->json('data.event'))->toBe('ping')
-        ->and($second->json('data.email'))->toBe('ann@example.com')
+        ->and($second->json('data.type'))->toBe('custom')
+        ->and($second->json('data.data.name'))->toBe('ping')
         ->and(customEventCount())->toBe(1);
 });
 

@@ -3,7 +3,7 @@
     "info": {
         "title": "Gerenuk Marketing API",
         "version": "1",
-        "description": "Manage contacts, lists, custom fields and events in a workspace.\n\nEvery request needs a workspace API token, sent as `Authorization: Bearer <token>`. A token carries permissions; each operation says which one it needs. Requests are limited per token each minute."
+        "description": "Manage contacts, lists, custom fields and events in a workspace.\n\nEvery request needs a workspace API token, sent as `Authorization: Bearer <token>`. A token carries permissions; each operation says which one it needs. Requests are limited per token each minute.\n\nRequest bodies are flat JSON. A record comes back inside `data`. Lists are cursor-paginated: pass `per_page` and `cursor`, and follow `meta.next_cursor` until it is null. Errors have a stable `code` and a `message`, and 422 adds `errors` keyed by field. A 429 response includes a `Retry-After` header."
     },
     "servers": [
         {
@@ -113,6 +113,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -121,6 +127,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -134,16 +141,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -323,7 +345,36 @@
                         }
                     },
                     "422": {
-                        "$ref": "#/components/responses/ValidationException"
+                        "description": "A filter failed validation, such as an unknown `status`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "The `segment` filter names a segment that does not exist.",
@@ -332,11 +383,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -350,6 +405,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -358,6 +419,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -371,6 +433,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -379,6 +447,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -392,16 +461,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -456,11 +540,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -474,6 +562,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -482,6 +576,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -495,6 +590,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -503,6 +604,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -516,16 +618,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -615,7 +732,36 @@
                         }
                     },
                     "422": {
-                        "$ref": "#/components/responses/ValidationException"
+                        "description": "The body failed validation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "201": {
                         "description": "The contact was created.",
@@ -642,6 +788,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -650,6 +802,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -663,6 +816,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -671,6 +830,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -684,16 +844,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -731,11 +906,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -749,6 +928,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -757,6 +942,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -770,6 +956,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -778,6 +970,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -791,16 +984,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -812,14 +1020,33 @@
         "/custom-fields": {
             "get": {
                 "operationId": "marketing.api.custom-fields.index",
-                "description": "Requires a token with the `contacts.view` permission.\n\nThe custom fields defined in the workspace. These keys are the ones accepted in a contact's `custom_fields`.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nThe custom fields defined in the workspace, ordered by key, 100 per page by default. These keys are the ones accepted in a contact's `custom_fields`. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List custom fields",
                 "tags": [
                     "Custom fields"
                 ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Custom fields per page, from 1 to 500. Defaults to 100.",
+                        "schema": {
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `meta.next_cursor` value from the previous page.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Custom field definitions, ordered by key.",
+                        "description": "Paginated set of `CustomFieldResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -828,38 +1055,93 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "key": {
-                                                        "type": "string"
-                                                    },
-                                                    "label": {
-                                                        "type": "string"
-                                                    },
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": [
-                                                            "text",
-                                                            "number",
-                                                            "date",
-                                                            "boolean"
-                                                        ]
-                                                    }
-                                                },
-                                                "required": [
-                                                    "key",
-                                                    "label",
-                                                    "type"
-                                                ]
+                                                "$ref": "#/components/schemas/CustomFieldResource"
                                             }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -868,6 +1150,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -876,6 +1164,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -889,6 +1178,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -897,6 +1192,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -910,16 +1206,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -978,29 +1289,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "key": {
-                                                    "type": "string"
-                                                },
-                                                "label": {
-                                                    "type": "string"
-                                                },
-                                                "type": {
-                                                    "type": "string",
-                                                    "enum": [
-                                                        "text",
-                                                        "number",
-                                                        "date",
-                                                        "boolean"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "key",
-                                                "label",
-                                                "type"
-                                            ]
+                                            "$ref": "#/components/schemas/CustomFieldResource"
                                         }
                                     },
                                     "required": [
@@ -1011,7 +1300,36 @@
                         }
                     },
                     "422": {
-                        "$ref": "#/components/responses/ValidationException"
+                        "description": "The body failed validation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -1020,6 +1338,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1028,6 +1352,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1041,6 +1366,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1049,6 +1380,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1062,16 +1394,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -1083,7 +1430,7 @@
         "/contacts/{email}/events": {
             "get": {
                 "operationId": "marketing.api.contacts.events",
-                "description": "Requires a token with the `contacts.view` permission.\n\nCursor-paginated, 100 events per page. Pass `next_cursor` as `cursor` to read the next page; it is null on the last page.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nCursor-paginated, 100 events per page by default. Pass `meta.next_cursor` as `cursor` to read the next page; it is null on the last page.",
                 "summary": "A contact's activity, newest first",
                 "tags": [
                     "Events"
@@ -1100,9 +1447,18 @@
                         }
                     },
                     {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Events per page, from 1 to 500. Defaults to 100.",
+                        "schema": {
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
                         "name": "cursor",
                         "in": "query",
-                        "description": "The `next_cursor` value from the previous page.",
+                        "description": "The `meta.next_cursor` value from the previous page.",
                         "schema": {
                             "type": "string"
                         }
@@ -1110,7 +1466,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "The contact's events.",
+                        "description": "Paginated set of `EventResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1119,64 +1475,93 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": [
-                                                            "sent",
-                                                            "delivered",
-                                                            "deferred",
-                                                            "bounced",
-                                                            "dropped",
-                                                            "complained",
-                                                            "opened",
-                                                            "clicked",
-                                                            "unsubscribed",
-                                                            "resubscribed",
-                                                            "paused",
-                                                            "custom",
-                                                            "automation_entered",
-                                                            "automation_completed",
-                                                            "automation_exited"
-                                                        ]
-                                                    },
-                                                    "data": {
-                                                        "type": "object",
-                                                        "additionalProperties": {}
-                                                    },
-                                                    "campaign_id": {
-                                                        "type": [
-                                                            "integer",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "occurred_at": {
-                                                        "type": "string"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "type",
-                                                    "data",
-                                                    "campaign_id",
-                                                    "occurred_at"
-                                                ]
+                                                "$ref": "#/components/schemas/EventResource"
                                             }
                                         },
-                                        "next_cursor": {
-                                            "type": [
-                                                "string",
-                                                "null"
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
                                             ]
                                         }
                                     },
                                     "required": [
                                         "data",
-                                        "next_cursor"
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "404": {
                         "description": "No contact with that email.",
@@ -1185,11 +1570,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1203,6 +1592,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1211,6 +1606,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1224,6 +1620,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1232,6 +1634,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1245,16 +1648,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -1317,33 +1735,14 @@
                 },
                 "responses": {
                     "202": {
-                        "description": "Accepted. `email` is only null when a repeated request finds that its contact has since been deleted.",
+                        "description": "Accepted. `data` is the recorded event; a repeated request with the same `Idempotency-Key` answers with the original event.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "id": {
-                                                    "type": "integer"
-                                                },
-                                                "event": {
-                                                    "type": "string"
-                                                },
-                                                "email": {
-                                                    "type": [
-                                                        "string",
-                                                        "null"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "id",
-                                                "event",
-                                                "email"
-                                            ]
+                                            "$ref": "#/components/schemas/EventResource"
                                         }
                                     },
                                     "required": [
@@ -1360,11 +1759,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1378,6 +1781,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         },
@@ -1392,6 +1798,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1405,6 +1812,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1413,6 +1826,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1426,6 +1840,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1434,6 +1854,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1447,16 +1868,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -1468,14 +1904,33 @@
         "/lists": {
             "get": {
                 "operationId": "marketing.api.lists.index",
-                "description": "Requires a token with the `contacts.view` permission.\n\nEvery list in the workspace, by name, with the number of contacts on each.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nEvery list in the workspace, by name, with the number of contacts on each, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List the lists",
                 "tags": [
                     "Lists"
                 ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Lists per page, from 1 to 500. Defaults to 100.",
+                        "schema": {
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `meta.next_cursor` value from the previous page.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Array of `ContactListResource`",
+                        "description": "Paginated set of `ContactListResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1486,14 +1941,91 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/ContactListResource"
                                             }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -1502,6 +2034,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1510,6 +2048,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1523,6 +2062,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1531,6 +2076,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1544,16 +2090,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -1617,6 +2178,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         },
@@ -1631,6 +2195,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message",
                                         "errors"
                                     ]
@@ -1645,6 +2210,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1653,6 +2224,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1666,6 +2238,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1674,6 +2252,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1687,16 +2266,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -1750,11 +2344,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1768,6 +2366,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1776,6 +2380,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1789,6 +2394,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1797,6 +2408,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1810,16 +2422,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -1890,11 +2517,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1908,6 +2539,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         },
@@ -1922,6 +2556,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message",
                                         "errors"
                                     ]
@@ -1936,6 +2571,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1944,6 +2585,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1957,6 +2599,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -1965,6 +2613,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -1978,16 +2627,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2024,11 +2688,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2042,6 +2710,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2050,6 +2724,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2063,6 +2738,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2071,6 +2752,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2084,16 +2766,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2184,11 +2881,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2202,6 +2903,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         },
@@ -2216,6 +2920,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message",
                                         "errors"
                                     ]
@@ -2230,6 +2935,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2238,6 +2949,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2251,6 +2963,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2259,6 +2977,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2272,16 +2991,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2370,11 +3104,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2388,6 +3126,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         },
@@ -2402,6 +3143,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message",
                                         "errors"
                                     ]
@@ -2416,6 +3158,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2424,6 +3172,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2437,6 +3186,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2445,6 +3200,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2458,16 +3214,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2479,14 +3250,33 @@
         "/segments": {
             "get": {
                 "operationId": "marketing.api.segments.index",
-                "description": "Requires a token with the `contacts.view` permission.\n\nEvery segment in the workspace, by name.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nEvery segment in the workspace, by name, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page. `contacts_count` is only on `GET /segments/{segment}`, because counting a segment runs its whole query.",
                 "summary": "List segments",
                 "tags": [
                     "Segments"
                 ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Segments per page, from 1 to 500. Defaults to 100.",
+                        "schema": {
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `meta.next_cursor` value from the previous page.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Segments, ordered by name.",
+                        "description": "Paginated set of `SegmentResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2495,28 +3285,93 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "integer"
-                                                    },
-                                                    "name": {
-                                                        "type": "string"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "id",
-                                                    "name"
-                                                ]
+                                                "$ref": "#/components/schemas/SegmentResource"
                                             }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -2525,6 +3380,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2533,6 +3394,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2546,6 +3408,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2554,6 +3422,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2567,16 +3436,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2606,35 +3490,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "The segment.",
+                        "description": "`SegmentResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "id": {
-                                                    "type": "integer"
-                                                },
-                                                "name": {
-                                                    "type": "string"
-                                                },
-                                                "definition": {
-                                                    "type": "object",
-                                                    "additionalProperties": {}
-                                                },
-                                                "contacts_count": {
-                                                    "type": "integer"
-                                                }
-                                            },
-                                            "required": [
-                                                "id",
-                                                "name",
-                                                "definition",
-                                                "contacts_count"
-                                            ]
+                                            "$ref": "#/components/schemas/SegmentResource"
                                         }
                                     },
                                     "required": [
@@ -2651,11 +3514,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2669,6 +3536,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2677,6 +3550,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2690,6 +3564,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2698,6 +3578,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2711,16 +3592,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2871,11 +3767,15 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
                                         "message": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2889,6 +3789,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2897,6 +3803,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2910,6 +3817,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -2918,6 +3831,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -2931,16 +3845,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -2952,14 +3881,33 @@
         "/tags": {
             "get": {
                 "operationId": "marketing.api.tags.index",
-                "description": "Requires a token with the `contacts.view` permission.\n\nEvery tag in the workspace, by name, with the number of contacts carrying each. Tags are created by sending their names when upserting a contact.",
+                "description": "Requires a token with the `contacts.view` permission.\n\nEvery tag in the workspace, by name, with the number of contacts carrying each, 100 per page by default. Tags are created by sending their names when upserting a contact. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List tags",
                 "tags": [
                     "Tags"
                 ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Tags per page, from 1 to 500. Defaults to 100.",
+                        "schema": {
+                            "type": "integer",
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "description": "The `meta.next_cursor` value from the previous page.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Tags, ordered by name.",
+                        "description": "Paginated set of `TagResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2968,32 +3916,93 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "integer"
-                                                    },
-                                                    "name": {
-                                                        "type": "string"
-                                                    },
-                                                    "contacts_count": {
-                                                        "type": "integer"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "id",
-                                                    "name",
-                                                    "contacts_count"
-                                                ]
+                                                "$ref": "#/components/schemas/TagResource"
                                             }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the next set of items."
+                                                },
+                                                "prev_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "The \"cursor\" that points to the previous set of items."
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "per_page",
+                                                "next_cursor",
+                                                "prev_cursor"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "description": "Unauthenticated. The token is missing, invalid or expired.",
@@ -3002,6 +4011,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "unauthenticated"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -3010,6 +4025,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -3023,6 +4039,12 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "missing_permission"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
@@ -3031,6 +4053,7 @@
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
                                 }
@@ -3044,16 +4067,31 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "examples": [
+                                                "rate_limited"
+                                            ]
+                                        },
                                         "message": {
                                             "type": "string",
                                             "examples": [
-                                                "Too Many Attempts."
+                                                "Too many requests."
                                             ]
                                         }
                                     },
                                     "required": [
+                                        "code",
                                         "message"
                                     ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "description": "Seconds to wait before retrying.",
+                                "schema": {
+                                    "type": "integer"
                                 }
                             }
                         }
@@ -3095,13 +4133,20 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
                     "id",
                     "name",
                     "description",
-                    "created_at"
+                    "created_at",
+                    "updated_at"
                 ],
                 "title": "ContactListResource"
             },
@@ -3196,6 +4241,169 @@
                     "updated_at"
                 ],
                 "title": "ContactResource"
+            },
+            "CustomFieldResource": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "number",
+                            "date",
+                            "boolean"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "key",
+                    "label",
+                    "type",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "CustomFieldResource"
+            },
+            "EventResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "sent",
+                            "delivered",
+                            "deferred",
+                            "bounced",
+                            "dropped",
+                            "complained",
+                            "opened",
+                            "clicked",
+                            "unsubscribed",
+                            "resubscribed",
+                            "paused",
+                            "custom",
+                            "automation_entered",
+                            "automation_completed",
+                            "automation_exited"
+                        ]
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "Details of the event. For a `custom` event: `name` and `properties`.",
+                        "additionalProperties": {}
+                    },
+                    "campaign_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "occurred_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "data",
+                    "campaign_id",
+                    "occurred_at"
+                ],
+                "title": "EventResource"
+            },
+            "SegmentResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "definition": {
+                        "type": "object",
+                        "description": "The segment's rule definition.",
+                        "additionalProperties": {}
+                    },
+                    "contacts_count": {
+                        "type": "integer",
+                        "description": "The number of contacts that currently match the segment. Only present when getting a single segment, because counting runs its whole query."
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "definition",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "SegmentResource"
+            },
+            "TagResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "contacts_count": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "TagResource"
             }
         },
         "responses": {
@@ -3206,6 +4414,12 @@
                         "schema": {
                             "type": "object",
                             "properties": {
+                                "code": {
+                                    "type": "string",
+                                    "examples": [
+                                        "validation_failed"
+                                    ]
+                                },
                                 "message": {
                                     "type": "string",
                                     "description": "Errors overview."
@@ -3222,6 +4436,7 @@
                                 }
                             },
                             "required": [
+                                "code",
                                 "message",
                                 "errors"
                             ]
