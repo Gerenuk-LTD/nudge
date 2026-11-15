@@ -7,16 +7,23 @@ use Carbon\CarbonInterface;
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
 use Gerenuk\Marketing\Automations\SyncAutomationEmails;
 use Gerenuk\Marketing\Enums\AudienceType;
+use Gerenuk\Marketing\Enums\AutomationRunStatus;
+use Gerenuk\Marketing\Enums\AutomationStatus;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
 use Gerenuk\Marketing\Enums\CampaignStatus;
 use Gerenuk\Marketing\Enums\ContactSource;
 use Gerenuk\Marketing\Enums\ContactStatus;
 use Gerenuk\Marketing\Enums\CustomFieldType;
 use Gerenuk\Marketing\Enums\EventType;
+use Gerenuk\Marketing\Enums\ImportStatus;
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Enums\SuppressionReason;
 use Gerenuk\Marketing\Models\ActivityEvent;
+use Gerenuk\Marketing\Models\ApiRequest;
+use Gerenuk\Marketing\Models\ApiToken;
 use Gerenuk\Marketing\Models\Automation;
+use Gerenuk\Marketing\Models\AutomationRun;
 use Gerenuk\Marketing\Models\Campaign;
 use Gerenuk\Marketing\Models\CampaignLink;
 use Gerenuk\Marketing\Models\CampaignRecipient;
@@ -24,7 +31,13 @@ use Gerenuk\Marketing\Models\CampaignSnapshot;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\ContactList;
 use Gerenuk\Marketing\Models\CustomFieldDefinition;
+use Gerenuk\Marketing\Models\EmailTemplate;
+use Gerenuk\Marketing\Models\Import;
+use Gerenuk\Marketing\Models\ImportError;
+use Gerenuk\Marketing\Models\Invitation;
+use Gerenuk\Marketing\Models\Membership;
 use Gerenuk\Marketing\Models\Provider;
+use Gerenuk\Marketing\Models\Role;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Models\Tag;
@@ -32,16 +45,20 @@ use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Sending\HtmlToText;
 use Gerenuk\Marketing\Sending\LinkExtractor;
 use Gerenuk\Marketing\Sending\ProviderType;
+use Gerenuk\Marketing\Templates\EmailEditor;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Fills a new workspace with realistic fake data for trying the app out locally:
- * contacts, lists, tags, segments, a provider, sent campaigns with engagement, and an automation.
+ * contacts, lists, tags, segments, a provider, sent campaigns with engagement, teammates, templates, imports,
+ * automations with runs, API tokens and log, and custom events.
  * Nothing is actually sent.
  */
 #[Signature('app:demo-data {--contacts=500 : How many contacts to create} {--email=test@example.com : The user who owns the demo workspace}')]
@@ -80,6 +97,12 @@ class DemoData extends Command
                 $this->components->task('Provider and suppressions', fn () => $this->createProviderAndSuppressions());
                 $this->components->task('Campaigns and engagement', fn () => $this->createCampaigns($workspace, $user));
                 $this->components->task('Automation', fn () => $this->createAutomation($syncAutomationEmails));
+                $this->components->task('Team, roles and invitation', fn () => $this->createTeam($workspace, $user));
+                $this->components->task('Email templates', fn () => $this->createTemplates($user));
+                $this->components->task('Imports', fn () => $this->createImports($user));
+                $this->components->task('Automation runs and more automations', fn () => $this->createAutomationRuns($syncAutomationEmails));
+                $this->components->task('API tokens and log', fn () => $this->createApiLog($workspace, $user));
+                $this->components->task('Custom events', fn () => $this->createCustomEvents($workspace));
             });
         });
 
@@ -87,6 +110,7 @@ class DemoData extends Command
 
         $this->newLine();
         $this->components->info("Created workspace \"{$workspace->name}\" for {$user->email} (password is \"password\" if the user is new).");
+        $this->components->info('Teammates: admin@, editor@ and viewer@example.com (password "password").');
 
         return self::SUCCESS;
     }
@@ -436,6 +460,344 @@ class DemoData extends Command
         ]);
 
         $syncAutomationEmails->handle($automation);
+    }
+
+    private function createTeam(Workspace $workspace, User $owner): void
+    {
+        foreach (['admin' => 'Admin', 'editor' => 'Editor', 'viewer' => 'Viewer'] as $local => $roleName) {
+            $teammate = User::query()->firstOrCreate(
+                ['email' => "{$local}@example.com"],
+                ['name' => ucfirst($local).' User', 'password' => 'password'],
+            );
+
+            if ($teammate->wasRecentlyCreated) {
+                $teammate->markEmailAsVerified();
+            }
+
+            Membership::query()->firstOrCreate([
+                'workspace_id' => $workspace->id,
+                'user_id' => $teammate->id,
+            ], ['role_id' => Role::query()->where('name', $roleName)->value('id')]);
+
+            $teammate->forgetResolvedMemberships();
+        }
+
+        Role::create([
+            'name' => 'Importer',
+            'permissions' => [Permission::ContactsView->value, Permission::ContactsImport->value, Permission::CampaignsView->value],
+            'is_owner' => false,
+        ]);
+
+        // Only a hash of the token is stored, and nobody knows the token, so the invitation can't be accepted.
+        Invitation::create([
+            'email' => 'newhire@example.com',
+            'role_id' => Role::query()->where('name', 'Editor')->value('id'),
+            'invited_by' => $owner->id,
+            'token_hash' => hash('sha256', Str::random(48)),
+            'expires_at' => now()->addDays(config('marketing.invitation_expiry_days')),
+        ]);
+    }
+
+    private function createTemplates(User $owner): void
+    {
+        foreach ([
+            ['Newsletter', 'A monthly roundup with a headline, a story and a button.', 'Your monthly roundup, {{ first_name | friend }}'],
+            ['Product announcement', 'Announce a new feature with one clear call to action.', 'Introducing something new'],
+        ] as [$name, $description, $subject]) {
+            EmailTemplate::create([
+                'created_by' => $owner->id,
+                'name' => $name,
+                'description' => $description,
+                'subject' => $subject,
+                'preheader' => 'A quick read for you.',
+                'editor' => EmailEditor::BLOCKS,
+                'editor_state' => $this->templateDocument($name),
+                'html' => '',
+            ]);
+        }
+
+        EmailTemplate::create([
+            'created_by' => $owner->id,
+            'name' => 'Plain announcement',
+            'description' => 'Hand-written HTML with no design.',
+            'subject' => 'A quick announcement',
+            'html' => $this->emailHtml('A quick announcement'),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function templateDocument(string $heading): array
+    {
+        $text = fn (string $id, string $html): array => ['id' => $id, 'type' => 'text', 'html' => $html, 'align' => 'left'];
+
+        return [
+            'version' => 1,
+            'settings' => ['backdrop' => '#f4f4f5', 'canvas' => '#ffffff', 'width' => 600, 'font' => 'Arial, Helvetica, sans-serif', 'text' => '#18181b', 'link' => '#2563eb'],
+            'blocks' => [
+                ['id' => 'title', 'type' => 'heading', 'html' => $heading, 'level' => 1, 'align' => 'left'],
+                $text('greeting', '<p>Hi {{ first_name | there }},</p><p>'.fake()->paragraph().'</p>'),
+                ['id' => 'cta', 'type' => 'button', 'label' => 'Read more', 'url' => 'https://demo.test/blog', 'align' => 'left', 'background' => '#18181b', 'color' => '#ffffff'],
+                ['id' => 'rule', 'type' => 'divider'],
+                ['id' => 'footer', 'type' => 'footer', 'html' => '<p>You are receiving this because you signed up at demo.test.</p>', 'align' => 'left'],
+            ],
+        ];
+    }
+
+    private function createImports(User $owner): void
+    {
+        $disk = Storage::disk(config('marketing.imports.disk'));
+        $customers = ContactList::query()->where('name', 'Customers')->firstOrFail();
+        $workspaceId = $customers->workspace_id;
+        $headers = ['email', 'first_name', 'last_name'];
+
+        $csv = fn (int $rows): string => implode("\n", [implode(',', $headers), ...array_map(
+            fn (int $i): string => "customer{$i}@example.org,First{$i},Last{$i}",
+            range(1, $rows),
+        )])."\n";
+
+        $disk->put($path = "imports/{$workspaceId}/demo-customers-march.csv", $csv(120));
+
+        $import = Import::create([
+            'user_id' => $owner->id,
+            'contact_list_id' => $customers->id,
+            'file_path' => $path,
+            'original_filename' => 'customers-march.csv',
+            'headers' => $headers,
+            'column_mapping' => ['email', 'first_name', 'last_name'],
+            'tags' => ['customer'],
+            'status' => ImportStatus::Completed,
+            'total_rows' => 120,
+            'processed_rows' => 120,
+            'created_count' => 80,
+            'updated_count' => 30,
+            'failed_count' => 10,
+            'started_at' => now()->subDays(12)->setTime(14, 0),
+            'finished_at' => now()->subDays(12)->setTime(14, 1),
+        ]);
+        $import->forceFill(['created_at' => now()->subDays(12)->setTime(13, 58)])->save();
+
+        $messages = ['The email field must be a valid email address.', 'Duplicate row', 'The email field is required.'];
+
+        foreach (range(1, 10) as $i) {
+            ImportError::create([
+                'import_id' => $import->id,
+                'row_number' => $i * 11,
+                'email' => $i % 3 === 0 ? null : "broken{$i}@example",
+                'message' => $messages[$i % 3],
+                'created_at' => $import->finished_at,
+            ]);
+        }
+
+        $disk->put($path = "imports/{$workspaceId}/demo-leads.csv", $csv(25));
+
+        $failed = Import::create([
+            'user_id' => $owner->id,
+            'contact_list_id' => null,
+            'file_path' => $path,
+            'original_filename' => 'leads.csv',
+            'headers' => $headers,
+            'column_mapping' => ['email', 'first_name', 'last_name'],
+            'status' => ImportStatus::Failed,
+            'total_rows' => 25,
+            'processed_rows' => 0,
+            'started_at' => now()->subDays(3)->setTime(10, 0),
+            'finished_at' => now()->subDays(3)->setTime(10, 0)->addSeconds(4),
+        ]);
+        $failed->forceFill(['created_at' => now()->subDays(3)->setTime(9, 58)])->save();
+    }
+
+    /**
+     * Give "Welcome series" a live history, and add a paused and a draft automation beside it.
+     */
+    private function createAutomationRuns(SyncAutomationEmails $syncAutomationEmails): void
+    {
+        $welcome = Automation::query()->where('name', 'Welcome series')->firstOrFail();
+        $newsletter = ContactList::query()->where('name', 'Newsletter')->firstOrFail();
+
+        $contactIds = $newsletter->contacts()->whereNull('archived_at')->inRandomOrder()->limit(60)->pluck('contacts.id');
+        $total = $contactIds->count();
+        $completed = (int) round($total * 25 / 60);
+        $waiting = (int) round($total * 20 / 60);
+        $active = (int) round($total * 10 / 60);
+        $faker = fake();
+        $rows = [];
+
+        foreach ($contactIds->values() as $index => $contactId) {
+            $status = match (true) {
+                $index < $completed => AutomationRunStatus::Completed,
+                $index < $completed + $waiting => AutomationRunStatus::Waiting,
+                $index < $completed + $waiting + $active => AutomationRunStatus::Active,
+                default => AutomationRunStatus::Exited,
+            };
+            $startedAt = now()->subDays($faker->numberBetween(1, 38))->subMinutes($faker->numberBetween(0, 1400));
+
+            $rows[] = [
+                'workspace_id' => $welcome->workspace_id,
+                'automation_id' => $welcome->id,
+                'contact_id' => $contactId,
+                'status' => $status->value,
+                'current_step_id' => match ($status) {
+                    AutomationRunStatus::Waiting => 'wait-3-days',
+                    AutomationRunStatus::Active => 'welcome',
+                    default => null,
+                },
+                'next_run_at' => match ($status) {
+                    AutomationRunStatus::Waiting => now()->addHours($faker->numberBetween(1, 72)),
+                    AutomationRunStatus::Active => now()->addMinutes(5),
+                    default => null,
+                },
+                'context' => json_encode([]),
+                'exit_reason' => $status === AutomationRunStatus::Exited ? 'unsubscribed' : null,
+                'completed_at' => $status === AutomationRunStatus::Completed ? $startedAt->copy()->addDays(3) : null,
+                'created_at' => $startedAt,
+                'updated_at' => $startedAt,
+            ];
+        }
+
+        AutomationRun::insert($rows);
+
+        $welcome->forceFill([
+            'status' => AutomationStatus::Active,
+            'activated_at' => now()->subDays(40),
+            'entered_count' => $total,
+            'completed_count' => $completed,
+        ])->save();
+
+        $provider = Provider::query()->firstOrFail();
+        $email = fn (string $subject): array => [
+            'provider_id' => $provider->id,
+            'subject' => $subject,
+            'from_name' => 'Demo Team',
+            'from_email' => 'hello@demo.test',
+            'html' => $this->emailHtml($subject),
+        ];
+
+        $winBack = Automation::factory()->create([
+            'name' => 'Win-back',
+            'status' => AutomationStatus::Paused,
+            'trigger_type' => AutomationTrigger::ListJoined,
+            'trigger_config' => ['list_id' => $newsletter->id],
+            'activated_at' => now()->subDays(20),
+            'definition' => ['steps' => [
+                ['id' => 'miss-you', 'type' => 'send_email', 'config' => $email('We miss you, {{ first_name | friend }}')],
+                ['id' => 'wait-a-week', 'type' => 'wait', 'config' => ['amount' => 7, 'unit' => 'days']],
+                ['id' => 'last-chance', 'type' => 'send_email', 'config' => $email('A little something to come back for')],
+            ]],
+        ]);
+
+        $birthday = Automation::factory()->create([
+            'name' => 'Birthday offer',
+            'status' => AutomationStatus::Draft,
+            'trigger_type' => AutomationTrigger::DateField,
+            'trigger_config' => ['field_key' => 'birthday', 'offset_days' => 0, 'repeat' => 'yearly'],
+            'definition' => ['steps' => [
+                ['id' => 'happy-birthday', 'type' => 'send_email', 'config' => $email('Happy birthday, {{ first_name | friend }}')],
+            ]],
+        ]);
+
+        $syncAutomationEmails->handle($welcome);
+        $syncAutomationEmails->handle($winBack);
+        $syncAutomationEmails->handle($birthday);
+    }
+
+    private function createApiLog(Workspace $workspace, User $owner): void
+    {
+        $faker = fake();
+        $emails = Contact::query()->limit(50)->pluck('email')->all();
+
+        $tokens = [
+            ApiToken::create([
+                'created_by' => $owner->id,
+                'name' => 'Zapier sync',
+                'token_hash' => hash('sha256', Str::random(48)),
+                'permissions' => [Permission::ContactsView->value, Permission::ContactsManage->value],
+                'last_used_at' => now()->subMinutes($faker->numberBetween(1, 59)),
+            ]),
+            ApiToken::create([
+                'created_by' => $owner->id,
+                'name' => 'Website signup form',
+                'token_hash' => hash('sha256', Str::random(48)),
+                'permissions' => [Permission::ContactsManage->value],
+                'last_used_at' => now()->subMinutes($faker->numberBetween(1, 59)),
+            ]),
+        ];
+
+        $errors = [
+            [422, 'PUT', 'contacts/{email}', 'contacts/not-an-email', ['message' => 'The email field must be a valid email address.', 'errors' => ['email' => ['The email field must be a valid email address.']]]],
+            [422, 'POST', 'events', 'events', ['message' => 'The event field is required.', 'errors' => ['event' => ['The event field is required.']]]],
+            [404, 'POST', 'events', 'events', ['message' => 'No contact with that email. Send create_contact: true to create one.']],
+            [404, 'GET', 'contacts/{email}', 'contacts/nobody@example.org', ['message' => 'Not found.']],
+            [403, 'GET', 'segments', 'segments', ['message' => 'This token cannot do that.']],
+            [429, 'PUT', 'contacts/{email}', 'contacts/busy@example.org', ['message' => 'Too many requests.']],
+            [500, 'POST', 'events', 'events', ['message' => 'Server error.']],
+        ];
+
+        $log = function (int $status, string $method, string $route, string $path, ?array $response, ?array $request) use ($faker, $tokens): void {
+            $token = $tokens[$faker->boolean(50) ? 0 : 1];
+            $createdAt = now()->subSeconds($faker->numberBetween(60, 12 * 86400));
+            $keepBodies = $createdAt->greaterThan(now()->subDays(7)) && ! ($method === 'GET' && $status < 400);
+
+            ApiRequest::create([
+                'api_token_id' => $token->id,
+                'token_name' => $token->name,
+                'method' => $method,
+                'route' => $route,
+                'path' => $path,
+                'status' => $status,
+                'duration_ms' => $status === 500 ? $faker->numberBetween(800, 3000) : $faker->numberBetween(12, 240),
+                'ip' => $faker->randomElement(['203.0.113.', '198.51.100.']).$faker->numberBetween(2, 250),
+                'user_agent' => $token->name === 'Zapier sync' ? 'Zapier' : 'GuzzleHttp/7',
+                'request_body' => $keepBodies && $request !== null ? json_encode($request) : null,
+                'response_body' => $keepBodies && $response !== null ? json_encode($response) : null,
+                'created_at' => $createdAt,
+            ]);
+        };
+
+        foreach (range(1, 113) as $i) {
+            $email = $faker->randomElement($emails);
+
+            match (true) {
+                $i % 10 < 5 => $log($faker->boolean(80) ? 200 : 201, 'PUT', 'contacts/{email}', "contacts/{$email}", ['data' => ['email' => $email, 'status' => 'subscribed']], ['first_name' => $faker->firstName(), 'tags' => ['customer']]),
+                $i % 10 < 7 => $log(202, 'POST', 'events', 'events', ['data' => ['event' => 'order_placed', 'email' => $email]], ['email' => $email, 'event' => 'order_placed', 'properties' => ['total' => $faker->numberBetween(10, 400)]]),
+                $i % 10 < 9 => $log(200, 'GET', 'contacts', 'contacts', null, null),
+                default => $log(200, 'GET', 'me', 'me', null, null),
+            };
+        }
+
+        foreach ($errors as [$status, $method, $route, $path, $response]) {
+            $log($status, $method, $route, $path, $response, $method === 'GET' ? null : ['email' => $faker->randomElement($emails)]);
+        }
+    }
+
+    private function createCustomEvents(Workspace $workspace): void
+    {
+        $faker = fake();
+        $contactIds = Contact::query()->pluck('id')->all();
+        $rows = [];
+
+        foreach (range(1, 300) as $ignored) {
+            $data = match ($faker->randomElement(['order_placed', 'order_placed', 'trial_started', 'page_viewed', 'page_viewed'])) {
+                'order_placed' => ['name' => 'order_placed', 'properties' => ['total' => $faker->numberBetween(15, 900), 'items' => $faker->numberBetween(1, 6)]],
+                'trial_started' => ['name' => 'trial_started', 'properties' => ['plan' => $faker->randomElement(self::PLANS)]],
+                default => ['name' => 'page_viewed', 'properties' => ['path' => $faker->randomElement(['/pricing', '/blog', '/docs', '/features'])]],
+            };
+
+            $rows[] = [
+                'workspace_id' => $workspace->id,
+                'contact_id' => $faker->randomElement($contactIds),
+                'campaign_id' => null,
+                'campaign_recipient_id' => null,
+                'type' => EventType::Custom->value,
+                'data' => json_encode($data),
+                'occurred_at' => now()->subMinutes($faker->numberBetween(5, 60 * 24 * 60)),
+            ];
+        }
+
+        foreach (array_chunk($rows, 1000) as $chunk) {
+            ActivityEvent::insert($chunk);
+        }
     }
 
     private function emailHtml(string $heading): string
