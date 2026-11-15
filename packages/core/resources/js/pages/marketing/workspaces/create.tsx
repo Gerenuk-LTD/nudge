@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import WorkspaceController from '@/actions/Gerenuk/Marketing/Http/Controllers/WorkspaceController';
 import InputError from '@/components/input-error';
@@ -6,10 +6,42 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { logout } from '@/routes';
 import { WorkspaceAvatar } from '@marketing/components/workspace-avatar';
 
-export default function CreateWorkspace() {
+export default function CreateWorkspace({
+    allowed,
+    message,
+}: {
+    allowed: boolean;
+    message: string | null;
+}) {
     const [name, setName] = useState('');
+
+    if (!allowed) {
+        return (
+            <>
+                <Head title="Create a workspace" />
+
+                <div className="space-y-4 text-sm">
+                    {message && <p>{message}</p>}
+                    <p className="text-muted-foreground">
+                        If you were invited, open the link in your invitation
+                        email.
+                    </p>
+                    <Link
+                        className="inline-block cursor-pointer underline"
+                        href={logout()}
+                        as="button"
+                        onClick={() => router.flushAll()}
+                        data-test="logout-button"
+                    >
+                        Log out
+                    </Link>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>

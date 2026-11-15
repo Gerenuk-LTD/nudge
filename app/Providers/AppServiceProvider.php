@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Support\RegistrationAccountPolicy;
 use Carbon\CarbonImmutable;
+use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(AccountCreationPolicy::class, RegistrationAccountPolicy::class);
     }
 
     /**

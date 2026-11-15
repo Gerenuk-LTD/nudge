@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing;
 
+use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
 use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Enums\AutomationTrigger;
 use Gerenuk\Marketing\Enums\Permission;
@@ -19,6 +20,7 @@ use Gerenuk\Marketing\Jobs\PruneApiRequests;
 use Gerenuk\Marketing\Jobs\PruneStaleImports;
 use Gerenuk\Marketing\Jobs\RecoverStalledSends;
 use Gerenuk\Marketing\Sending\ProviderTransports;
+use Gerenuk\Marketing\Support\AllowAccountCreation;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -52,6 +54,8 @@ class MarketingServiceProvider extends ServiceProvider
         $this->app->scoped(CurrentWorkspace::class);
         // Scoped, so each request or queued job builds transports from the latest saved credentials.
         $this->app->scoped(ProviderTransports::class);
+        // The host overrides this to decide who may start a new account.
+        $this->app->bindIf(AccountCreationPolicy::class, AllowAccountCreation::class);
 
         // Lets Inertia, and its test assertions, find the package's pages under the `marketing/` prefix.
         $this->app->make('config')->push('inertia.pages.paths', __DIR__.'/../resources/js/pages');

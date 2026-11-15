@@ -3,6 +3,7 @@
 namespace Gerenuk\Marketing\Http\Controllers;
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
 use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Models\Account;
 use Gerenuk\Marketing\Models\Membership;
@@ -11,14 +12,24 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class WorkspaceController extends Controller
 {
     public function create(Request $request): Response
     {
-        $this->accountForNewWorkspace($this->user($request));
+        try {
+            $this->accountForNewWorkspace($this->user($request));
+            $allowed = true;
+        } catch (HttpException $exception) {
+            if ($exception->getStatusCode() !== 403) {
+                throw $exception;
+            }
+            $allowed = false;
+            $message = $exception->getMessage();
+        }
 
-        return Inertia::render('marketing/workspaces/create');
+        return Inertia::render('marketing/workspaces/create', ['allowed' => $allowed, 'message' => $message ?? null]);
     }
 
     public function store(Request $request, CreateWorkspace $createWorkspace): RedirectResponse
@@ -44,7 +55,9 @@ class WorkspaceController extends Controller
         $userId = $user->getAuthIdentifier();
 
         if (! Membership::query()->where('user_id', $userId)->exists()) {
-            return null;
+            // Someone who already owns an account keeps using it; anyone else needs the host's say-so to start one.
+            return Account::query()->where('owner_id', $userId)->first()
+                ?? (app(AccountCreationPolicy::class)->allows($user) ? null : abort(403, __('You don’t have access to a workspace yet. Ask a workspace owner to invite you.')));
         }
 
         return Account::query()->where('owner_id', $userId)->first()

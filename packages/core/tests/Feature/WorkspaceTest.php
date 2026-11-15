@@ -1,10 +1,14 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
+use Gerenuk\Marketing\Contracts\MarketingUser;
 use Gerenuk\Marketing\Events\WorkspaceCreated;
+use Gerenuk\Marketing\Models\Account;
 use Gerenuk\Marketing\Models\Membership;
 use Gerenuk\Marketing\Models\Provider;
 use Gerenuk\Marketing\Models\Role;
+use Gerenuk\Marketing\Models\Workspace;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tests\Fixtures\User;
 use Illuminate\Support\Facades\Event;
@@ -106,7 +110,9 @@ test('a member who doesn\'t own an account cannot create a workspace', function 
     [, $acme] = $this->createOwner('Acme');
     $editor = $this->addMember($acme, 'Editor');
 
-    $this->actingAs($editor)->get(route('marketing.workspaces.create'))->assertForbidden();
+    $this->actingAs($editor)->get(route('marketing.workspaces.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('allowed', false));
     $this->actingAs($editor)->post(route('marketing.workspaces.store'), ['name' => 'Side project'])->assertForbidden();
     $this->actingAs($editor)->get(route('marketing.home'))
         ->assertInertia(fn ($page) => $page->where('workspace.canCreateWorkspace', false));
@@ -133,4 +139,46 @@ test('an account owner\'s new workspace joins their own account', function () {
     expect($third->name)->toBe('Third')
         ->and($third->account_id)->toBe($own->account_id)
         ->and($third->account_id)->not->toBe($other->account_id);
+});
+
+/**
+ * Binds a policy that refuses every user a new account.
+ */
+function refuseAccountCreation(): void
+{
+    app()->instance(AccountCreationPolicy::class, new class implements AccountCreationPolicy
+    {
+        public function allows(MarketingUser $user): bool
+        {
+            return false;
+        }
+    });
+}
+
+test('a user the account policy refuses sees the page without the form', function () {
+    refuseAccountCreation();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('marketing.workspaces.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('allowed', false)->has('message'));
+});
+
+test('a user the account policy refuses cannot create a workspace', function () {
+    refuseAccountCreation();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Acme'])->assertForbidden();
+
+    expect(Workspace::withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('an account owner without a membership can still create a workspace when the policy refuses', function () {
+    refuseAccountCreation();
+    $user = User::factory()->create();
+    $account = Account::create(['name' => 'Acme', 'owner_id' => $user->id]);
+
+    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Acme'])->assertRedirect(route('marketing.home'));
+
+    expect($user->fresh()->currentWorkspace->account_id)->toBe($account->id);
 });
