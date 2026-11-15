@@ -56,16 +56,9 @@ Optional settings:
 
 ## HTTPS and reverse proxies
 
-Terminate TLS in front of the app and set `APP_URL` to the `https://` address. Session cookies are marked Secure by default and won't be sent over plain HTTP. Responses carry HSTS whenever the request arrives over HTTPS.
+Terminate TLS in front of the app and set `APP_URL` to the exact public `https://` address. Links in emails and the API spec always use `APP_URL`, and in production requests for any other host are refused. Session cookies are marked Secure by default and won't be sent over plain HTTP. Responses carry HSTS whenever the request arrives over HTTPS.
 
-If the app runs behind a proxy or load balancer, configure trusted proxies in `bootstrap/app.php`:
-
-```php
-->withMiddleware(function (Middleware $middleware): void {
-    $middleware->trustProxies(at: ['10.0.0.0/8']); // your proxy's addresses
-    // ...
-})
-```
+If the app runs behind a proxy or load balancer, set `TRUSTED_PROXIES` in `.env` to its addresses: a comma-separated list of IPs or CIDR ranges, such as `10.0.0.0/8`. Use `*` when the addresses change and the app can't be reached except through the proxy.
 
 Without trusted proxies, Laravel sees every request as HTTP and from the proxy's IP address. That breaks rate limits, which then apply to everyone at once, as well as session IP records and HSTS.
 

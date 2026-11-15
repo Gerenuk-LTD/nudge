@@ -31,6 +31,14 @@ test('the spec names this install\'s own base URL, even when the prefix is chang
         ->assertJsonPath('servers.0.url', url('api/v2'));
 });
 
+test('the spec ignores the request\'s host', function () {
+    config(['app.url' => 'https://mail.example.com']);
+
+    $this->getJson('http://evil.example/'.config('marketing.api_prefix').'/openapi.json')
+        ->assertOk()
+        ->assertJsonPath('servers.0.url', 'https://mail.example.com/'.trim((string) config('marketing.api_prefix'), '/'));
+});
+
 test('the docs page is a standalone page that points at the spec', function () {
     $response = $this->get(route('marketing.api.docs'))->assertOk();
 

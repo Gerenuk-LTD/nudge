@@ -22,7 +22,8 @@ class ApiDocsController extends Controller
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        $spec['servers'] = [['url' => url((string) config('marketing.api_prefix'))]];
+        // From APP_URL, never the request's Host: the response is publicly cacheable.
+        $spec['servers'] = [['url' => rtrim((string) config('app.url'), '/').'/'.trim((string) config('marketing.api_prefix'), '/')]];
 
         return response()->json($spec)->header('Cache-Control', 'public, max-age=3600');
     }

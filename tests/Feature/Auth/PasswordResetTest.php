@@ -93,6 +93,21 @@ test('forgot password does not reveal whether an account exists', function () {
         ->toBe(__(Password::RESET_LINK_SENT));
 });
 
+test('reset links use APP_URL even when the request names another host', function () {
+    Notification::fake();
+    $user = User::factory()->create();
+
+    $this->post('http://evil.example/forgot-password', ['email' => $user->email]);
+
+    Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user) {
+        $url = $notification->toMail($user)->actionUrl;
+
+        expect($url)->toStartWith(rtrim(config('app.url'), '/').'/')->not->toContain('evil.example');
+
+        return true;
+    });
+});
+
 test('forgot password is rate limited', function () {
     foreach (range(1, 5) as $attempt) {
         $this->post(route('password.email'), ['email' => "nobody{$attempt}@example.com"])->assertRedirect();
