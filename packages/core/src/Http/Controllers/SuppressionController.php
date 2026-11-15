@@ -2,11 +2,13 @@
 
 namespace Gerenuk\Marketing\Http\Controllers;
 
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Enums\SuppressionReason;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Support\CsvCell;
 use Gerenuk\Marketing\Support\TableQuery;
+use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -97,7 +99,7 @@ class SuppressionController extends Controller
     /**
      * Removing a bounce or complaint suppression lets the address be emailed again, so it is deliberate.
      */
-    public function destroy(Request $request, Suppression $suppression): RedirectResponse
+    public function destroy(Request $request, Suppression $suppression, CurrentWorkspace $currentWorkspace): RedirectResponse
     {
         $suppression->delete();
 
@@ -109,7 +111,11 @@ class SuppressionController extends Controller
             'by' => $this->user($request)->getAuthIdentifier(),
         ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __(':email can be emailed again.', ['email' => $suppression->email])]);
+        $canViewContacts = $this->user($request)->hasWorkspacePermission($currentWorkspace->getOrFail(), Permission::ContactsView);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $canViewContacts
+            ? __(':email can be emailed again.', ['email' => $suppression->email])
+            : __('The address can be emailed again.')]);
 
         return back();
     }

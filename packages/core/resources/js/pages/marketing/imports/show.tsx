@@ -45,6 +45,7 @@ type Props = {
     import: ImportSummary;
     headers: string[];
     sample: (string | null)[][];
+    canSeeRows: boolean;
     suggestedMapping: (string | null)[];
     targets: { value: string; label: string }[];
     lists: Option[];
@@ -139,6 +140,7 @@ function MappingForm({
     import: item,
     headers,
     sample,
+    canSeeRows,
     suggestedMapping,
     targets,
     lists,
@@ -197,7 +199,10 @@ function MappingForm({
                         {row.original || `Column ${row.index + 1}`}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
-                        {examples(row.index) || 'No values in the first rows'}
+                        {!canSeeRows
+                            ? 'Example values are hidden'
+                            : examples(row.index) ||
+                              'No values in the first rows'}
                     </span>
                 </div>
             ),
@@ -332,7 +337,7 @@ function MappingForm({
     );
 }
 
-function Results({ import: item, destination, failedRows }: Props) {
+function Results({ import: item, destination, failedRows, canSeeRows }: Props) {
     const running = ['queued', 'processing'].includes(item.status);
     const percentage =
         item.total_rows > 0
@@ -448,20 +453,23 @@ function Results({ import: item, destination, failedRows }: Props) {
                                 Rows that failed
                             </h2>
                             <p className="text-13 text-muted-foreground">
-                                {item.failed_count > failedRows.length
+                                {item.failed_count > failedRows.length &&
+                                canSeeRows
                                     ? `The first ${failedRows.length} of ${item.failed_count.toLocaleString()}. Download them all to fix and import again.`
                                     : 'Fix these in your file and import it again.'}
                             </p>
                         </div>
-                        <Button variant="outline" size="sm" asChild>
-                            <a href={ImportController.errors.url(item.id)}>
-                                <Download />
-                                Download failed rows
-                            </a>
-                        </Button>
+                        {canSeeRows && (
+                            <Button variant="outline" size="sm" asChild>
+                                <a href={ImportController.errors.url(item.id)}>
+                                    <Download />
+                                    Download failed rows
+                                </a>
+                            </Button>
+                        )}
                     </div>
                     <DataTable
-                        columns={failedColumns}
+                        columns={failedColumns(canSeeRows)}
                         data={failedRows}
                         getRowId={(row) => String(row.id)}
                     />
@@ -471,7 +479,7 @@ function Results({ import: item, destination, failedRows }: Props) {
     );
 }
 
-const failedColumns: ColumnDef<FailedRow>[] = [
+const failedColumns = (canSeeRows: boolean): ColumnDef<FailedRow>[] => [
     {
         id: 'row',
         header: 'Row',
@@ -483,7 +491,9 @@ const failedColumns: ColumnDef<FailedRow>[] = [
         header: 'Email',
         cell: ({ row }) =>
             row.original.email || (
-                <span className="text-muted-foreground">Missing</span>
+                <span className="text-muted-foreground">
+                    {canSeeRows ? 'Missing' : '—'}
+                </span>
             ),
     },
     {

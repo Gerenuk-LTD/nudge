@@ -11,6 +11,7 @@ use Gerenuk\Marketing\Campaigns\ChecklistItem;
 use Gerenuk\Marketing\Enums\AudienceType;
 use Gerenuk\Marketing\Enums\CampaignKind;
 use Gerenuk\Marketing\Enums\CampaignStatus;
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Enums\RecipientStatus;
 use Gerenuk\Marketing\Http\Requests\CampaignRequest;
 use Gerenuk\Marketing\Jobs\PickAbTestWinner;
@@ -347,6 +348,8 @@ class CampaignController extends Controller
             return to_route('marketing.campaigns.edit', $campaign);
         }
 
+        $canViewContacts = $this->user($request)->hasWorkspacePermission($this->currentWorkspace->getOrFail(), Permission::ContactsView);
+
         return Inertia::render('marketing/campaigns/show', [
             'campaign' => CampaignSummary::from($campaign),
             'snapshot' => $campaign->snapshot?->only(['subject', 'subject_b', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'html_b']),
@@ -358,7 +361,8 @@ class CampaignController extends Controller
             ] : null,
             'links' => $campaign->links()->orderByDesc('unique_clicks_count')->orderBy('id')->get()
                 ->map(fn (CampaignLink $link) => $link->only(['id', 'url', 'clicks_count', 'unique_clicks_count'])),
-            'recipients' => Inertia::defer(fn () => $this->recipients($request, $campaign)),
+            'canViewRecipients' => $canViewContacts,
+            'recipients' => $canViewContacts ? Inertia::defer(fn () => $this->recipients($request, $campaign)) : null,
         ]);
     }
 

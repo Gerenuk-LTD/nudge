@@ -90,21 +90,24 @@ class SegmentController extends Controller
     /**
      * The live count and a sample of matching contacts while a segment is being built.
      */
-    public function preview(Request $request): JsonResponse
+    public function preview(Request $request, CurrentWorkspace $currentWorkspace): JsonResponse
     {
         $this->validator->validate($request->input('definition'));
 
         $query = $this->segmentQuery->contacts($request->input('definition'));
+        $canViewContacts = $this->user($request)->hasWorkspacePermission($currentWorkspace->getOrFail(), Permission::ContactsView);
 
         return response()->json([
             'count' => (clone $query)->count(),
             'total' => Contact::query()->active()->count(),
-            'sample' => $query->orderByDesc('id')->limit(10)->get(['id', 'email', 'first_name', 'last_name'])
-                ->map(fn (Contact $contact) => [
-                    'id' => $contact->id,
-                    'email' => $contact->email,
-                    'name' => trim("{$contact->first_name} {$contact->last_name}") ?: null,
-                ]),
+            'sample' => $canViewContacts
+                ? $query->orderByDesc('id')->limit(10)->get(['id', 'email', 'first_name', 'last_name'])
+                    ->map(fn (Contact $contact) => [
+                        'id' => $contact->id,
+                        'email' => $contact->email,
+                        'name' => trim("{$contact->first_name} {$contact->last_name}") ?: null,
+                    ])
+                : [],
         ]);
     }
 

@@ -132,8 +132,10 @@ export default function ShowCampaign({
     snapshot,
     links,
     recipients,
+    canViewRecipients,
     abTest,
 }: {
+    canViewRecipients: boolean;
     abTest: AbTest;
     campaign: CampaignSummary;
     snapshot: Snapshot;
@@ -418,7 +420,7 @@ export default function ShowCampaign({
                     />
                 </dl>
 
-                {stats.failed > 0 && (
+                {stats.failed > 0 && canViewRecipients && (
                     <p className="text-13 text-red-600 dark:text-red-400">
                         {stats.failed.toLocaleString()} could not be sent.
                         Filter recipients by "Failed" to see why.
@@ -467,44 +469,56 @@ export default function ShowCampaign({
 
                 <section className="space-y-3">
                     <h2 className="text-base font-semibold">Recipients</h2>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <TableSearch
-                            value={recipientQuery.get('search')}
-                            onSearch={(search) =>
-                                recipientQuery.update({ search })
-                            }
-                            placeholder="Search by email"
-                        />
-                        <FacetedFilter
-                            title="Status"
-                            options={RECIPIENT_STATUSES}
-                            selected={recipientQuery.values('status')}
-                            onChange={(status) =>
-                                recipientQuery.update({ status })
-                            }
-                        />
-                        <ResetFilters
-                            active={recipientQuery.values('status').length > 0}
-                            onReset={() =>
-                                recipientQuery.update({ status: null })
-                            }
-                        />
-                    </div>
-                    {!recipients ? (
-                        <DataTableSkeleton columns={4} />
+                    {!canViewRecipients ? (
+                        <p className="rounded-xl border bg-card px-5 py-4 text-13 text-muted-foreground shadow-xs">
+                            You need permission to view contacts to see who
+                            received this email.
+                        </p>
                     ) : (
                         <>
-                            <DataTable
-                                columns={recipientColumns}
-                                data={recipients.data}
-                                getRowId={byId}
-                                emptyMessage="Nobody here."
-                                sort={recipientQuery.sort}
-                            />
-                            <Pagination
-                                page={recipients}
-                                query={recipientQuery}
-                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                                <TableSearch
+                                    value={recipientQuery.get('search')}
+                                    onSearch={(search) =>
+                                        recipientQuery.update({ search })
+                                    }
+                                    placeholder="Search by email"
+                                />
+                                <FacetedFilter
+                                    title="Status"
+                                    options={RECIPIENT_STATUSES}
+                                    selected={recipientQuery.values('status')}
+                                    onChange={(status) =>
+                                        recipientQuery.update({ status })
+                                    }
+                                />
+                                <ResetFilters
+                                    active={
+                                        recipientQuery.values('status').length >
+                                        0
+                                    }
+                                    onReset={() =>
+                                        recipientQuery.update({ status: null })
+                                    }
+                                />
+                            </div>
+                            {!recipients ? (
+                                <DataTableSkeleton columns={4} />
+                            ) : (
+                                <>
+                                    <DataTable
+                                        columns={recipientColumns}
+                                        data={recipients.data}
+                                        getRowId={byId}
+                                        emptyMessage="Nobody here."
+                                        sort={recipientQuery.sort}
+                                    />
+                                    <Pagination
+                                        page={recipients}
+                                        query={recipientQuery}
+                                    />
+                                </>
+                            )}
                         </>
                     )}
                 </section>

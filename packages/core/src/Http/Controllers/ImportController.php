@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing\Http\Controllers;
 use Gerenuk\Marketing\Actions\Imports\CreateImport;
 use Gerenuk\Marketing\Actions\Imports\StartImport;
 use Gerenuk\Marketing\Enums\ImportStatus;
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Imports\ColumnMapping;
 use Gerenuk\Marketing\Imports\CsvReader;
 use Gerenuk\Marketing\Models\ContactList;
@@ -69,6 +70,7 @@ class ImportController extends Controller
         $customFields = CustomFieldDefinition::query()->orderBy('label')->get();
         $sample = [];
         $fileMissing = false;
+        $canSeeRows = $this->canSeeRows($request, $import);
 
         if ($import->status === ImportStatus::Pending) {
             try {
@@ -85,10 +87,16 @@ class ImportController extends Controller
             }
         }
 
+        // The file is still opened above so a missing upload is reported, but its rows are only shown to people who may see contacts.
+        if (! $canSeeRows) {
+            $sample = [];
+        }
+
         return Inertia::render('marketing/imports/show', [
             'import' => $this->present($import),
             'headers' => $import->headers,
             'sample' => $sample,
+            'canSeeRows' => $canSeeRows,
             'suggestedMapping' => ColumnMapping::suggest($import->headers, $customFields),
             'targets' => collect(ColumnMapping::targets($customFields))->map(fn (string $target) => [
                 'value' => $target,
@@ -104,7 +112,10 @@ class ImportController extends Controller
                 'list' => $import->contact_list_id === null ? null : ContactList::query()->find($import->contact_list_id, ['id', 'name']),
                 'tags' => $import->tags ?? [],
             ],
-            'failedRows' => $import->errors()->orderBy('row_number')->limit(self::ERRORS_SHOWN)->get(['id', 'row_number', 'email', 'message']),
+            'failedRows' => $canSeeRows
+                ? $import->errors()->orderBy('row_number')->limit(self::ERRORS_SHOWN)->get(['id', 'row_number', 'email', 'message'])
+                : $import->errors()->orderBy('row_number')->limit(self::ERRORS_SHOWN)->get(['id', 'row_number', 'message'])
+                    ->map(fn (ImportError $error) => [...$error->only(['id', 'row_number', 'message']), 'email' => null]),
         ]);
     }
 
@@ -155,8 +166,10 @@ class ImportController extends Controller
     /**
      * Download the rows that failed, with the reason for each.
      */
-    public function errors(Import $import): StreamedResponse
+    public function errors(Request $request, Import $import): StreamedResponse
     {
+        abort_unless($this->canSeeRows($request, $import), 403);
+
         $filename = pathinfo($import->original_filename, PATHINFO_FILENAME).'-errors.csv';
 
         return response()->streamDownload(function () use ($import): void {
@@ -169,6 +182,15 @@ class ImportController extends Controller
 
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /** The uploader always sees their own rows; anyone else needs permission to view contacts. */
+    private function canSeeRows(Request $request, Import $import): bool
+    {
+        $user = $this->user($request);
+
+        return $import->user_id === $user->getAuthIdentifier()
+            || $user->hasWorkspacePermission($this->currentWorkspace->getOrFail(), Permission::ContactsView);
     }
 
     /**
