@@ -66,12 +66,16 @@ class ApiRequestController extends Controller
      */
     private function requests(Request $request): LengthAwarePaginator
     {
+        $search = trim($request->string('search')->toString());
+        $byId = preg_match('/^#?\d+$/', $search) === 1;
+
         $query = ApiRequest::query()
-            ->where('created_at', '>=', match ($request->string('period')->toString()) {
+            // A request looked up by its ID is found whatever its age.
+            ->unless($byId, fn (Builder $query) => $query->where('created_at', '>=', match ($request->string('period')->toString()) {
                 '24h' => now()->subDay(),
                 '30d' => now()->subDays(30),
                 default => now()->subDays(7),
-            })
+            }))
             ->when(TableQuery::values($request->input('token')), fn (Builder $query, array $ids) => $query->whereIn('api_token_id', $ids))
             ->when(TableQuery::values($request->input('route')), function (Builder $query, array $routes): void {
                 $query->where(function (Builder $query) use ($routes): void {
@@ -95,9 +99,7 @@ class ApiRequestController extends Controller
                 });
             });
 
-        $search = trim($request->string('search')->toString());
-
-        if (preg_match('/^#?\d+$/', $search) === 1) {
+        if ($byId) {
             $query->whereKey((int) ltrim($search, '#'));
         } else {
             TableQuery::search($query, $search, ['path']);

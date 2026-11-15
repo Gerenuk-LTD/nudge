@@ -227,7 +227,7 @@ test('failed reads keep their bodies', function () {
 
 test('a request can be found by its ID', function () {
     logRow($this->workspace);
-    $second = logRow($this->workspace, ['path' => '/api/v1/me']);
+    $second = logRow($this->workspace, ['path' => '/api/v1/me', 'created_at' => now()->subDays(10)]);
 
     foreach (["#{$second->id}", (string) $second->id] as $search) {
         $this->actingAs($this->owner)->get(route('marketing.api-log.index', ['search' => $search]))
