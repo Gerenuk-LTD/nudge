@@ -15,7 +15,7 @@ use function Laravel\Prompts\password;
  * Sets a user's password from the command line, e.g. when they're locked out and can't receive the reset email.
  * The password goes through the same validation as the normal reset flow.
  */
-#[Signature('app:set-password {email : The email address of the user} {--password= : The new password (prompted for if left out)}')]
+#[Signature('app:set-password {email : The email address of the user} {--password= : The new password (prompted for if left out)} {--clear-sign-in-methods : Also remove the user\'s passkeys and two-factor authentication}')]
 #[Description("Manually set a user's password")]
 class SetPassword extends Command
 {
@@ -51,6 +51,13 @@ class SetPassword extends Command
         }
 
         $this->components->info("Password updated for [{$user->email}].");
+
+        if ($this->option('clear-sign-in-methods')) {
+            $user->passkeys()->delete();
+            $user->forceFill(['two_factor_secret' => null, 'two_factor_recovery_codes' => null, 'two_factor_confirmed_at' => null])->save();
+
+            $this->components->info("Passkeys and two-factor authentication removed for [{$user->email}].");
+        }
 
         return self::SUCCESS;
     }

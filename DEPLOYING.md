@@ -35,6 +35,8 @@ A new install has no accounts, and the first one becomes its owner. So that nobo
 
 Once the owner exists, `REGISTRATION_MODE` decides who else can sign up, and the setup token no longer matters.
 
+Passkeys and two-factor authentication can only be added once an account's email is verified. To recover a locked-out user, `php artisan app:set-password someone@example.com --clear-sign-in-methods` resets their password and removes their passkeys and two-factor authentication.
+
 ## Environment values that must be set
 
 `.env.example` ships production-safe defaults (`APP_ENV=production`, `APP_DEBUG=false`, secure and encrypted sessions). Never deploy with `APP_ENV=local` or `APP_DEBUG=true`: debug pages show request data and SQL to anyone.
