@@ -2,12 +2,14 @@
 
 namespace Gerenuk\Marketing\Http\Controllers;
 
+use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Models\Contact;
 use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
 use Gerenuk\Marketing\Segments\SegmentField;
 use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
 use Gerenuk\Marketing\Segments\SegmentQuery;
+use Gerenuk\Marketing\Segments\WithdrawSegmentApprovals;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -58,11 +60,22 @@ class SegmentController extends Controller
         return $this->form($segment);
     }
 
-    public function update(Request $request, Segment $segment, CurrentWorkspace $currentWorkspace): RedirectResponse
+    public function update(Request $request, Segment $segment, CurrentWorkspace $currentWorkspace, WithdrawSegmentApprovals $withdraw): RedirectResponse
     {
-        $segment->update($this->validated($request, $currentWorkspace, $segment));
+        $validated = $this->validated($request, $currentWorkspace, $segment);
+        $workspace = $currentWorkspace->getOrFail();
+        $canApprove = $this->user($request)->hasWorkspacePermission($workspace, Permission::CampaignsApprove);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Segment saved.')]);
+        $segment->fill($validated);
+        $definitionChanged = $segment->isDirty('definition');
+        $segment->save();
+
+        $withdrawn = $definitionChanged && ! $canApprove ? $withdraw->handle($segment, $workspace) : ['campaigns' => 0, 'automations' => 0];
+        $count = $withdrawn['campaigns'] + $withdrawn['automations'];
+
+        Inertia::flash('toast', $count > 0
+            ? ['type' => 'warning', 'message' => __('Segment saved. Approval was withdrawn from :count campaigns or automations that use it.', ['count' => $count])]
+            : ['type' => 'success', 'message' => __('Segment saved.')]);
 
         return to_route('marketing.segments.edit', $segment);
     }

@@ -271,6 +271,12 @@ class CampaignController extends Controller
     {
         $this->ensureEditable($campaign);
 
+        $version = $request->validate(['version' => ['nullable', 'string']])['version'] ?? null;
+
+        if ($version !== null && $version !== $campaign->updated_at?->toIso8601String()) {
+            throw ValidationException::withMessages(['campaign' => __('This campaign changed after you opened it. Reload it and review it again.')]);
+        }
+
         $campaign->update(['approved_at' => now(), 'approved_by' => $this->user($request)->getAuthIdentifier()]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Campaign approved.')]);
@@ -413,6 +419,7 @@ class CampaignController extends Controller
             'audience_type' => $campaign->audience_type->value,
             'list_ids' => $campaign->list_ids ?? [],
             'approved_at' => $campaign->approved_at?->toIso8601String(),
+            'updated_at' => $campaign->updated_at?->toIso8601String(),
             'scheduled_at' => $campaign->scheduled_at?->toIso8601String(),
         ];
     }

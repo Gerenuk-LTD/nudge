@@ -91,6 +91,7 @@ type Campaign = {
     audience_type: 'all' | 'lists' | 'segment';
     list_ids: number[];
     approved_at: string | null;
+    updated_at: string | null;
     scheduled_at: string | null;
 };
 
@@ -1758,7 +1759,7 @@ function ReviewStep({
                                         CampaignController.approve.url(
                                             campaign.id,
                                         ),
-                                        {},
+                                        { version: campaign.updated_at },
                                         { preserveScroll: true },
                                     )
                                 }

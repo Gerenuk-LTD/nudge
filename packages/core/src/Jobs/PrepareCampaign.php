@@ -53,10 +53,20 @@ class PrepareCampaign implements ShouldBeUnique, ShouldQueue
 
     public function handle(CurrentWorkspace $currentWorkspace, CampaignAudience $audience): void
     {
-        $currentWorkspace->runAs(Workspace::findOrFail($this->workspaceId), function () use ($audience): void {
+        $workspace = Workspace::findOrFail($this->workspaceId);
+
+        $currentWorkspace->runAs($workspace, function () use ($audience, $workspace): void {
             $campaign = Campaign::find($this->campaignId);
 
             if ($campaign === null) {
+                return;
+            }
+
+            // A backstop for anything that withdrew approval after scheduling: such a campaign goes back to Draft unsent.
+            if ($workspace->requires_campaign_approval && $campaign->approved_at === null && $campaign->status === CampaignStatus::Scheduled) {
+                Campaign::query()->whereKey($campaign->id)->where('status', CampaignStatus::Scheduled)
+                    ->update(['status' => CampaignStatus::Draft, 'scheduled_at' => null]);
+
                 return;
             }
 
