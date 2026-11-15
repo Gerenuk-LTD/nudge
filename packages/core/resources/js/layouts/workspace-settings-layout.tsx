@@ -1,7 +1,15 @@
-import { Code, Mail, Settings, ShieldCheck, Users } from 'lucide-react';
+import {
+    Code,
+    Mail,
+    ScrollText,
+    Settings,
+    ShieldCheck,
+    Users,
+} from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { SettingsShell } from '@marketing/components/settings-shell';
 import type { SettingsTab } from '@marketing/components/settings-shell';
+import { index as apiLogIndex } from '@/routes/marketing/api-log';
 import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
 import { index as membersIndex } from '@/routes/marketing/members';
 import { index as rolesIndex } from '@/routes/marketing/roles';
@@ -37,6 +45,12 @@ export const workspaceSettingsTabs: (SettingsTab & {
         title: 'API tokens',
         href: apiTokensIndex(),
         icon: Code,
+        permission: 'api_tokens.manage',
+    },
+    {
+        title: 'API log',
+        href: apiLogIndex(),
+        icon: ScrollText,
         permission: 'api_tokens.manage',
     },
 ];

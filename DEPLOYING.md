@@ -107,6 +107,10 @@ Every install serves a reference for its own API at `{APP_URL}/api/v1/docs`, and
 
 Set `MARKETING_API_DOCS=false` to turn both off. The docs page loads its viewer from a CDN (jsDelivr), so the reader's browser needs internet access; the spec itself is served from your own app.
 
+## API log
+
+Every request made with an API token is recorded under Workspace settings, API log: time, token, endpoint, status and duration. Request and response bodies, which hold contact data, are kept only for writes and errors, cut to 16 KB, and cleared after `MARKETING_API_LOG_BODY_DAYS` days (default 7). The rows themselves are deleted after `MARKETING_API_LOG_DAYS` days (default 30), by a daily job in the scheduler. The token itself is never stored. Set `MARKETING_API_LOG=false` to turn the log off.
+
 ## Keys
 
 Keep `APP_KEY` secret and backed up. It encrypts sessions and stored provider credentials, and it signs tracking and unsubscribe links.

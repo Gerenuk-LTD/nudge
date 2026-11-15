@@ -32,6 +32,16 @@ return [
         'enabled' => (bool) env('MARKETING_API_DOCS', true),
     ],
 
+    // Every authenticated API request, shown under Workspace settings → API log. Bodies (cut to max_body_bytes) are
+    // kept only for writes and errors, and cleared after body_retention_days because they hold contact data. The rows
+    // themselves go after retention_days.
+    'api_log' => [
+        'enabled' => (bool) env('MARKETING_API_LOG', true),
+        'retention_days' => (int) env('MARKETING_API_LOG_DAYS', 30),
+        'body_retention_days' => (int) env('MARKETING_API_LOG_BODY_DAYS', 7),
+        'max_body_bytes' => 16384,
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Imports

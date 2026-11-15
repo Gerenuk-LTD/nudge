@@ -1,5 +1,6 @@
 <?php
 
+use Gerenuk\Marketing\Http\Controllers\ApiRequestController;
 use Gerenuk\Marketing\Http\Controllers\ApiTokenController;
 use Gerenuk\Marketing\Http\Controllers\AutomationController;
 use Gerenuk\Marketing\Http\Controllers\CampaignController;
@@ -178,6 +179,8 @@ Route::middleware('marketing.workspace')->group(function () {
             Route::get('api-tokens', [ApiTokenController::class, 'index'])->name('api-tokens.index');
             Route::post('api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
             Route::delete('api-tokens/{apiToken}', [ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+            Route::get('api-log', [ApiRequestController::class, 'index'])->name('api-log.index');
+            Route::get('api-log/{apiRequest}', [ApiRequestController::class, 'show'])->name('api-log.show');
         });
     });
 });

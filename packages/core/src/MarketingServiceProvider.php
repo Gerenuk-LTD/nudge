@@ -8,10 +8,12 @@ use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Http\Controllers\ApiDocsController;
 use Gerenuk\Marketing\Http\Middleware\AuthenticateApiToken;
 use Gerenuk\Marketing\Http\Middleware\EnsureTokenCan;
+use Gerenuk\Marketing\Http\Middleware\LogApiRequest;
 use Gerenuk\Marketing\Http\Middleware\SetCurrentWorkspace;
 use Gerenuk\Marketing\Jobs\AdvanceDueAutomationRuns;
 use Gerenuk\Marketing\Jobs\DispatchDueCampaigns;
 use Gerenuk\Marketing\Jobs\EnrollScheduledTriggers;
+use Gerenuk\Marketing\Jobs\PruneApiRequests;
 use Gerenuk\Marketing\Jobs\PruneStaleImports;
 use Gerenuk\Marketing\Jobs\RecoverStalledSends;
 use Gerenuk\Marketing\Sending\ProviderTransports;
@@ -87,6 +89,7 @@ class MarketingServiceProvider extends ServiceProvider
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->call(new DispatchDueCampaigns)->everyMinute()->name('marketing:dispatch-due-campaigns')->withoutOverlapping(10);
             $schedule->call(new PruneStaleImports)->daily()->name('marketing:prune-stale-imports')->withoutOverlapping(60);
+            $schedule->call(new PruneApiRequests)->daily()->name('marketing:prune-api-requests')->withoutOverlapping(60);
             $schedule->call(new AdvanceDueAutomationRuns)->everyMinute()->name('marketing:advance-automation-runs')->withoutOverlapping(10);
             $schedule->job(new EnrollScheduledTriggers([AutomationTrigger::SegmentEntered]))->everyFiveMinutes()->name('marketing:segment-triggers')->withoutOverlapping(30);
             $schedule->job(new EnrollScheduledTriggers([AutomationTrigger::DateField, AutomationTrigger::Inactivity]))->dailyAt('08:00')->name('marketing:daily-triggers')->withoutOverlapping(120);
@@ -99,6 +102,7 @@ class MarketingServiceProvider extends ServiceProvider
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('marketing.workspace', SetCurrentWorkspace::class);
         $router->aliasMiddleware('marketing.api', AuthenticateApiToken::class);
+        $router->aliasMiddleware('marketing.api-log', LogApiRequest::class);
         $router->aliasMiddleware('marketing.token-can', EnsureTokenCan::class);
 
         // The workspace must be set before route model binding runs, so bound models are workspace-scoped.
@@ -147,7 +151,7 @@ class MarketingServiceProvider extends ServiceProvider
         Route::middleware('web')->name('marketing.')->group(__DIR__.'/../routes/public-pages.php');
 
         Route::prefix(config('marketing.api_prefix'))
-            ->middleware(['api', 'marketing.api', 'throttle:marketing-api'])
+            ->middleware(['api', 'marketing.api', 'marketing.api-log', 'throttle:marketing-api'])
             ->name('marketing.api.')
             ->group(__DIR__.'/../routes/api.php');
 

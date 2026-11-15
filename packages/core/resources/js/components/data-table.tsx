@@ -1,17 +1,26 @@
 import type {
     Column,
     ColumnDef,
+    ExpandedState,
     RowData,
     SortingState,
 } from '@tanstack/react-table';
 import {
     flexRender,
     getCoreRowModel,
+    getExpandedRowModel,
     getSortedRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, Inbox } from 'lucide-react';
-import { useState } from 'react';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    ChevronRight,
+    Inbox,
+} from 'lucide-react';
+import { Fragment, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -53,6 +62,7 @@ export function DataTable<TData>({
     emptyMessage,
     sortable = false,
     sort,
+    renderExpanded,
 }: {
     columns: ColumnDef<TData>[];
     data: TData[];
@@ -60,20 +70,27 @@ export function DataTable<TData>({
     emptyMessage?: string;
     sortable?: boolean;
     sort?: TableSort;
+    /** When given, each row gets a chevron that shows this under it. Only the row's own content is rendered, on demand. */
+    renderExpanded?: (row: TData) => ReactNode;
 }) {
     'use no memo'; // The table instance is mutable, so React Compiler must not memoize around it.
 
     const [sorting, setSorting] = useState<SortingState>([]);
+    const [expanded, setExpanded] = useState<ExpandedState>({});
+    const columnCount = columns.length + (renderExpanded ? 1 : 0);
 
     const table = useReactTable({
         data,
         columns,
         getRowId,
-        state: { sorting },
+        state: { sorting, expanded },
         onSortingChange: setSorting,
+        onExpandedChange: setExpanded,
         enableSorting: sortable,
+        getRowCanExpand: () => renderExpanded !== undefined,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
     });
 
     const sortedBy = (column: Column<TData>): false | 'asc' | 'desc' => {
@@ -110,6 +127,11 @@ export function DataTable<TData>({
                             key={headerGroup.id}
                             className="hover:bg-transparent"
                         >
+                            {renderExpanded && (
+                                <TableHead className="w-10 px-2">
+                                    <span className="sr-only">Details</span>
+                                </TableHead>
+                            )}
                             {headerGroup.headers.map((header) => {
                                 const label = flexRender(
                                     header.column.columnDef.header,
@@ -184,30 +206,64 @@ export function DataTable<TData>({
                 <TableBody>
                     {table.getRowModel().rows.length > 0 ? (
                         table.getRowModel().rows.map((row) => (
-                            <TableRow key={row.id}>
-                                {row.getVisibleCells().map((cell) => (
-                                    <TableCell
-                                        key={cell.id}
-                                        className={cn(
-                                            'px-4 py-2.5 whitespace-normal',
-                                            cell.column.columnDef.meta
-                                                ?.numeric && 'text-right',
-                                            cell.column.columnDef.meta
-                                                ?.className,
-                                        )}
-                                    >
-                                        {flexRender(
-                                            cell.column.columnDef.cell,
-                                            cell.getContext(),
-                                        )}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
+                            <Fragment key={row.id}>
+                                <TableRow>
+                                    {renderExpanded && (
+                                        <TableCell className="w-10 px-2 py-2.5">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7 text-muted-foreground"
+                                                aria-label="Show details"
+                                                aria-expanded={row.getIsExpanded()}
+                                                onClick={() =>
+                                                    row.toggleExpanded()
+                                                }
+                                            >
+                                                <ChevronRight
+                                                    className={cn(
+                                                        'size-4 transition-transform',
+                                                        row.getIsExpanded() &&
+                                                            'rotate-90',
+                                                    )}
+                                                />
+                                            </Button>
+                                        </TableCell>
+                                    )}
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell
+                                            key={cell.id}
+                                            className={cn(
+                                                'px-4 py-2.5 whitespace-normal',
+                                                cell.column.columnDef.meta
+                                                    ?.numeric && 'text-right',
+                                                cell.column.columnDef.meta
+                                                    ?.className,
+                                            )}
+                                        >
+                                            {flexRender(
+                                                cell.column.columnDef.cell,
+                                                cell.getContext(),
+                                            )}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                                {renderExpanded && row.getIsExpanded() && (
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell
+                                            colSpan={columnCount}
+                                            className="bg-muted/30 p-4 whitespace-normal"
+                                        >
+                                            {renderExpanded(row.original)}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </Fragment>
                         ))
                     ) : (
                         <TableRow className="hover:bg-transparent">
                             <TableCell
-                                colSpan={columns.length}
+                                colSpan={columnCount}
                                 className="px-4 py-12 whitespace-normal"
                             >
                                 <div className="flex flex-col items-center gap-3 text-center">
