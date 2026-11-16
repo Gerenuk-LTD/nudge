@@ -28,19 +28,19 @@ class RemoveUserFromWorkspaces
             throw ValidationException::withMessages(['account' => __('You own workspaces, so your account can’t be deleted yet. Contact support to close them first.')]);
         }
 
-        $memberships = Membership::query()->with('role')->where('user_id', $userId)->get();
+        DB::transaction(function () use ($userId): void {
+            $memberships = Membership::query()->with('role')->where('user_id', $userId)->get();
 
-        foreach ($memberships as $membership) {
-            if ($membership->role->is_owner) {
-                try {
-                    EnsureWorkspaceKeepsAnOwner::check($membership);
-                } catch (ValidationException) {
-                    throw ValidationException::withMessages(['account' => __('You’re the only owner of a workspace. Make someone else an owner first.')]);
+            foreach ($memberships as $membership) {
+                if ($membership->role->is_owner) {
+                    try {
+                        EnsureWorkspaceKeepsAnOwner::check($membership);
+                    } catch (ValidationException) {
+                        throw ValidationException::withMessages(['account' => __('You�re the only owner of a workspace. Make someone else an owner first.')]);
+                    }
                 }
             }
-        }
 
-        DB::transaction(function () use ($userId): void {
             ApiToken::withoutGlobalScopes()->where('created_by', $userId)->delete();
             Invitation::withoutGlobalScopes()->where('invited_by', $userId)->delete();
             Membership::query()->where('user_id', $userId)->delete();

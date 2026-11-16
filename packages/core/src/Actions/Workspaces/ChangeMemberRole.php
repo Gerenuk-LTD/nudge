@@ -12,11 +12,11 @@ class ChangeMemberRole
 {
     public function handle(Membership $membership, Role $role): void
     {
-        if ($membership->role->is_owner && ! $role->is_owner) {
-            EnsureWorkspaceKeepsAnOwner::check($membership);
-        }
-
         DB::transaction(function () use ($membership, $role): void {
+            if ($membership->role->is_owner && ! $role->is_owner) {
+                EnsureWorkspaceKeepsAnOwner::check($membership);
+            }
+
             $membership->update(['role_id' => $role->id]);
 
             if (! $role->is_owner) {

@@ -1,6 +1,7 @@
 <?php
 
 use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Marketing\Actions\Workspaces\EnsureWorkspaceKeepsAnOwner;
 use Gerenuk\Marketing\Actions\Workspaces\RemoveUserFromWorkspaces;
 use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Models\ApiToken;
@@ -10,6 +11,7 @@ use Gerenuk\Marketing\Models\Role;
 use Gerenuk\Marketing\Notifications\WorkspaceInvitation;
 use Gerenuk\Marketing\Tests\Fixtures\User;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
@@ -138,6 +140,32 @@ test('the last owner cannot be removed or demoted', function () {
     $this->actingAs($owner)->delete(route('marketing.members.destroy', $membership))->assertSessionHasErrors('member');
 
     expect($owner->fresh()->membershipFor($workspace)->role->is_owner)->toBeTrue();
+});
+
+test('the last-owner check runs inside the change\'s transaction', function () {
+    [$owner] = $this->createOwner();
+    $membership = Membership::where('user_id', $owner->id)->first();
+
+    // RefreshDatabase wraps every test in a transaction, so step out of it to simulate a caller without one.
+    DB::rollBack();
+
+    try {
+        expect(fn () => EnsureWorkspaceKeepsAnOwner::check($membership))->toThrow(LogicException::class);
+    } finally {
+        DB::beginTransaction();
+    }
+});
+
+test('two owners can each be demoted once, but not both', function () {
+    [$first, $workspace] = $this->createOwner();
+    $second = $this->addMember($workspace, 'Owner');
+    $firstMembership = Membership::where('user_id', $first->id)->first();
+    $secondMembership = Membership::where('user_id', $second->id)->first();
+
+    $this->actingAs($first)->put(route('marketing.members.update', $firstMembership), ['role_id' => roleNamed('Admin')->id])->assertSessionHasNoErrors();
+    $this->actingAs($second)->put(route('marketing.members.update', $secondMembership), ['role_id' => roleNamed('Admin')->id])->assertSessionHasErrors('member');
+
+    expect($second->fresh()->membershipFor($workspace)->role->is_owner)->toBeTrue();
 });
 
 test('memberships from another workspace cannot be changed', function () {

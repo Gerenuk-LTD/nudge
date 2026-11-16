@@ -11,11 +11,11 @@ class RemoveMember
 {
     public function handle(Membership $membership): void
     {
-        if ($membership->role->is_owner) {
-            EnsureWorkspaceKeepsAnOwner::check($membership);
-        }
-
         DB::transaction(function () use ($membership): void {
+            if ($membership->role->is_owner) {
+                EnsureWorkspaceKeepsAnOwner::check($membership);
+            }
+
             // Tokens act for the person who made them, so they go when that person leaves.
             ApiToken::withoutGlobalScopes()
                 ->where('workspace_id', $membership->workspace_id)
