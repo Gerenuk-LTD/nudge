@@ -10,6 +10,7 @@ use Gerenuk\Marketing\Segments\SegmentField;
 use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
 use Gerenuk\Marketing\Segments\SegmentQuery;
 use Gerenuk\Marketing\Segments\WithdrawSegmentApprovals;
+use Gerenuk\Marketing\Support\JsonChanges;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -66,9 +67,8 @@ class SegmentController extends Controller
         $workspace = $currentWorkspace->getOrFail();
         $canApprove = $this->user($request)->hasWorkspacePermission($workspace, Permission::CampaignsApprove);
 
-        // MySQL JSON columns store object keys in their own order, so compare key-sorted copies rather than isDirty().
-        $definitionChanged = self::sortKeys($segment->definition) !== self::sortKeys($validated['definition']);
         $segment->fill($validated);
+        $definitionChanged = JsonChanges::dirty($segment, ['definition']);
         $segment->save();
 
         $withdrawn = $definitionChanged && ! $canApprove ? $withdraw->handle($segment, $workspace) : ['campaigns' => 0, 'automations' => 0];
@@ -79,17 +79,6 @@ class SegmentController extends Controller
             : ['type' => 'success', 'message' => __('Segment saved.')]);
 
         return to_route('marketing.segments.edit', $segment);
-    }
-
-    /**
-     * @param  array<array-key, mixed>  $value
-     * @return array<array-key, mixed>
-     */
-    private static function sortKeys(array $value): array
-    {
-        ksort($value);
-
-        return array_map(fn ($item) => is_array($item) ? self::sortKeys($item) : $item, $value);
     }
 
     public function destroy(Segment $segment): RedirectResponse

@@ -21,6 +21,7 @@ use Gerenuk\Marketing\Models\Suppression;
 use Gerenuk\Marketing\Sending\ProviderTransports;
 use Gerenuk\Marketing\Sending\ProviderType;
 use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
@@ -472,6 +473,25 @@ test('changing variables withdraws approval', function () {
     expect($campaign->fresh()->approved_at)->not->toBeNull();
 
     $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']]);
+    expect($campaign->fresh()->approved_at)->toBeNull();
+});
+
+test('re-saving unchanged JSON content keeps approval when the database reorders its keys', function () {
+    $this->workspace->update(['requires_campaign_approval' => true]);
+    $editorState = ['type' => 'doc', 'content' => [['text' => 'Hi', 'marks' => []]]];
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id, 'editor_state' => $editorState]);
+
+    $this->actingAs($this->owner)->post(route('marketing.campaigns.approve', $campaign));
+
+    // MySQL stores JSON object keys in its own order; simulate that on any database.
+    DB::table('campaigns')->where('id', $campaign->id)
+        ->update(['editor_state' => json_encode(['content' => [['marks' => [], 'text' => 'Hi']], 'type' => 'doc'])]);
+
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['editor_state' => $editorState])
+        ->assertSessionHasNoErrors();
+    expect($campaign->fresh()->approved_at)->not->toBeNull();
+
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['editor_state' => [...$editorState, 'type' => 'other']]);
     expect($campaign->fresh()->approved_at)->toBeNull();
 });
 

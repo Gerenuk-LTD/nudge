@@ -24,6 +24,7 @@ use Gerenuk\Marketing\Models\Segment;
 use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
 use Gerenuk\Marketing\Sending\MergeTags;
 use Gerenuk\Marketing\Support\CampaignSummary;
+use Gerenuk\Marketing\Support\JsonChanges;
 use Gerenuk\Marketing\Support\MergeTagOptions;
 use Gerenuk\Marketing\Support\TableQuery;
 use Gerenuk\Marketing\Templates\TemplateChoice;
@@ -151,7 +152,7 @@ class CampaignController extends Controller
 
         $campaign->fill($request->validated());
 
-        if ($campaign->approved_at !== null && $campaign->isDirty(self::CONTENT_FIELDS)) {
+        if ($campaign->approved_at !== null && JsonChanges::dirty($campaign, self::CONTENT_FIELDS)) {
             $campaign->fill(['approved_at' => null, 'approved_by' => null]);
         }
 
