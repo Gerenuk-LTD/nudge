@@ -455,6 +455,15 @@ test('variable names are validated', function () {
         ->assertSessionHasNoErrors();
 });
 
+test('variable names are at most 50 characters', function () {
+    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => [str_repeat('a', 51) => 'x']])
+        ->assertSessionHasErrors('variables');
+    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => [str_repeat('a', 50) => 'x']])
+        ->assertSessionHasNoErrors();
+});
+
 test('changing variables withdraws approval', function () {
     $this->workspace->update(['requires_campaign_approval' => true]);
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);

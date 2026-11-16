@@ -38,6 +38,12 @@ class CampaignRequest extends FormRequest
                 'sometimes', 'nullable', 'array', 'max:50',
                 function (string $attribute, mixed $value, Closure $fail): void {
                     foreach (array_keys((array) $value) as $key) {
+                        if (strlen((string) $key) > 50) {
+                            $fail(__('Variable names are at most 50 characters.'));
+
+                            return;
+                        }
+
                         if (! preg_match('/^[a-z][a-z0-9_]*$/', (string) $key) || in_array($key, MergeTags::BUILT_IN, true)) {
                             $fail(__('Variable names use lowercase letters, numbers and underscores.'));
 
