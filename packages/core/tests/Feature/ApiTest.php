@@ -92,6 +92,20 @@ test('an unknown contact on an event without create_contact has its own code', f
         ->assertJsonPath('code', 'contact_not_found');
 });
 
+test('event properties are bounded', function () {
+    $token = apiToken($this->workspace, $this->owner);
+    $post = fn (array $properties) => $this->withToken($token)->postJson(route('marketing.api.events.store'), [
+        'email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true, 'properties' => $properties,
+    ]);
+    $nested = fn (int $levels) => array_reduce(range(1, $levels), fn ($inner) => ['k' => $inner], 1);
+
+    $post(array_combine(array_map(fn ($i) => "key{$i}", range(1, 51)), range(1, 51)))->assertUnprocessable()->assertJsonValidationErrors('properties');
+    $post($nested(6))->assertUnprocessable()->assertJsonValidationErrors('properties');
+    $post(['note' => str_repeat('a', 20000)])->assertUnprocessable()->assertJsonValidationErrors('properties');
+
+    $post(['total' => 12.5, 'items' => [['sku' => 'a'], ['sku' => 'b']], 'deep' => $nested(4)])->assertAccepted();
+});
+
 test('a bad idempotency key has its own code', function () {
     $token = apiToken($this->workspace, $this->owner);
 

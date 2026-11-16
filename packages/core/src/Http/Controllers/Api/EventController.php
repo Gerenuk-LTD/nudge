@@ -2,6 +2,7 @@
 
 namespace Gerenuk\Marketing\Http\Controllers\Api;
 
+use Closure;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\HeaderParameter;
@@ -36,18 +37,26 @@ class EventController extends Controller
      *
      * Records a named event on a contact's timeline and starts any automations triggered by it. The event is processed asynchronously, so this answers `202`.
      */
-    #[BodyParameter('properties', 'Free-form data about the event, such as an order total. Available to automations that this event triggers.', type: 'object', required: false)]
+    #[BodyParameter('properties', 'Free-form data about the event, such as an order total. Available to automations that this event triggers. At most 50 top-level keys, nested at most 4 levels deep, and 16 KB as JSON.', type: 'object', required: false)]
     #[BodyParameter('create_contact', 'Set to true to create the contact when no contact has this email. Otherwise an unknown email answers 404.', type: 'boolean', required: false)]
     #[HeaderParameter('Idempotency-Key', 'Send the same key when retrying. A repeat within the workspace returns the original response and records nothing new. Must be 1 to 255 visible ASCII characters.', required: false, type: 'string')]
     #[Response(202, 'Accepted. `data` is the recorded event; a repeated request with the same `Idempotency-Key` answers with the original event.', type: 'array{data: EventResource}')]
     #[Response(404, 'No contact with that email, and `create_contact` was not true.', type: 'array{code: string, message: string}')]
-    #[Response(422, 'The body failed validation, or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).', type: 'array{code: string, message: string, errors?: array<string, list<string>>}')]
+    #[Response(422, 'The body failed validation (`properties` is limited to 50 top-level keys, 4 levels of nesting and 16 KB as JSON), or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).', type: 'array{code: string, message: string, errors?: array<string, list<string>>}')]
     public function store(Request $request, UpsertContact $upsert, AutomationTriggers $triggers): JsonResponse
     {
         $validated = $request->validate([
             'email' => ['required', 'email:filter', 'max:254'],
             'event' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9_.:-]+$/'],
-            'properties' => ['sometimes', 'array'],
+            'properties' => ['sometimes', 'array', 'max:50', function (string $attribute, mixed $value, Closure $fail): void {
+                $json = json_encode($value, 0, 5);
+
+                if ($json === false) {
+                    $fail(__('Properties can be nested at most 4 levels deep.'));
+                } elseif (strlen($json) > 16384) {
+                    $fail(__('Properties can be at most 16 KB as JSON.'));
+                }
+            }],
             'create_contact' => ['sometimes', 'boolean'],
         ]);
 

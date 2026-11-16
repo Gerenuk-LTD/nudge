@@ -1718,7 +1718,7 @@
                                     },
                                     "properties": {
                                         "type": "object",
-                                        "description": "Free-form data about the event, such as an order total. Available to automations that this event triggers."
+                                        "description": "Free-form data about the event, such as an order total. Available to automations that this event triggers. At most 50 top-level keys, nested at most 4 levels deep, and 16 KB as JSON."
                                     },
                                     "create_contact": {
                                         "type": "boolean",
@@ -1775,7 +1775,7 @@
                         }
                     },
                     "422": {
-                        "description": "The body failed validation, or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).",
+                        "description": "The body failed validation (`properties` is limited to 50 top-level keys, 4 levels of nesting and 16 KB as JSON), or the `Idempotency-Key` header is not 1 to 255 visible ASCII characters (then `message` says so and `errors` is absent).",
                         "content": {
                             "application/json": {
                                 "schema": {
