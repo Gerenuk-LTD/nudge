@@ -94,8 +94,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->foreignId('campaign_id')->unique()->constrained()->cascadeOnDelete();
-            $table->string('subject');
-            $table->string('preheader')->nullable();
+            $table->text('subject');
+            $table->text('preheader')->nullable();
             $table->string('from_name');
             $table->string('from_email');
             $table->string('reply_to')->nullable();

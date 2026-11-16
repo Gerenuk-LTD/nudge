@@ -429,6 +429,21 @@ test('the snapshot keeps the variable values it was taken with', function () {
     expect($campaign->snapshot()->first()->html)->toContain('Use OLD')->not->toContain('NEW');
 });
 
+test('a subject and preheader that grow past 255 characters once variables are filled still prepare', function () {
+    Contact::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'provider_id' => $this->provider->id,
+        'subject' => '{{ long }}',
+        'preheader' => '{{ long }}',
+        'variables' => ['long' => str_repeat('a', 300)],
+    ]);
+
+    $snapshot = sendNow($this, $campaign)->snapshot()->first();
+
+    expect(mb_strlen($snapshot->subject))->toBe(300)
+        ->and(mb_strlen((string) $snapshot->preheader))->toBe(300);
+});
+
 test('variable names are validated', function () {
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 

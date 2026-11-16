@@ -63,7 +63,7 @@ return new class extends Migration
         });
 
         Schema::table('campaign_snapshots', function (Blueprint $table) {
-            $table->string('subject_b')->nullable()->after('subject');
+            $table->text('subject_b')->nullable()->after('subject');
             $table->longText('html_b')->nullable()->after('html');
             $table->longText('text_b')->nullable()->after('text');
         });
