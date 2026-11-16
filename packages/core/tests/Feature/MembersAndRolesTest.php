@@ -268,6 +268,23 @@ test('demoting a member narrows their API tokens', function () {
     expect(ApiToken::withoutGlobalScopes()->where('created_by', $admin->id)->first()->permissions)->toBe(['contacts.view']);
 });
 
+test('narrowing a role revokes its members\' invitations for roles above it', function () {
+    Notification::fake();
+    [$owner, $workspace] = $this->createOwner();
+    $lead = memberWithCustomRole($owner, $workspace, 'Lead', ['members.manage', 'campaigns.manage']);
+    memberWithCustomRole($owner, $workspace, 'Sender', ['campaigns.manage']);
+    memberWithCustomRole($owner, $workspace, 'Helper', ['members.manage']);
+
+    $this->actingAs($lead)->post(route('marketing.members.invite'), ['email' => 'sender@example.com', 'role_id' => roleNamed('Sender')->id])->assertRedirect();
+    $this->actingAs($lead)->post(route('marketing.members.invite'), ['email' => 'helper@example.com', 'role_id' => roleNamed('Helper')->id])->assertRedirect();
+    expect(Invitation::count())->toBe(2);
+
+    $this->actingAs($owner)->put(route('marketing.roles.update', roleNamed('Lead')), ['name' => 'Lead', 'permissions' => ['members.manage']])
+        ->assertRedirect();
+
+    expect(Invitation::withoutGlobalScopes()->pluck('email')->all())->toBe(['helper@example.com']);
+});
+
 test('the last owner of a workspace cannot be removed by deleting their user', function () {
     [$original, $workspace] = $this->createOwner();
     $user = $this->addMember($workspace, 'Owner');

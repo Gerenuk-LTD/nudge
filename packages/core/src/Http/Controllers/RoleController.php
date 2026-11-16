@@ -5,6 +5,7 @@ namespace Gerenuk\Marketing\Http\Controllers;
 use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
 use Gerenuk\Marketing\Enums\Permission;
 use Gerenuk\Marketing\Models\ApiToken;
+use Gerenuk\Marketing\Models\Invitation;
 use Gerenuk\Marketing\Models\Role;
 use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
@@ -74,6 +75,15 @@ class RoleController extends Controller
             foreach ($role->memberships()->pluck('user_id') as $userId) {
                 ApiToken::narrowForUser($role->workspace_id, (int) $userId, $role->permissions);
             }
+
+            // Invitations they sent for roles above the narrowed one would hand out access they no longer have.
+            Invitation::withoutGlobalScopes()
+                ->with('role')
+                ->where('workspace_id', $role->workspace_id)
+                ->whereIn('invited_by', $role->memberships()->pluck('user_id'))
+                ->get()
+                ->reject(fn (Invitation $invitation) => $invitation->role->isWithin($role))
+                ->each(fn (Invitation $invitation) => $invitation->delete());
         });
 
         return to_route('marketing.roles.index');
