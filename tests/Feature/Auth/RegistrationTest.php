@@ -148,6 +148,15 @@ test('the first account needs the setup token', function () {
     $this->assertAuthenticated();
 });
 
+test('a failed first sign-up does not keep the setup token in the session', function () {
+    config(['registration.mode' => 'open', 'registration.setup_token' => 'setup-secret']);
+
+    $this->post(route('register.store'), [...registrationData('first@example.com'), 'password_confirmation' => 'different', 'setup_token' => 'setup-secret'])
+        ->assertSessionHasErrors('password')
+        ->assertSessionHas('_old_input.email', 'first@example.com')
+        ->assertSessionMissing('_old_input.setup_token');
+});
+
 test('without a configured setup token the first account cannot be created on the website', function () {
     config(['registration.mode' => 'open', 'registration.setup_token' => null]);
 
