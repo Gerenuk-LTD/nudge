@@ -36,7 +36,7 @@ class RemoveUserFromWorkspaces
                     try {
                         EnsureWorkspaceKeepsAnOwner::check($membership);
                     } catch (ValidationException) {
-                        throw ValidationException::withMessages(['account' => __('You’re the only owner of a workspace. Make someone else an owner first.')]);
+                        throw ValidationException::withMessages(['account' => __('Youâ€™re the only owner of a workspace. Make someone else an owner first.')]);
                     }
                 }
             }
