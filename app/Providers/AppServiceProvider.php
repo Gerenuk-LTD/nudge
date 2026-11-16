@@ -44,7 +44,9 @@ class AppServiceProvider extends ServiceProvider
         // Absolute links (password resets, the API spec) must never take their host from the request.
         $appUrl = (string) config('app.url');
 
-        if ($appUrl !== '') {
+        // Not while Wayfinder generates the frontend routes: it bakes a forced root into every URL, so the built
+        // JavaScript would carry the build machine's APP_URL (and its scheme) instead of relative paths.
+        if ($appUrl !== '' && ! $this->app->runningConsoleCommand('wayfinder:generate')) {
             URL::forceRootUrl($appUrl);
 
             if (str_starts_with($appUrl, 'https://')) {
