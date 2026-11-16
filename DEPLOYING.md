@@ -112,13 +112,26 @@ Keep `APP_KEY` secret and backed up. It encrypts sessions and stored provider cr
 
 ## Rotating APP_KEY
 
-Rotate the key if it may have leaked:
+### Routine rotation
+
+To rotate the key on a schedule:
 
 1. Copy the current `APP_KEY` value into `APP_PREVIOUS_KEYS`. Separate several old keys with commas.
 2. Run `php artisan key:generate` to set a new `APP_KEY`.
 3. Run `php artisan config:cache` and `php artisan queue:restart`.
 
 New links are signed with the new key. Unsubscribe, click and open links in emails already sent keep working as long as the old key stays in `APP_PREVIOUS_KEYS`, and so do stored credentials. Keep it there for as long as old emails might still be acted on; a year is sensible for unsubscribe links. Signed-in users stay signed in.
+
+### If the key may have leaked
+
+While the old key is in `APP_PREVIOUS_KEYS`, Laravel still accepts links signed with it (so email-verification links stay forgeable) and it still decrypts stored secrets. To retire it fully:
+
+1. Copy the current `APP_KEY` into **both** `APP_PREVIOUS_KEYS` and `MARKETING_PREVIOUS_LINK_KEYS`. Separate several old keys with commas.
+2. Run `php artisan key:generate`, then `php artisan config:cache`.
+3. Run `php artisan app:reencrypt-secrets`. It re-encrypts provider credentials, webhook secrets and two-factor settings with the new key.
+4. Remove the old key from `APP_PREVIOUS_KEYS` (keep it in `MARKETING_PREVIOUS_LINK_KEYS`), then run `php artisan config:cache` and `php artisan queue:restart`.
+
+Everyone is signed out. Unsubscribe, pause, open and click links in emails already sent keep working, because `MARKETING_PREVIOUS_LINK_KEYS` is checked by those links only. Someone holding the old key can still forge those links (unsubscribing or pausing a recipient), so remove it from `MARKETING_PREVIOUS_LINK_KEYS` once old emails no longer matter. If the database may have leaked too, rotate each provider's API keys at the provider and update them in Settings. Passkeys keep working; setting `PASSKEYS_USER_HANDLE_SECRET` to its own value keeps passkey handles stable across rotations.
 
 ## Upgrading
 

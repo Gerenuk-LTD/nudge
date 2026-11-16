@@ -89,6 +89,10 @@ return [
 
     'tracking_url' => env('MARKETING_TRACKING_URL'),
 
+    // Old APP_KEYs that still verify tracking and unsubscribe links in emails already sent, without being trusted for
+    // anything else. Used after a key leak; see DEPLOYING.md.
+    'previous_link_keys' => array_values(array_filter(explode(',', (string) env('MARKETING_PREVIOUS_LINK_KEYS', '')))),
+
     'sending' => [
         'queue' => env('MARKETING_SENDING_QUEUE', 'default'),
 

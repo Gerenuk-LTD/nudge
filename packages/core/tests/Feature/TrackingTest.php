@@ -117,6 +117,20 @@ test('links signed with a previous app key still work after rotation', function 
     $this->post($url, ['List-Unsubscribe' => 'One-Click'])->assertOk();
 });
 
+test('links signed with a key kept only for links still work', function () {
+    $url = pathOf($this->urls->unsubscribe($this->recipient));
+    $oldKey = config('app.key');
+
+    config(['app.previous_keys' => [], 'marketing.previous_link_keys' => [$oldKey], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+
+    $this->get($url)->assertOk();
+    $this->post($url, ['List-Unsubscribe' => 'One-Click'])->assertOk();
+
+    config(['marketing.previous_link_keys' => []]);
+
+    $this->get($url)->assertNotFound();
+});
+
 test('links signed with an unknown key are rejected', function () {
     $url = pathOf($this->urls->unsubscribe($this->recipient));
 

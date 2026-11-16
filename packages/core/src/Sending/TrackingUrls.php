@@ -51,7 +51,7 @@ class TrackingUrls
 
     public function verify(string $payload, string $signature): bool
     {
-        foreach ([config('app.key'), ...config('app.previous_keys', [])] as $key) {
+        foreach ([config('app.key'), ...config('app.previous_keys', []), ...config('marketing.previous_link_keys', [])] as $key) {
             if (is_string($key) && $key !== '' && hash_equals($this->sign($payload, $key), $signature)) {
                 return true;
             }
