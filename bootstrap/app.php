@@ -26,11 +26,13 @@ return Application::configure(basePath: dirname(__DIR__))
             subdomains: false,
         );
 
+        // Global, so the API, the API docs and the tracking routes get the headers too, not just web routes.
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
             HandleAppearance::class,
-            SecurityHeaders::class,
             AuthenticateSession::class,
             RedirectWhenRegistrationClosed::class,
             ThrottlePasswordChecks::class,
