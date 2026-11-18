@@ -1,0 +1,5 @@
+providers:
+    - Inertia\ServiceProvider
+    - Gerenuk\Marketing\MarketingServiceProvider
+    - Dedoc\Scramble\ScrambleServiceProvider
+    - Workbench\App\Providers\DocsServiceProvider
