@@ -1,0 +1,86 @@
+/*
+ * What the core's screens need from a host's Tailwind build. Import it after Tailwind:
+ *
+ *     @import '../../vendor/gerenuk/marketing-core/resources/css/marketing.css';
+ *
+ * It points Tailwind at the core's components and adds the 13px step they use for labels,
+ * table cells and secondary text. Colours, fonts and radii stay with the host's shadcn theme.
+ */
+@source '../js';
+
+@theme {
+    --text-13: 0.8125rem;
+    --text-13--line-height: 1.125rem;
+}
+
+/* The automation canvas (React Flow), drawn with the host's shadcn colours so it follows light and dark mode. */
+.automation-flow {
+    --xy-background-color: transparent;
+    --xy-edge-stroke: color-mix(
+        in oklch,
+        var(--muted-foreground) 55%,
+        transparent
+    );
+    --xy-edge-stroke-width: 1.5;
+    --xy-handle-background-color: var(--card);
+    --xy-handle-border-color: var(--border);
+    --xy-controls-button-background-color: var(--card);
+    --xy-controls-button-background-color-hover: var(--accent);
+    --xy-controls-button-color: var(--foreground);
+    --xy-controls-button-color-hover: var(--foreground);
+    --xy-controls-button-border-color: var(--border);
+    --xy-controls-box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --xy-minimap-background-color: var(--card);
+}
+
+.automation-flow .react-flow__handle {
+    width: 8px;
+    height: 8px;
+    border-width: 1.5px;
+}
+
+.automation-flow .react-flow__controls,
+.automation-flow .react-flow__minimap {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+}
+
+.automation-flow .react-flow__minimap {
+    color: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+}
+
+.automation-flow .react-flow__minimap-mask {
+    fill: color-mix(in oklch, var(--background) 65%, transparent);
+}
+
+.automation-flow .react-flow__node:focus-visible {
+    outline: none;
+}
+
+/* Rich text inside the email builder's canvas, matching the inline styles the sent email gets. */
+.email-rich p {
+    margin: 0 0 12px;
+}
+.email-rich p:last-child,
+.email-rich li p {
+    margin: 0;
+}
+.email-rich ul,
+.email-rich ol {
+    margin: 0 0 12px;
+    padding-left: 24px;
+}
+.email-rich ul {
+    list-style: disc;
+}
+.email-rich ol {
+    list-style: decimal;
+}
+.email-rich li {
+    margin: 0 0 4px;
+}
+.email-rich a {
+    color: var(--email-link);
+    text-decoration: underline;
+}

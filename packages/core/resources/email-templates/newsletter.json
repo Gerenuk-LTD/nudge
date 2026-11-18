@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "settings": {
+    "backdrop": "#f4f4f5",
+    "canvas": "#ffffff",
+    "width": 600,
+    "font": "Arial, Helvetica, sans-serif",
+    "text": "#18181b",
+    "link": "#2563eb"
+  },
+  "blocks": [
+    {
+      "id": "brand",
+      "type": "heading",
+      "html": "Your company",
+      "level": 3,
+      "align": "left"
+    },
+    {
+      "id": "rule",
+      "type": "divider"
+    },
+    {
+      "id": "title",
+      "type": "heading",
+      "html": "This month's news",
+      "level": 1,
+      "align": "left"
+    },
+    {
+      "id": "intro",
+      "type": "text",
+      "html": "<p>Hi {{ first_name | there }}, here's a round-up of what's new.</p>",
+      "align": "left"
+    },
+    {
+      "id": "story1",
+      "type": "heading",
+      "html": "First story",
+      "level": 3,
+      "align": "left"
+    },
+    {
+      "id": "story1-text",
+      "type": "text",
+      "html": "<p>A sentence or two about it, and why it matters to the reader. <a href=\"https://example.com\">Read more</a></p>",
+      "align": "left"
+    },
+    {
+      "id": "story2",
+      "type": "heading",
+      "html": "Second story",
+      "level": 3,
+      "align": "left"
+    },
+    {
+      "id": "story2-text",
+      "type": "text",
+      "html": "<p>Keep each one short. Link out for the details. <a href=\"https://example.com\">Read more</a></p>",
+      "align": "left"
+    },
+    {
+      "id": "cta",
+      "type": "button",
+      "label": "Visit the blog",
+      "url": "https://example.com",
+      "align": "left",
+      "background": "#18181b",
+      "color": "#ffffff"
+    },
+    {
+      "id": "rule2",
+      "type": "divider"
+    },
+    {
+      "id": "footer",
+      "type": "footer",
+      "html": "<p>You are receiving this because you signed up.</p>",
+      "align": "left"
+    }
+  ]
+}

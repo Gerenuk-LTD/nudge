@@ -1,0 +1,56 @@
+{
+    "name": "gerenuk/marketing-core",
+    "description": "Core of the Gerenuk marketing platform: contacts, lists, segments, imports and the API.",
+    "type": "library",
+    "license": "FSL-1.1-ALv2",
+    "require": {
+        "php": "^8.3",
+        "inertiajs/inertia-laravel": "^3.0",
+        "laravel/framework": "^13.17",
+        "symfony/amazon-mailer": "^8.1",
+        "symfony/brevo-mailer": "^8.1",
+        "symfony/http-client": "^8.1",
+        "symfony/mailchimp-mailer": "^8.1",
+        "symfony/mailer-send-mailer": "^8.1",
+        "symfony/mailgun-mailer": "^8.1",
+        "symfony/mailjet-mailer": "^8.1",
+        "symfony/postmark-mailer": "^8.1",
+        "symfony/resend-mailer": "^8.1",
+        "symfony/scaleway-mailer": "^8.1",
+        "symfony/sendgrid-mailer": "^8.1",
+        "symfony/webhook": "^8.1"
+    },
+    "require-dev": {
+        "dedoc/scramble": "0.13.53",
+        "orchestra/testbench": "^11.3",
+        "pestphp/pest": "^5.3",
+        "pestphp/pest-plugin-laravel": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Gerenuk\\Marketing\\": "src/",
+            "Gerenuk\\Marketing\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Gerenuk\\Marketing\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Gerenuk\\Marketing\\MarketingServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
