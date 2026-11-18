@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use App\Support\RegistrationAccountPolicy;
 use Carbon\CarbonImmutable;
-use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
+use Gerenuk\Nudge\Contracts\AccountCreationPolicy;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;

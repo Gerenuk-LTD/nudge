@@ -1,4 +1,4 @@
-import { Stepper } from '@marketing/components/editor-bar';
+import { Stepper } from '@nudge/components/editor-bar';
 
 const steps = [
     { key: 'upload', label: 'Upload' },

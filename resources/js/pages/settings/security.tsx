@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
-import { SettingsSection } from '@marketing/components/settings-section';
+import { SettingsSection } from '@nudge/components/settings-section';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/security';

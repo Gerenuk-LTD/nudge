@@ -1,19 +1,19 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Api;
+namespace Gerenuk\Nudge\Http\Controllers\Api;
 
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Automations\AutomationTriggers;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Http\Resources\ContactListResource;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Automations\AutomationTriggers;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Http\Resources\ContactListResource;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;

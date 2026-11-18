@@ -8,7 +8,7 @@ import {
     Webhook,
     Zap,
 } from 'lucide-react';
-import type { StepType } from '@marketing/types';
+import type { StepType } from '@nudge/types';
 
 /**
  * Each kind of automation node's icon and tinted tile colours, shared by the canvas and the automation cards.

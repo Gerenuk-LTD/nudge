@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending\Webhooks;
+namespace Gerenuk\Nudge\Sending\Webhooks;
 
-use Gerenuk\Marketing\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\ProviderType;
 
 /**
  * Tells a temporary bounce from a permanent one. Several providers report both under one "bounce"

@@ -1,7 +1,7 @@
 import { Palette, ShieldCheck, UserRound } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
-import { SettingsShell } from '@marketing/components/settings-shell';
-import type { SettingsTab } from '@marketing/components/settings-shell';
+import { SettingsShell } from '@nudge/components/settings-shell';
+import type { SettingsTab } from '@nudge/components/settings-shell';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';

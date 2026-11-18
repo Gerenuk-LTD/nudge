@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
+use Gerenuk\Nudge\Contracts\NudgeUser;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 
@@ -11,11 +11,11 @@ abstract class Controller extends BaseController
     /**
      * The signed-in user. Every dashboard route requires authentication.
      */
-    protected function user(Request $request): MarketingUser
+    protected function user(Request $request): NudgeUser
     {
         $user = $request->user();
 
-        abort_unless($user instanceof MarketingUser, 401);
+        abort_unless($user instanceof NudgeUser, 401);
 
         return $user;
     }

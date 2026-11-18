@@ -1,15 +1,15 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Api;
+namespace Gerenuk\Nudge\Http\Controllers\Api;
 
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Http\Resources\CustomFieldResource;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Support\CustomFieldRules;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Http\Resources\CustomFieldResource;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Support\CustomFieldRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;

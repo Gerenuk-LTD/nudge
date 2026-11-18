@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
-use Gerenuk\Marketing\Models\Automation;
+use Gerenuk\Nudge\Models\Automation;
 
 /**
  * What an approver signs off on for an automation: everything that decides who it reaches and what happens to them

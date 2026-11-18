@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\DeliveryOutcome;
-use Gerenuk\Marketing\Sending\RecipientDelivery;
-use Gerenuk\Marketing\Sending\SendRateLimiter;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\DeliveryOutcome;
+use Gerenuk\Nudge\Sending\RecipientDelivery;
+use Gerenuk\Nudge\Sending\SendRateLimiter;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use RuntimeException;
@@ -32,7 +32,7 @@ class SendCampaignBatch implements ShouldQueue
      */
     public function __construct(public int $campaignId, public int $workspaceId, public array $recipientIds)
     {
-        $this->onQueue(config('marketing.sending.queue'));
+        $this->onQueue(config('nudge.sending.queue'));
     }
 
     public function handle(CurrentWorkspace $currentWorkspace, RecipientDelivery $delivery, SendRateLimiter $limiter): void

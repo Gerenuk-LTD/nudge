@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Tests\Feature;
+namespace Gerenuk\Nudge\Tests\Feature;
 
-use Gerenuk\Marketing\Tests\TestCase;
+use Gerenuk\Nudge\Tests\TestCase;
 use Orchestra\Testbench\Attributes\DefineEnvironment;
 
 /**
@@ -12,13 +12,13 @@ class ApiDocsDisabledTest extends TestCase
 {
     protected function disableApiDocs($app): void
     {
-        $app['config']->set('marketing.api_docs.enabled', false);
+        $app['config']->set('nudge.api_docs.enabled', false);
     }
 
     #[DefineEnvironment('disableApiDocs')]
     public function test_the_docs_routes_are_not_registered_when_turned_off(): void
     {
-        $prefix = config('marketing.api_prefix');
+        $prefix = config('nudge.api_prefix');
 
         $this->get("$prefix/docs")->assertNotFound();
         $this->getJson("$prefix/openapi.json")->assertNotFound();

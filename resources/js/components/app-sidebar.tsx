@@ -13,18 +13,18 @@ import {
     SidebarRail,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { home } from '@/routes/marketing';
+import { home } from '@/routes/nudge';
 import type { NavItem } from '@/types';
-import { SendingStatus } from '@marketing/components/sending-status';
-import { WorkspaceSwitcher } from '@marketing/components/workspace-switcher';
-import { useCan } from '@marketing/hooks/use-workspace';
-import { marketingNavItems } from '@marketing/navigation';
+import { SendingStatus } from '@nudge/components/sending-status';
+import { WorkspaceSwitcher } from '@nudge/components/workspace-switcher';
+import { useCan } from '@nudge/hooks/use-workspace';
+import { nudgeNavItems } from '@nudge/navigation';
 
 export function AppSidebar() {
     const can = useCan();
     const { isMobile, setOpenMobile } = useSidebar();
 
-    const mainNavItems: NavItem[] = marketingNavItems.filter((item) =>
+    const mainNavItems: NavItem[] = nudgeNavItems.filter((item) =>
         can(item.permission),
     );
 

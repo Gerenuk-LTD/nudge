@@ -1,8 +1,8 @@
 <?php
 
-use Gerenuk\Marketing\Http\Controllers\Public\TrackingController;
-use Gerenuk\Marketing\Http\Controllers\Public\UnsubscribeController;
-use Gerenuk\Marketing\Http\Controllers\Public\WebhookController;
+use Gerenuk\Nudge\Http\Controllers\Public\TrackingController;
+use Gerenuk\Nudge\Http\Controllers\Public\UnsubscribeController;
+use Gerenuk\Nudge\Http\Controllers\Public\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*

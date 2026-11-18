@@ -1,34 +1,34 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Automations\ActivateAutomation;
-use Gerenuk\Marketing\Automations\ActivationChecklist;
-use Gerenuk\Marketing\Automations\AutomationApproval;
-use Gerenuk\Marketing\Automations\AutomationDefinition;
-use Gerenuk\Marketing\Automations\AutomationDefinitionValidator;
-use Gerenuk\Marketing\Automations\StepType;
-use Gerenuk\Marketing\Automations\SyncAutomationEmails;
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Http\Requests\AutomationRequest;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Segments\SegmentField;
-use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
-use Gerenuk\Marketing\Support\MergeTagOptions;
-use Gerenuk\Marketing\Templates\TemplateChoice;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Automations\ActivateAutomation;
+use Gerenuk\Nudge\Automations\ActivationChecklist;
+use Gerenuk\Nudge\Automations\AutomationApproval;
+use Gerenuk\Nudge\Automations\AutomationDefinition;
+use Gerenuk\Nudge\Automations\AutomationDefinitionValidator;
+use Gerenuk\Nudge\Automations\StepType;
+use Gerenuk\Nudge\Automations\SyncAutomationEmails;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Http\Requests\AutomationRequest;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Segments\SegmentField;
+use Gerenuk\Nudge\Segments\SegmentFieldCatalog;
+use Gerenuk\Nudge\Support\MergeTagOptions;
+use Gerenuk\Nudge\Templates\TemplateChoice;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +42,7 @@ class AutomationController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('marketing/automations/index', [
+        return Inertia::render('nudge/automations/index', [
             'automations' => Automation::query()
                 ->withCount(['runs as active_count' => fn ($query) => $query->whereIn('status', [AutomationRunStatus::Active, AutomationRunStatus::Waiting])])
                 ->orderBy('name')
@@ -75,14 +75,14 @@ class AutomationController extends Controller
             'definition' => ['steps' => []],
         ]);
 
-        return to_route('marketing.automations.edit', $automation);
+        return to_route('nudge.automations.edit', $automation);
     }
 
     public function edit(Automation $automation, ActivationChecklist $checklist, SegmentFieldCatalog $catalog, TemplateChoice $templateChoice): Response
     {
         $workspace = $this->currentWorkspace->getOrFail();
 
-        return Inertia::render('marketing/automations/edit', [
+        return Inertia::render('nudge/automations/edit', [
             'automation' => [
                 'id' => $automation->id,
                 'name' => $automation->name,
@@ -196,7 +196,7 @@ class AutomationController extends Controller
 
         $automation->delete();
 
-        return to_route('marketing.automations.index');
+        return to_route('nudge.automations.index');
     }
 
     /**
@@ -205,7 +205,7 @@ class AutomationController extends Controller
      *
      * @param  array<string, mixed>  $definition
      */
-    private function ensureCanUseSteps(array $definition, MarketingUser $user, Workspace $workspace): void
+    private function ensureCanUseSteps(array $definition, NudgeUser $user, Workspace $workspace): void
     {
         $steps = AutomationDefinition::from($definition);
 

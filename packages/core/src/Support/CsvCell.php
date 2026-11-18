@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
 /**
  * Makes a value safe to open in a spreadsheet: text starting with a formula character is prefixed with an

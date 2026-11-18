@@ -12,13 +12,13 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { show as showCampaign } from '@/routes/marketing/campaigns';
-import { show as showContact } from '@/routes/marketing/contacts';
-import { ContactStatusBadge } from '@marketing/components/contact-status-badge';
-import { StatusBadge } from '@marketing/components/status-badge';
-import type { SubscriptionTarget } from '@marketing/components/subscription-dialog';
-import { formatDate, formatDateTime } from '@marketing/lib/format';
-import type { ContactStatus, CustomFieldType } from '@marketing/types';
+import { show as showCampaign } from '@/routes/nudge/campaigns';
+import { show as showContact } from '@/routes/nudge/contacts';
+import { ContactStatusBadge } from '@nudge/components/contact-status-badge';
+import { StatusBadge } from '@nudge/components/status-badge';
+import type { SubscriptionTarget } from '@nudge/components/subscription-dialog';
+import { formatDate, formatDateTime } from '@nudge/lib/format';
+import type { ContactStatus, CustomFieldType } from '@nudge/types';
 
 const sources: Record<string, string> = {
     manual: 'added by hand',

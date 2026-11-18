@@ -1,14 +1,14 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Public;
+namespace Gerenuk\Nudge\Http\Controllers\Public;
 
-use Gerenuk\Marketing\Actions\Campaigns\RecordEngagement;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\TrackingUrls;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Campaigns\RecordEngagement;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\TrackingUrls;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;

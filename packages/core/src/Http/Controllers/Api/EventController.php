@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Api;
+namespace Gerenuk\Nudge\Http\Controllers\Api;
 
 use Closure;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -9,17 +9,17 @@ use Dedoc\Scramble\Attributes\HeaderParameter;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Automations\AutomationTriggers;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Http\ApiError;
-use Gerenuk\Marketing\Http\ApiErrorCode;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Http\Resources\EventResource;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Support\ContactData;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Automations\AutomationTriggers;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Http\ApiError;
+use Gerenuk\Nudge\Http\ApiErrorCode;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Http\Resources\EventResource;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Support\ContactData;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

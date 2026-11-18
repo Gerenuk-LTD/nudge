@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Imports;
+namespace Gerenuk\Nudge\Imports;
 
 use Generator;
 use Illuminate\Support\Facades\Storage;

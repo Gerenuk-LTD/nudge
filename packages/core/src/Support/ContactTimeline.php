@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
 
 /**
  * A contact's recent activity in plain language, newest first.

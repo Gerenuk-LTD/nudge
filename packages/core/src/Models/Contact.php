@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Models;
+namespace Gerenuk\Nudge\Models;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Database\Factories\ContactFactory;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\Concerns\BelongsToWorkspace;
+use Gerenuk\Nudge\Database\Factories\ContactFactory;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;

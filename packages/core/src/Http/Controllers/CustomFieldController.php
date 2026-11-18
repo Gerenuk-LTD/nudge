@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\CustomFieldType;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Support\CustomFieldReferences;
-use Gerenuk\Marketing\Support\CustomFieldRules;
+use Gerenuk\Nudge\Enums\CustomFieldType;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Support\CustomFieldReferences;
+use Gerenuk\Nudge\Support\CustomFieldRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +19,7 @@ class CustomFieldController extends Controller
         $fields = CustomFieldDefinition::query()->orderBy('label')->get(['id', 'key', 'label', 'type']);
         $usage = $references->usage(array_values($fields->pluck('key')->map(fn (mixed $key) => (string) $key)->all()));
 
-        return Inertia::render('marketing/custom-fields/index', [
+        return Inertia::render('nudge/custom-fields/index', [
             'fields' => $fields->map(fn (CustomFieldDefinition $field) => [
                 ...$field->only(['id', 'key', 'label', 'type']),
                 'filled_count' => Contact::query()->active()->whereNotNull('custom_fields->'.$field->key)->count(),
@@ -39,7 +39,7 @@ class CustomFieldController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Field added.')]);
 
-        return to_route('marketing.custom-fields.index');
+        return to_route('nudge.custom-fields.index');
     }
 
     /**
@@ -51,7 +51,7 @@ class CustomFieldController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Field renamed.')]);
 
-        return to_route('marketing.custom-fields.index');
+        return to_route('nudge.custom-fields.index');
     }
 
     /**
@@ -63,6 +63,6 @@ class CustomFieldController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Field deleted.')]);
 
-        return to_route('marketing.custom-fields.index');
+        return to_route('nudge.custom-fields.index');
     }
 }

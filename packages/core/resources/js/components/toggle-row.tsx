@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Label } from '@/components/ui/label';
-import { ToggleSwitch } from '@marketing/components/toggle-switch';
+import { ToggleSwitch } from '@nudge/components/toggle-switch';
 
 /** A setting that is on or off: a label and explanation beside a switch, in a light inset box. */
 export function ToggleRow({

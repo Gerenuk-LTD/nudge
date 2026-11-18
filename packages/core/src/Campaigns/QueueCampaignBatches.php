@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Campaigns;
+namespace Gerenuk\Nudge\Campaigns;
 
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Jobs\PrepareCampaign;
-use Gerenuk\Marketing\Jobs\SendCampaignBatch;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Jobs\PrepareCampaign;
+use Gerenuk\Nudge\Jobs\SendCampaignBatch;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
 use Illuminate\Support\Collection;
 
 /**

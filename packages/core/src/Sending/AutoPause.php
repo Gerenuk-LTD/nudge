@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Workspace;
 
 /**
  * Pauses a workspace's sending when its bounce or complaint rate over the last 7 days is too high,
@@ -27,7 +27,7 @@ class AutoPause
 
         $sent = (int) ($counts[EventType::Sent->value] ?? 0);
 
-        if ($sent < (int) config('marketing.sending.auto_pause.minimum_sends')) {
+        if ($sent < (int) config('nudge.sending.auto_pause.minimum_sends')) {
             return false;
         }
 
@@ -35,8 +35,8 @@ class AutoPause
         $complaintRate = (int) ($counts[EventType::Complained->value] ?? 0) / $sent;
 
         $reason = match (true) {
-            $bounceRate > (float) config('marketing.sending.auto_pause.bounce_rate') => sprintf('Bounce rate reached %.1f%% over the last 7 days.', $bounceRate * 100),
-            $complaintRate > (float) config('marketing.sending.auto_pause.complaint_rate') => sprintf('Complaint rate reached %.2f%% over the last 7 days.', $complaintRate * 100),
+            $bounceRate > (float) config('nudge.sending.auto_pause.bounce_rate') => sprintf('Bounce rate reached %.1f%% over the last 7 days.', $bounceRate * 100),
+            $complaintRate > (float) config('nudge.sending.auto_pause.complaint_rate') => sprintf('Complaint rate reached %.2f%% over the last 7 days.', $complaintRate * 100),
             default => null,
         };
 

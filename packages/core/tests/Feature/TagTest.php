@@ -1,10 +1,10 @@
 <?php
 
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Tag;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Tag;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -31,8 +31,8 @@ function automationUsing(Tag $trigger, string $adds): Automation
 }
 
 test('tags can be created, and names stay unique', function () {
-    $this->actingAs($this->owner)->post(route('marketing.tags.store'), ['name' => 'vip'])->assertRedirect();
-    $this->actingAs($this->owner)->post(route('marketing.tags.store'), ['name' => 'vip'])->assertSessionHasErrors('name');
+    $this->actingAs($this->owner)->post(route('nudge.tags.store'), ['name' => 'vip'])->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.tags.store'), ['name' => 'vip'])->assertSessionHasErrors('name');
 
     expect(Tag::pluck('name')->all())->toBe(['vip']);
 });
@@ -44,7 +44,7 @@ test('the tag list shows which segments and automations use each tag', function 
     Segment::create(['name' => 'VIPs', 'definition' => ['match' => 'all', 'conditions' => [['type' => 'condition', 'field' => 'tag', 'operator' => 'has', 'value' => $vip->id]]]]);
     automationUsing($vip, 'Welcomed');
 
-    $this->actingAs($this->owner)->get(route('marketing.tags.index'))
+    $this->actingAs($this->owner)->get(route('nudge.tags.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('tags.0.name', 'unused')
             ->where('tags.0.used_by', [])
@@ -60,7 +60,7 @@ test('renaming a tag keeps automations that add it by name working', function ()
     $welcomed = Tag::create(['name' => 'welcomed']);
     $automation = automationUsing($vip, 'Welcomed');
 
-    $this->actingAs($this->owner)->put(route('marketing.tags.update', $welcomed), ['name' => 'onboarded'])->assertRedirect();
+    $this->actingAs($this->owner)->put(route('nudge.tags.update', $welcomed), ['name' => 'onboarded'])->assertRedirect();
 
     expect($automation->refresh()->definition['steps'][0]['yes'][0]['config']['add_tags'])->toBe(['onboarded']);
 });
@@ -74,7 +74,7 @@ test('merging a tag moves its contacts and references, then deletes it', functio
     $segment = Segment::create(['name' => 'VIPs', 'definition' => ['match' => 'all', 'conditions' => [['type' => 'condition', 'field' => 'tag', 'operator' => 'has', 'value' => $duplicate->id]]]]);
     $automation = automationUsing($duplicate, 'VIP');
 
-    $this->actingAs($this->owner)->post(route('marketing.tags.merge', $duplicate), ['into' => $vip->id])->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.tags.merge', $duplicate), ['into' => $vip->id])->assertRedirect();
 
     $automation->refresh();
     expect(Tag::pluck('name')->all())->toBe(['vip-customer'])
@@ -90,8 +90,8 @@ test('a tag cannot be merged into itself or a tag from another workspace', funct
     $this->createOwner('Globex');
     $foreign = Tag::create(['name' => 'vip']);
 
-    $this->actingAs($this->owner)->post(route('marketing.tags.merge', $vip), ['into' => $vip->id])->assertSessionHasErrors('into');
-    $this->actingAs($this->owner)->post(route('marketing.tags.merge', $vip), ['into' => $foreign->id])->assertSessionHasErrors('into');
+    $this->actingAs($this->owner)->post(route('nudge.tags.merge', $vip), ['into' => $vip->id])->assertSessionHasErrors('into');
+    $this->actingAs($this->owner)->post(route('nudge.tags.merge', $vip), ['into' => $foreign->id])->assertSessionHasErrors('into');
 
     expect(Tag::withoutGlobalScopes()->count())->toBe(2);
 });
@@ -99,7 +99,7 @@ test('a tag cannot be merged into itself or a tag from another workspace', funct
 test('tags given to a contact join existing tags whatever their capitals', function () {
     $vip = Tag::create(['name' => 'vip']);
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
         'tags' => ['VIP', 'Lead'],

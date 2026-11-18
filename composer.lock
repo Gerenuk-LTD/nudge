@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "80e6a11cfa4c54fcc943d4ea22f8829d",
+    "content-hash": "74b376e77b7c9241c46ffd5898a59651",
     "packages": [
         {
             "name": "async-aws/core",
@@ -870,12 +870,12 @@
             "time": "2025-12-03T09:33:47+00:00"
         },
         {
-            "name": "gerenuk/marketing-core",
+            "name": "gerenuk/nudge-core",
             "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "packages/core",
-                "reference": "d85c61caecf52050b2deec8cbb8586890fbb23ee"
+                "reference": "02265e635cfa249d56051236206bba38eb6f3c85"
             },
             "require": {
                 "inertiajs/inertia-laravel": "^3.0",
@@ -904,26 +904,26 @@
             "extra": {
                 "laravel": {
                     "providers": [
-                        "Gerenuk\\Marketing\\MarketingServiceProvider"
+                        "Gerenuk\\Nudge\\NudgeServiceProvider"
                     ]
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Gerenuk\\Marketing\\": "src/",
-                    "Gerenuk\\Marketing\\Database\\Factories\\": "database/factories/"
+                    "Gerenuk\\Nudge\\": "src/",
+                    "Gerenuk\\Nudge\\Database\\Factories\\": "database/factories/"
                 }
             },
             "autoload-dev": {
                 "psr-4": {
-                    "Gerenuk\\Marketing\\Tests\\": "tests/",
+                    "Gerenuk\\Nudge\\Tests\\": "tests/",
                     "Workbench\\App\\": "workbench/app/"
                 }
             },
             "license": [
                 "FSL-1.1-ALv2"
             ],
-            "description": "Core of the Gerenuk marketing platform: contacts, lists, segments, imports and the API.",
+            "description": "Core of Nudge: contacts, lists, segments, imports and the API.",
             "transport-options": {
                 "symlink": true,
                 "relative": true
@@ -13078,7 +13078,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "gerenuk/marketing-core": 20
+        "gerenuk/nudge-core": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

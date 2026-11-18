@@ -18,7 +18,7 @@ use Dedoc\Scramble\Support\RouteInfo;
  */
 class TokenPermissionExtension extends OperationExtension
 {
-    private const PREFIX = 'marketing.token-can:';
+    private const PREFIX = 'nudge.token-can:';
 
     public function handle(Operation $operation, RouteInfo $routeInfo): void
     {

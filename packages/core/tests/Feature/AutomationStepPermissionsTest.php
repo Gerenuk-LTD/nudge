@@ -1,14 +1,14 @@
 <?php
 
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -71,7 +71,7 @@ test('a member without contacts.view cannot save a webhook step', function () {
     $automation = stepsDraft($this, [stepsEmail('Hello', $this->provider->id)]);
 
     $this->actingAs($member)
-        ->put(route('marketing.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [WEBHOOK_STEP]]]))
+        ->put(route('nudge.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [WEBHOOK_STEP]]]))
         ->assertSessionHasErrors('definition');
 
     expect($automation->fresh()->definition['steps'][0]['type'])->toBe('send_email');
@@ -82,7 +82,7 @@ test('a member without contacts.manage cannot save an update contact step', func
     $automation = stepsDraft($this, [stepsEmail('Hello', $this->provider->id)]);
 
     $this->actingAs($member)
-        ->put(route('marketing.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [UPDATE_STEP]]]))
+        ->put(route('nudge.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [UPDATE_STEP]]]))
         ->assertSessionHasErrors('definition');
 
     expect($automation->fresh()->definition['steps'][0]['type'])->toBe('send_email');
@@ -93,7 +93,7 @@ test('an email-only definition saves without contact permissions', function () {
     $automation = stepsDraft($this, [stepsEmail('Hello', $this->provider->id)]);
 
     $this->actingAs($member)
-        ->put(route('marketing.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [stepsEmail('Changed', $this->provider->id)]]]))
+        ->put(route('nudge.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [stepsEmail('Changed', $this->provider->id)]]]))
         ->assertSessionHasNoErrors();
 
     expect($automation->fresh()->definition['steps'][0]['config']['subject'])->toBe('Changed');
@@ -104,7 +104,7 @@ test('a member without contacts.view cannot start an automation with a webhook s
     $automation = stepsDraft($this, [stepsEmail('Hello', $this->provider->id), WEBHOOK_STEP]);
 
     $this->actingAs($member)
-        ->post(route('marketing.automations.activate', $automation))
+        ->post(route('nudge.automations.activate', $automation))
         ->assertSessionHasErrors('definition');
 
     expect($automation->fresh()->status)->toBe(AutomationStatus::Draft);
@@ -115,12 +115,12 @@ test('the matching contact permission allows the step', function () {
 
     $viewer = ($this->automationsOnlyMember)(['contacts.view']);
     $this->actingAs($viewer)
-        ->put(route('marketing.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [WEBHOOK_STEP]]]))
+        ->put(route('nudge.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [WEBHOOK_STEP]]]))
         ->assertSessionHasNoErrors();
 
     $manager = ($this->automationsOnlyMember)(['contacts.manage']);
     $this->actingAs($manager)
-        ->put(route('marketing.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [UPDATE_STEP]]]))
+        ->put(route('nudge.automations.update', $automation), stepsPayload($automation, ['definition' => ['steps' => [UPDATE_STEP]]]))
         ->assertSessionHasNoErrors();
 
     expect($automation->fresh()->definition['steps'][0]['type'])->toBe('update_contact');

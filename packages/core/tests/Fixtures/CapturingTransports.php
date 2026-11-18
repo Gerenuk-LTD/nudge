@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Tests\Fixtures;
+namespace Gerenuk\Nudge\Tests\Fixtures;
 
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderTransports;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderTransports;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\AbstractTransport;
 use Symfony\Component\Mailer\Transport\TransportInterface;

@@ -1,17 +1,17 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Campaigns\QueueCampaignBatches;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\SendRateLimiter;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Campaigns\QueueCampaignBatches;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\SendRateLimiter;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -148,7 +148,7 @@ class RecoverStalledSends
      */
     private function once(Campaign $campaign, callable $retry): void
     {
-        if (Cache::add("marketing:recover:campaign:{$campaign->id}", true, now()->addMinutes(self::STALE_PROGRESS_MINUTES))) {
+        if (Cache::add("nudge:recover:campaign:{$campaign->id}", true, now()->addMinutes(self::STALE_PROGRESS_MINUTES))) {
             $retry();
         }
     }

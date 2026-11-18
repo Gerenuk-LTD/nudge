@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\CampaignSnapshot;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\CampaignSnapshot;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Workspace;
 use Symfony\Component\Mailer\Header\MetadataHeader;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;

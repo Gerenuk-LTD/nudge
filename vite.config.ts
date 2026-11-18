@@ -52,9 +52,7 @@ export default defineConfig({
         alias: {
             // The core package's frontend: pages, layouts and components. Resolved through
             // vendor so it works with both the local path repository and a Packagist install.
-            '@marketing': realpathSync(
-                'vendor/gerenuk/marketing-core/resources/js',
-            ),
+            '@nudge': realpathSync('vendor/gerenuk/nudge-core/resources/js'),
         },
     },
     test: {

@@ -1,14 +1,14 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Enums\SuppressionReason;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Support\CsvCell;
-use Gerenuk\Marketing\Support\TableQuery;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Support\CsvCell;
+use Gerenuk\Nudge\Support\TableQuery;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -44,7 +44,7 @@ class SuppressionController extends Controller
             ->get(['id', 'email', 'first_name', 'last_name'])
             ->keyBy('email');
 
-        return Inertia::render('marketing/suppressions/index', [
+        return Inertia::render('nudge/suppressions/index', [
             'suppressions' => $suppressions->through(fn (Suppression $suppression) => [
                 'id' => $suppression->id,
                 'email' => $suppression->email,
@@ -93,7 +93,7 @@ class SuppressionController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => trans_choice('Blocked :count address.|Blocked :count addresses.', count($emails))]);
 
-        return to_route('marketing.suppressions.index');
+        return to_route('nudge.suppressions.index');
     }
 
     /**

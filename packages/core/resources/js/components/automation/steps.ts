@@ -1,4 +1,4 @@
-import type { AutomationStep, StepType } from '@marketing/types';
+import type { AutomationStep, StepType } from '@nudge/types';
 
 /**
  * A step setting as display text. Settings are free-form JSON, so anything that is not a string or number shows as empty.

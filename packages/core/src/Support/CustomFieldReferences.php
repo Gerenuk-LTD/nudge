@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Automations\StepType;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Nudge\Automations\StepType;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Segment;
 
 /**
  * Where custom fields are used outside contacts: segment rules and automation conditions filter on them as

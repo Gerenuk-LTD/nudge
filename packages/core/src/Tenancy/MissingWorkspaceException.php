@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Tenancy;
+namespace Gerenuk\Nudge\Tenancy;
 
 use LogicException;
 

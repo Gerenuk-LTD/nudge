@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Imports;
+namespace Gerenuk\Nudge\Imports;
 
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 

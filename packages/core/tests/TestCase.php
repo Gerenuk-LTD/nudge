@@ -1,14 +1,14 @@
 <?php
 
-namespace Gerenuk\Marketing\Tests;
+namespace Gerenuk\Nudge\Tests;
 
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\MarketingServiceProvider;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
-use Gerenuk\Marketing\Tests\Fixtures\User;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\NudgeServiceProvider;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Tests\Fixtures\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\ServiceProvider as InertiaServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -22,13 +22,13 @@ abstract class TestCase extends Orchestra
      */
     protected function getPackageProviders($app): array
     {
-        return [InertiaServiceProvider::class, MarketingServiceProvider::class];
+        return [InertiaServiceProvider::class, NudgeServiceProvider::class];
     }
 
     protected function defineEnvironment($app): void
     {
-        $app['config']->set('marketing.user_model', User::class);
-        $app['config']->set('marketing.web_middleware', ['web', 'auth']);
+        $app['config']->set('nudge.user_model', User::class);
+        $app['config']->set('nudge.web_middleware', ['web', 'auth']);
         $app['config']->set('inertia.testing.ensure_pages_exist', true);
         $app['config']->set('view.paths', [__DIR__.'/Fixtures/views']);
         $app['config']->set('auth.providers.users.model', User::class);

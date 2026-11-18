@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import type { Permission, WorkspaceSharedProps } from '@marketing/types';
+import type { Permission, WorkspaceSharedProps } from '@nudge/types';
 
 /**
  * The current workspace and the signed-in user's permissions in it.

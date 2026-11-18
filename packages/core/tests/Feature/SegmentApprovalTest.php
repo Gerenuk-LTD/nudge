@@ -1,21 +1,21 @@
 <?php
 
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Jobs\DispatchDueCampaigns;
-use Gerenuk\Marketing\Jobs\PrepareCampaign;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Jobs\DispatchDueCampaigns;
+use Gerenuk\Nudge\Jobs\PrepareCampaign;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -62,7 +62,7 @@ function segmentApprovalScheduled($test, array $overrides = []): Campaign
 
 function segmentApprovalSave($test, $user, ?array $definition = null, ?string $name = null): void
 {
-    $test->actingAs($user)->put(route('marketing.segments.update', $test->segment), [
+    $test->actingAs($user)->put(route('nudge.segments.update', $test->segment), [
         'name' => $name ?? $test->segment->name,
         'definition' => $definition ?? $test->segment->definition,
     ])->assertSessionHasNoErrors();
@@ -145,8 +145,8 @@ test('a live "enters a segment" automation pauses', function () {
         ]]],
     ]);
 
-    $this->actingAs($this->owner)->post(route('marketing.automations.approve', $automation))->assertRedirect();
-    $this->actingAs($this->editor)->post(route('marketing.automations.activate', $automation))->assertSessionHasNoErrors();
+    $this->actingAs($this->owner)->post(route('nudge.automations.approve', $automation))->assertRedirect();
+    $this->actingAs($this->editor)->post(route('nudge.automations.activate', $automation))->assertSessionHasNoErrors();
     expect($automation->fresh()->status)->toBe(AutomationStatus::Active);
 
     segmentApprovalSave($this, $this->editor, segmentApprovalDefinition('free'));
@@ -181,14 +181,14 @@ test('approving a stale version is refused', function () {
     $campaign = segmentApprovalCampaign($this, ['approved_at' => null, 'approved_by' => null]);
 
     $this->actingAs($this->owner)
-        ->post(route('marketing.campaigns.approve', $campaign), ['version' => now()->subDay()->toIso8601String()])
+        ->post(route('nudge.campaigns.approve', $campaign), ['version' => now()->subDay()->toIso8601String()])
         ->assertSessionHasErrors('campaign');
 
     $this->useWorkspace($this->workspace);
     expect($campaign->fresh()->approved_at)->toBeNull();
 
     $this->actingAs($this->owner)
-        ->post(route('marketing.campaigns.approve', $campaign), ['version' => $campaign->fresh()->updated_at->toIso8601String()])
+        ->post(route('nudge.campaigns.approve', $campaign), ['version' => $campaign->fresh()->updated_at->toIso8601String()])
         ->assertSessionHasNoErrors();
 
     $this->useWorkspace($this->workspace);

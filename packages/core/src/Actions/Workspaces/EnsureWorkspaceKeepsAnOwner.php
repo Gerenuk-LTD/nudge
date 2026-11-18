@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Workspaces;
+namespace Gerenuk\Nudge\Actions\Workspaces;
 
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LogicException;

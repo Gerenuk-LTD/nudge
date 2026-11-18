@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Requests;
+namespace Gerenuk\Nudge\Http\Requests;
 
 use Closure;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Sending\MergeTags;
-use Gerenuk\Marketing\Templates\EmailEditor;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Sending\MergeTags;
+use Gerenuk\Nudge\Templates\EmailEditor;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

@@ -22,7 +22,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { AutomationStep, StepStats, StepType } from '@marketing/types';
+import type { AutomationStep, StepStats, StepType } from '@nudge/types';
 import type { InsertPoint } from './steps';
 import { stepKinds as kinds } from './step-kinds';
 import { stepLabels, summarize } from './steps';

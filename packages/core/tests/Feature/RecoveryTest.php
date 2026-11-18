@@ -1,22 +1,22 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Jobs\AdvanceAutomationRun;
-use Gerenuk\Marketing\Jobs\PickAbTestWinner;
-use Gerenuk\Marketing\Jobs\RecoverStalledSends;
-use Gerenuk\Marketing\Jobs\SendCampaignBatch;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Jobs\AdvanceAutomationRun;
+use Gerenuk\Nudge\Jobs\PickAbTestWinner;
+use Gerenuk\Nudge\Jobs\RecoverStalledSends;
+use Gerenuk\Nudge\Jobs\SendCampaignBatch;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Queue;
 
@@ -110,7 +110,7 @@ test('resuming re-queues campaigns that were sending', function () {
     recoveryStart($this, 3);
     $this->workspace->update(['sending_paused_at' => now(), 'sending_paused_reason' => 'Test']);
 
-    $this->actingAs($this->owner)->post(route('marketing.sending.resume'));
+    $this->actingAs($this->owner)->post(route('nudge.sending.resume'));
 
     Queue::assertPushed(SendCampaignBatch::class, 2);
 });

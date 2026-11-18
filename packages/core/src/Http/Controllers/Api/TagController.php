@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Api;
+namespace Gerenuk\Nudge\Http\Controllers\Api;
 
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Http\Resources\TagResource;
-use Gerenuk\Marketing\Models\Tag;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Http\Resources\TagResource;
+use Gerenuk\Nudge\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 

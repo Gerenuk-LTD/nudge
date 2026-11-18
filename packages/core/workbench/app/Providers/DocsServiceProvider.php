@@ -16,7 +16,7 @@ use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Support\Generator\Types\ArrayType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
-use Gerenuk\Marketing\Support\ContactRules;
+use Gerenuk\Nudge\Support\ContactRules;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -34,9 +34,9 @@ class DocsServiceProvider extends ServiceProvider
     public function register(): void
     {
         config([
-            'scramble.api_path' => config('marketing.api_prefix'),
+            'scramble.api_path' => config('nudge.api_prefix'),
             'scramble.info.version' => '1',
-            'scramble.ui.title' => 'Gerenuk Marketing API',
+            'scramble.ui.title' => 'Nudge API',
             // Joined with explicit newlines so the export is identical on every platform.
             'scramble.info.description' => implode("\n\n", [
                 'Manage contacts, lists, custom fields and events in a workspace.',
@@ -54,8 +54,8 @@ class DocsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Scramble::configure()
-            ->routes(fn (Route $route): bool => str_starts_with((string) $route->getName(), 'marketing.api.')
-                && ! str_starts_with((string) $route->getName(), 'marketing.api.docs'))
+            ->routes(fn (Route $route): bool => str_starts_with((string) $route->getName(), 'nudge.api.')
+                && ! str_starts_with((string) $route->getName(), 'nudge.api.docs'))
             ->withOperationTransformers(TokenPermissionExtension::class)
             ->withDocumentTransformers(function (OpenApi $openApi): void {
                 $openApi->secure(

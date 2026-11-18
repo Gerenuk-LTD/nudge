@@ -1,15 +1,15 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Automations;
+namespace Gerenuk\Nudge\Actions\Automations;
 
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Jobs\AdvanceAutomationRun;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Jobs\AdvanceAutomationRun;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Contact;
 use Illuminate\Support\Facades\Cache;
 
 class EnrollContact
@@ -27,7 +27,7 @@ class EnrollContact
         }
 
         // Two triggers for the same contact can arrive at once; only one may enrol them.
-        return Cache::lock("marketing:enrol:{$automation->id}:{$contact->id}", 10)->block(5, function () use ($automation, $contact, $context): ?AutomationRun {
+        return Cache::lock("nudge:enrol:{$automation->id}:{$contact->id}", 10)->block(5, function () use ($automation, $contact, $context): ?AutomationRun {
             $previous = AutomationRun::query()->where('automation_id', $automation->id)->where('contact_id', $contact->id);
 
             $alreadyIn = (clone $previous)->whereIn('status', [AutomationRunStatus::Active, AutomationRunStatus::Waiting])->exists();

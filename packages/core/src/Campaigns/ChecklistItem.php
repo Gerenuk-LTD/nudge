@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Campaigns;
+namespace Gerenuk\Nudge\Campaigns;
 
 final class ChecklistItem
 {

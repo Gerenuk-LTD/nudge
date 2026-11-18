@@ -1,6 +1,6 @@
 {
-    "name": "gerenuk/marketing-core",
-    "description": "Core of the Gerenuk marketing platform: contacts, lists, segments, imports and the API.",
+    "name": "gerenuk/nudge-core",
+    "description": "Core of Nudge: contacts, lists, segments, imports and the API.",
     "type": "library",
     "license": "FSL-1.1-ALv2",
     "require": {
@@ -28,20 +28,20 @@
     },
     "autoload": {
         "psr-4": {
-            "Gerenuk\\Marketing\\": "src/",
-            "Gerenuk\\Marketing\\Database\\Factories\\": "database/factories/"
+            "Gerenuk\\Nudge\\": "src/",
+            "Gerenuk\\Nudge\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Gerenuk\\Marketing\\Tests\\": "tests/",
+            "Gerenuk\\Nudge\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Gerenuk\\Marketing\\MarketingServiceProvider"
+                "Gerenuk\\Nudge\\NudgeServiceProvider"
             ]
         }
     },

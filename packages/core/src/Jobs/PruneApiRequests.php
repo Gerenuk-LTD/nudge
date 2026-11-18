@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Models\ApiRequest;
+use Gerenuk\Nudge\Models\ApiRequest;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -17,14 +17,14 @@ class PruneApiRequests
     public function __invoke(): void
     {
         ApiRequest::withoutGlobalScopes()
-            ->where('created_at', '<', now()->subDays((int) config('marketing.api_log.body_retention_days')))
+            ->where('created_at', '<', now()->subDays((int) config('nudge.api_log.body_retention_days')))
             ->where(fn (Builder $query) => $query->whereNotNull('request_body')->orWhereNotNull('response_body'))
             ->chunkById(1000, fn ($rows) => ApiRequest::withoutGlobalScopes()
                 ->whereKey($rows->modelKeys())
                 ->update(['request_body' => null, 'response_body' => null]));
 
         ApiRequest::withoutGlobalScopes()
-            ->where('created_at', '<', now()->subDays((int) config('marketing.api_log.retention_days')))
+            ->where('created_at', '<', now()->subDays((int) config('nudge.api_log.retention_days')))
             ->chunkById(1000, fn ($rows) => ApiRequest::withoutGlobalScopes()->whereKey($rows->modelKeys())->delete());
     }
 }

@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Support\DailySeries;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Support\DailySeries;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +38,7 @@ class ContactListController extends Controller
             self::GROWTH_DAYS,
         );
 
-        return Inertia::render('marketing/lists/index', [
+        return Inertia::render('nudge/lists/index', [
             'lists' => $lists->map(fn (ContactList $list) => [
                 ...$list->only(['id', 'name', 'description', 'contacts_count', 'subscribed_count']),
                 'joins' => $joins[$list->id],
@@ -53,7 +53,7 @@ class ContactListController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('List created.')]);
 
-        return to_route('marketing.lists.index');
+        return to_route('nudge.lists.index');
     }
 
     public function update(Request $request, ContactList $list): RedirectResponse
@@ -62,7 +62,7 @@ class ContactListController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('List saved.')]);
 
-        return to_route('marketing.lists.index');
+        return to_route('nudge.lists.index');
     }
 
     public function destroy(ContactList $list): RedirectResponse
@@ -71,7 +71,7 @@ class ContactListController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('List deleted. Its contacts were kept.')]);
 
-        return to_route('marketing.lists.index');
+        return to_route('nudge.lists.index');
     }
 
     /**

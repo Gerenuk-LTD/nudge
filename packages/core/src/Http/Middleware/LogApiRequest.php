@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Middleware;
+namespace Gerenuk\Nudge\Http\Middleware;
 
 use Closure;
-use Gerenuk\Marketing\Models\ApiRequest;
-use Gerenuk\Marketing\Models\ApiToken;
+use Gerenuk\Nudge\Models\ApiRequest;
+use Gerenuk\Nudge\Models\ApiToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,7 +25,7 @@ class LogApiRequest
 
         $response->headers->set('X-Request-Id', 'req_'.$ulid);
 
-        if (config('marketing.api_log.enabled')) {
+        if (config('nudge.api_log.enabled')) {
             try {
                 $this->record($request, $response, $ulid, (int) ((hrtime(true) - $started) / 1_000_000));
             } catch (Throwable $exception) {
@@ -38,7 +38,7 @@ class LogApiRequest
 
     private function record(Request $request, Response $response, string $ulid, int $durationMs): void
     {
-        $token = $request->attributes->get('marketing_api_token');
+        $token = $request->attributes->get('nudge_api_token');
 
         if (! $token instanceof ApiToken) {
             return;
@@ -54,7 +54,7 @@ class LogApiRequest
             'api_token_id' => $token->id,
             'token_name' => $token->name,
             'method' => $request->getMethod(),
-            'route' => $uri === null ? null : Str::after($uri, trim((string) config('marketing.api_prefix'), '/').'/'),
+            'route' => $uri === null ? null : Str::after($uri, trim((string) config('nudge.api_prefix'), '/').'/'),
             'path' => mb_strcut($request->getRequestUri(), 0, 2048),
             'status' => $response->getStatusCode(),
             'duration_ms' => $durationMs,
@@ -79,7 +79,7 @@ class LogApiRequest
             return null;
         }
 
-        $max = (int) config('marketing.api_log.max_body_bytes');
+        $max = (int) config('nudge.api_log.max_body_bytes');
 
         if (strlen($body) <= $max) {
             return $body;

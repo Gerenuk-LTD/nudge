@@ -1,26 +1,26 @@
 <?php
 
-use Gerenuk\Marketing\Http\Controllers\ApiRequestController;
-use Gerenuk\Marketing\Http\Controllers\ApiTokenController;
-use Gerenuk\Marketing\Http\Controllers\AutomationController;
-use Gerenuk\Marketing\Http\Controllers\CampaignController;
-use Gerenuk\Marketing\Http\Controllers\ContactController;
-use Gerenuk\Marketing\Http\Controllers\ContactListController;
-use Gerenuk\Marketing\Http\Controllers\CurrentWorkspaceController;
-use Gerenuk\Marketing\Http\Controllers\CustomFieldController;
-use Gerenuk\Marketing\Http\Controllers\EmailAssetController;
-use Gerenuk\Marketing\Http\Controllers\EmailTemplateController;
-use Gerenuk\Marketing\Http\Controllers\HomeController;
-use Gerenuk\Marketing\Http\Controllers\ImportController;
-use Gerenuk\Marketing\Http\Controllers\InvitationController;
-use Gerenuk\Marketing\Http\Controllers\MemberController;
-use Gerenuk\Marketing\Http\Controllers\ProviderController;
-use Gerenuk\Marketing\Http\Controllers\RoleController;
-use Gerenuk\Marketing\Http\Controllers\SegmentController;
-use Gerenuk\Marketing\Http\Controllers\SendingSettingsController;
-use Gerenuk\Marketing\Http\Controllers\SuppressionController;
-use Gerenuk\Marketing\Http\Controllers\TagController;
-use Gerenuk\Marketing\Http\Controllers\WorkspaceController;
+use Gerenuk\Nudge\Http\Controllers\ApiRequestController;
+use Gerenuk\Nudge\Http\Controllers\ApiTokenController;
+use Gerenuk\Nudge\Http\Controllers\AutomationController;
+use Gerenuk\Nudge\Http\Controllers\CampaignController;
+use Gerenuk\Nudge\Http\Controllers\ContactController;
+use Gerenuk\Nudge\Http\Controllers\ContactListController;
+use Gerenuk\Nudge\Http\Controllers\CurrentWorkspaceController;
+use Gerenuk\Nudge\Http\Controllers\CustomFieldController;
+use Gerenuk\Nudge\Http\Controllers\EmailAssetController;
+use Gerenuk\Nudge\Http\Controllers\EmailTemplateController;
+use Gerenuk\Nudge\Http\Controllers\HomeController;
+use Gerenuk\Nudge\Http\Controllers\ImportController;
+use Gerenuk\Nudge\Http\Controllers\InvitationController;
+use Gerenuk\Nudge\Http\Controllers\MemberController;
+use Gerenuk\Nudge\Http\Controllers\ProviderController;
+use Gerenuk\Nudge\Http\Controllers\RoleController;
+use Gerenuk\Nudge\Http\Controllers\SegmentController;
+use Gerenuk\Nudge\Http\Controllers\SendingSettingsController;
+use Gerenuk\Nudge\Http\Controllers\SuppressionController;
+use Gerenuk\Nudge\Http\Controllers\TagController;
+use Gerenuk\Nudge\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 // Routes that work before the user has a workspace.
@@ -29,7 +29,7 @@ Route::post('workspaces', [WorkspaceController::class, 'store'])->name('workspac
 Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('invitations.show');
 Route::post('invitations/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
 
-Route::middleware('marketing.workspace')->group(function () {
+Route::middleware('nudge.workspace')->group(function () {
     Route::put('current-workspace', [CurrentWorkspaceController::class, 'update'])->name('current-workspace.update');
     Route::get('home', HomeController::class)->name('home');
     Route::get('email-assets', [EmailAssetController::class, 'index'])->name('email-assets.index');
@@ -106,7 +106,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
         Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
         Route::post('campaigns/{campaign}/resend', [CampaignController::class, 'resendToNonOpeners'])->name('campaigns.resend');
-        Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test')->middleware('throttle:marketing-test-sends');
+        Route::post('campaigns/{campaign}/test', [CampaignController::class, 'test'])->name('campaigns.test')->middleware('throttle:nudge-test-sends');
         Route::post('campaigns/{campaign}/template', [EmailTemplateController::class, 'storeFromCampaign'])->name('campaigns.template');
 
         Route::get('templates/create', [EmailTemplateController::class, 'create'])->name('templates.create');
@@ -147,7 +147,7 @@ Route::middleware('marketing.workspace')->group(function () {
         Route::get('providers/{provider}/edit', [ProviderController::class, 'edit'])->name('providers.edit');
         Route::put('providers/{provider}', [ProviderController::class, 'update'])->name('providers.update');
         Route::delete('providers/{provider}', [ProviderController::class, 'destroy'])->name('providers.destroy');
-        Route::post('providers/{provider}/test', [ProviderController::class, 'test'])->name('providers.test')->middleware('throttle:marketing-test-sends');
+        Route::post('providers/{provider}/test', [ProviderController::class, 'test'])->name('providers.test')->middleware('throttle:nudge-test-sends');
     });
 
     Route::prefix('workspace')->group(function () {

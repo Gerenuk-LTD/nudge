@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\CampaignKind;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\EmailTemplate;
-use Gerenuk\Marketing\Support\MergeTagOptions;
-use Gerenuk\Marketing\Templates\EmailEditor;
-use Gerenuk\Marketing\Templates\StarterTemplates;
+use Gerenuk\Nudge\Enums\CampaignKind;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\EmailTemplate;
+use Gerenuk\Nudge\Support\MergeTagOptions;
+use Gerenuk\Nudge\Templates\EmailEditor;
+use Gerenuk\Nudge\Templates\StarterTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,7 +18,7 @@ class EmailTemplateController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('marketing/templates/index', [
+        return Inertia::render('nudge/templates/index', [
             'templates' => EmailTemplate::query()->latest('updated_at')->get()->map(fn (EmailTemplate $template) => [
                 'id' => $template->id,
                 'name' => $template->name,
@@ -40,7 +40,7 @@ class EmailTemplateController extends Controller
 
         $content = StarterTemplates::content($starter);
 
-        return Inertia::render('marketing/templates/form', [
+        return Inertia::render('nudge/templates/form', [
             'template' => null,
             'editor' => $content['editor'],
             'editorState' => $content['editor_state'],
@@ -58,12 +58,12 @@ class EmailTemplateController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Template saved.')]);
 
-        return to_route('marketing.templates.edit', $template);
+        return to_route('nudge.templates.edit', $template);
     }
 
     public function edit(EmailTemplate $template): Response
     {
-        return Inertia::render('marketing/templates/form', [
+        return Inertia::render('nudge/templates/form', [
             'template' => $template->only(['id', 'name', 'description', 'subject', 'preheader']),
             'editor' => $template->editor,
             'editorState' => $template->editor_state,
@@ -78,7 +78,7 @@ class EmailTemplateController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Template saved.')]);
 
-        return to_route('marketing.templates.edit', $template);
+        return to_route('nudge.templates.edit', $template);
     }
 
     public function destroy(EmailTemplate $template): RedirectResponse
@@ -87,7 +87,7 @@ class EmailTemplateController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Template deleted. Emails made from it are unchanged.')]);
 
-        return to_route('marketing.templates.index');
+        return to_route('nudge.templates.index');
     }
 
     public function duplicate(Request $request, EmailTemplate $template): RedirectResponse
@@ -98,7 +98,7 @@ class EmailTemplateController extends Controller
             'created_by' => $this->user($request)->getAuthIdentifier(),
         ])->save();
 
-        return to_route('marketing.templates.edit', $copy);
+        return to_route('nudge.templates.edit', $copy);
     }
 
     /**
@@ -123,7 +123,7 @@ class EmailTemplateController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Saved as a template.')]);
 
-        return to_route('marketing.templates.edit', $template);
+        return to_route('nudge.templates.edit', $template);
     }
 
     /**

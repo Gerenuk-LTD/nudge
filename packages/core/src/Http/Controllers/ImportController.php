@@ -1,20 +1,20 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Imports\CreateImport;
-use Gerenuk\Marketing\Actions\Imports\StartImport;
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Imports\ColumnMapping;
-use Gerenuk\Marketing\Imports\CsvReader;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Import;
-use Gerenuk\Marketing\Models\ImportError;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Support\CsvCell;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Imports\CreateImport;
+use Gerenuk\Nudge\Actions\Imports\StartImport;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Imports\ColumnMapping;
+use Gerenuk\Nudge\Imports\CsvReader;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Import;
+use Gerenuk\Nudge\Models\ImportError;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Support\CsvCell;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -34,7 +34,7 @@ class ImportController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('marketing/imports/index', [
+        return Inertia::render('nudge/imports/index', [
             'imports' => Import::query()->latest('id')->limit(100)->get()->map(fn (Import $import) => $this->present($import)),
         ]);
     }
@@ -43,8 +43,8 @@ class ImportController extends Controller
     {
         $customFields = CustomFieldDefinition::query()->orderBy('label')->get();
 
-        return Inertia::render('marketing/imports/create', [
-            'maxFileKilobytes' => config('marketing.imports.max_file_kilobytes'),
+        return Inertia::render('nudge/imports/create', [
+            'maxFileKilobytes' => config('nudge.imports.max_file_kilobytes'),
             'columns' => collect(ColumnMapping::targets($customFields))
                 ->map(fn (string $target) => str_starts_with($target, 'custom:') ? substr($target, 7) : $target)
                 ->values(),
@@ -55,14 +55,14 @@ class ImportController extends Controller
     public function store(Request $request, CreateImport $createImport): RedirectResponse
     {
         $validated = $request->validate([
-            'file' => ['required', 'file', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel', 'max:'.config('marketing.imports.max_file_kilobytes')],
+            'file' => ['required', 'file', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel', 'max:'.config('nudge.imports.max_file_kilobytes')],
             'list' => ['nullable', 'integer', Rule::exists('contact_lists', 'id')->where('workspace_id', $this->currentWorkspace->id())],
         ]);
 
         $import = $createImport->handle($this->currentWorkspace->getOrFail(), $this->user($request), $request->file('file'));
 
         // An import started from a list carries it through, so the mapping step has that list chosen.
-        return to_route('marketing.imports.show', array_filter(['import' => $import, 'list' => $validated['list'] ?? null]));
+        return to_route('nudge.imports.show', array_filter(['import' => $import, 'list' => $validated['list'] ?? null]));
     }
 
     public function show(Request $request, Import $import): Response
@@ -74,7 +74,7 @@ class ImportController extends Controller
 
         if ($import->status === ImportStatus::Pending) {
             try {
-                foreach ((new CsvReader(config('marketing.imports.disk'), $import->file_path))->rows() as $row) {
+                foreach ((new CsvReader(config('nudge.imports.disk'), $import->file_path))->rows() as $row) {
                     $sample[] = $row;
 
                     if (count($sample) === 5) {
@@ -92,7 +92,7 @@ class ImportController extends Controller
             $sample = [];
         }
 
-        return Inertia::render('marketing/imports/show', [
+        return Inertia::render('nudge/imports/show', [
             'import' => $this->present($import),
             'headers' => $import->headers,
             'sample' => $sample,
@@ -145,7 +145,7 @@ class ImportController extends Controller
 
         $startImport->handle($import, array_values($validated['mapping']), $validated['contact_list_id'] ?? null, $validated['tags'] ?? []);
 
-        return to_route('marketing.imports.show', $import);
+        return to_route('nudge.imports.show', $import);
     }
 
     /**
@@ -155,12 +155,12 @@ class ImportController extends Controller
     {
         abort_if(in_array($import->status, [ImportStatus::Queued, ImportStatus::Processing], true), 409, __('This import is still running.'));
 
-        Storage::disk(config('marketing.imports.disk'))->delete($import->file_path);
+        Storage::disk(config('nudge.imports.disk'))->delete($import->file_path);
         $import->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Import removed. Its contacts were kept.')]);
 
-        return to_route('marketing.imports.index');
+        return to_route('nudge.imports.index');
     }
 
     /**

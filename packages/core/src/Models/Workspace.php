@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Models;
+namespace Gerenuk\Nudge\Models;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Database\Factories\WorkspaceFactory;
+use Gerenuk\Nudge\Database\Factories\WorkspaceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

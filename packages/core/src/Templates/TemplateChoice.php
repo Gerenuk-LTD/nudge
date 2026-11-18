@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Templates;
+namespace Gerenuk\Nudge\Templates;
 
-use Gerenuk\Marketing\Models\EmailTemplate;
+use Gerenuk\Nudge\Models\EmailTemplate;
 use Illuminate\Validation\ValidationException;
 
 /**

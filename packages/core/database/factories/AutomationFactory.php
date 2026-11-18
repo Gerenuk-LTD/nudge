@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

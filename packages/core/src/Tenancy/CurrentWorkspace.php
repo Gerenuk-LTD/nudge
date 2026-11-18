@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Tenancy;
+namespace Gerenuk\Nudge\Tenancy;
 
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Models\Workspace;
 
 /**
  * Holds the workspace that tenant-owned queries are scoped to for the

@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Models\Provider;
+use Gerenuk\Nudge\Models\Provider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Sleep;
@@ -14,7 +14,7 @@ class SendRateLimiter
 {
     public function waitForSlot(Provider $provider): void
     {
-        $key = "marketing:provider-rate:{$provider->id}";
+        $key = "nudge:provider-rate:{$provider->id}";
 
         while (! RateLimiter::attempt($key, max(1, $provider->max_per_second), fn () => true, 1)) {
             Sleep::for(RateLimiter::availableIn($key) * 1000 ?: 100)->milliseconds();
@@ -44,6 +44,6 @@ class SendRateLimiter
 
     private function dailyKey(Provider $provider): string
     {
-        return "marketing:provider-daily:{$provider->id}:".now()->toDateString();
+        return "nudge:provider-daily:{$provider->id}:".now()->toDateString();
     }
 }

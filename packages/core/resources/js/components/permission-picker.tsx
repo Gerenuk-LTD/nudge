@@ -10,8 +10,8 @@ import {
     groupCoverage,
     toggleGroup,
     togglePermission,
-} from '@marketing/lib/permissions';
-import type { Permission } from '@marketing/types';
+} from '@nudge/lib/permissions';
+import type { Permission } from '@nudge/types';
 
 export type PermissionOption = {
     value: Permission;

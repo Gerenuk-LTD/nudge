@@ -1,6 +1,6 @@
-import { StatusBadge } from '@marketing/components/status-badge';
-import type { StatusTone } from '@marketing/components/status-badge';
-import type { CampaignStatus } from '@marketing/types';
+import { StatusBadge } from '@nudge/components/status-badge';
+import type { StatusTone } from '@nudge/components/status-badge';
+import type { CampaignStatus } from '@nudge/types';
 
 const statuses: Record<CampaignStatus, { label: string; tone: StatusTone }> = {
     draft: { label: 'Draft', tone: 'neutral' },

@@ -14,21 +14,21 @@ import {
     TextCursorInput,
     Users,
 } from 'lucide-react';
-import { home } from '@/routes/marketing';
-import { index as automationsIndex } from '@/routes/marketing/automations';
-import { index as campaignsIndex } from '@/routes/marketing/campaigns';
-import { index as contactsIndex } from '@/routes/marketing/contacts';
-import { index as customFieldsIndex } from '@/routes/marketing/custom-fields';
-import { index as importsIndex } from '@/routes/marketing/imports';
-import { index as listsIndex } from '@/routes/marketing/lists';
-import { index as providersIndex } from '@/routes/marketing/providers';
-import { index as segmentsIndex } from '@/routes/marketing/segments';
-import { index as suppressionsIndex } from '@/routes/marketing/suppressions';
-import { index as tagsIndex } from '@/routes/marketing/tags';
-import { index as templatesIndex } from '@/routes/marketing/templates';
-import type { Permission } from '@marketing/types';
+import { home } from '@/routes/nudge';
+import { index as automationsIndex } from '@/routes/nudge/automations';
+import { index as campaignsIndex } from '@/routes/nudge/campaigns';
+import { index as contactsIndex } from '@/routes/nudge/contacts';
+import { index as customFieldsIndex } from '@/routes/nudge/custom-fields';
+import { index as importsIndex } from '@/routes/nudge/imports';
+import { index as listsIndex } from '@/routes/nudge/lists';
+import { index as providersIndex } from '@/routes/nudge/providers';
+import { index as segmentsIndex } from '@/routes/nudge/segments';
+import { index as suppressionsIndex } from '@/routes/nudge/suppressions';
+import { index as tagsIndex } from '@/routes/nudge/tags';
+import { index as templatesIndex } from '@/routes/nudge/templates';
+import type { Permission } from '@nudge/types';
 
-export type MarketingNavItem = {
+export type NudgeNavItem = {
     title: string;
     href: NonNullable<InertiaLinkProps['href']>;
     icon: LucideIcon;
@@ -39,7 +39,7 @@ export type MarketingNavItem = {
 /**
  * The core's sidebar items, shown under their group's heading in this order. Host apps render these and can add their own, such as billing.
  */
-export const marketingNavItems: MarketingNavItem[] = [
+export const nudgeNavItems: NudgeNavItem[] = [
     {
         title: 'Home',
         href: home(),

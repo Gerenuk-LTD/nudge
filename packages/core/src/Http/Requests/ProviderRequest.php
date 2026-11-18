@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Requests;
+namespace Gerenuk\Nudge\Http\Requests;
 
 use Closure;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -43,7 +43,7 @@ class ProviderRequest extends FormRequest
                 ...($field->options === [] ? [] : [Rule::in(array_column($field->options, 'value'))]),
             ];
 
-            if ($type === ProviderType::Smtp && $field->key === 'host' && ! config('marketing.sending.allow_private_smtp_hosts')) {
+            if ($type === ProviderType::Smtp && $field->key === 'host' && ! config('nudge.sending.allow_private_smtp_hosts')) {
                 $rules['credentials.host'][] = function (string $attribute, mixed $value, Closure $fail): void {
                     if (is_string($value) && ! $this->resolvesToPublicAddresses($value)) {
                         $fail(__('This host is on a private network, which this installation doesn\'t allow.'));

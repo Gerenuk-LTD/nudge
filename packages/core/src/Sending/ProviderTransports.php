@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Models\Provider;
+use Gerenuk\Nudge\Models\Provider;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 

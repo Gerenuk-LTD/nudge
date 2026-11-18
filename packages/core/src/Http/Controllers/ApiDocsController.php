@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -23,13 +23,13 @@ class ApiDocsController extends Controller
         }
 
         // From APP_URL, never the request's Host: the response is publicly cacheable.
-        $spec['servers'] = [['url' => rtrim((string) config('app.url'), '/').'/'.trim((string) config('marketing.api_prefix'), '/')]];
+        $spec['servers'] = [['url' => rtrim((string) config('app.url'), '/').'/'.trim((string) config('nudge.api_prefix'), '/')]];
 
         return response()->json($spec)->header('Cache-Control', 'public, max-age=3600');
     }
 
     public function page(): View
     {
-        return view('marketing::api-docs', ['specUrl' => route('marketing.api.docs.spec', absolute: false)]);
+        return view('nudge::api-docs', ['specUrl' => route('nudge.api.docs.spec', absolute: false)]);
     }
 }

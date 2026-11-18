@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
-import { ToggleRow } from '@marketing/components/toggle-row';
-import type { CustomField, Option } from '@marketing/types';
+import { ToggleRow } from '@nudge/components/toggle-row';
+import type { CustomField, Option } from '@nudge/types';
 
 export type CustomFieldValue = string | number | boolean | null;
 

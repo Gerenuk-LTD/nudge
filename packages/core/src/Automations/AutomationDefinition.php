@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
 /**
  * An automation's steps: a list where condition steps hold "yes" and "no" branches of their own.

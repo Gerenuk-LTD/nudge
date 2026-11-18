@@ -15,9 +15,9 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { SettingsSection } from '@marketing/components/settings-section';
-import { StatusBadge } from '@marketing/components/status-badge';
-import { formatDateTime } from '@marketing/lib/format';
+import { SettingsSection } from '@nudge/components/settings-section';
+import { StatusBadge } from '@nudge/components/status-badge';
+import { formatDateTime } from '@nudge/lib/format';
 
 export type Session = {
     id: string;

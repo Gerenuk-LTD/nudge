@@ -1,12 +1,12 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
-use Gerenuk\Marketing\Jobs\PruneApiRequests;
-use Gerenuk\Marketing\Models\ApiRequest;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Tests\Fixtures\User;
+use Gerenuk\Nudge\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Nudge\Jobs\PruneApiRequests;
+use Gerenuk\Nudge\Models\ApiRequest;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Tests\Fixtures\User;
 use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
@@ -23,7 +23,7 @@ function logToken($workspace, $user, array $permissions = ['contacts.view', 'con
 
 function putContact(string $token, string $email = 'ada@example.com')
 {
-    return test()->withToken($token)->putJson(route('marketing.api.contacts.upsert', $email), ['first_name' => 'Ada']);
+    return test()->withToken($token)->putJson(route('nudge.api.contacts.upsert', $email), ['first_name' => 'Ada']);
 }
 
 /**
@@ -83,7 +83,7 @@ test('the token is never stored', function () {
 });
 
 test('invalid tokens are not logged', function () {
-    $this->withToken('gmk_nope')->getJson(route('marketing.api.contacts.index'))->assertUnauthorized();
+    $this->withToken('gmk_nope')->getJson(route('nudge.api.contacts.index'))->assertUnauthorized();
 
     expect(ApiRequest::withoutGlobalScopes()->count())->toBe(0);
 });
@@ -97,7 +97,7 @@ test('a missing permission is logged', function () {
 });
 
 test('long bodies are cut', function () {
-    config(['marketing.api_log.max_body_bytes' => 100]);
+    config(['nudge.api_log.max_body_bytes' => 100]);
     $token = logToken($this->workspace, $this->owner);
 
     $response = putContact($token);
@@ -112,17 +112,17 @@ test('workspaces are kept apart', function () {
     $row = logRow($this->workspace);
     [$other, $otherWorkspace] = $this->createOwner('Other');
 
-    $this->actingAs($other)->get(route('marketing.api-log.index'))
+    $this->actingAs($other)->get(route('nudge.api-log.index'))
         ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($page) => $page->where('requests.total', 0)));
-    $this->actingAs($other)->getJson(route('marketing.api-log.show', $row))->assertNotFound();
+    $this->actingAs($other)->getJson(route('nudge.api-log.show', $row))->assertNotFound();
 });
 
 test('the page needs the api tokens permission', function () {
     $row = logRow($this->workspace);
     $user = memberWith($this->workspace, ['contacts.view']);
 
-    $this->actingAs($user)->get(route('marketing.api-log.index'))->assertForbidden();
-    $this->actingAs($user)->getJson(route('marketing.api-log.show', $row))->assertForbidden();
+    $this->actingAs($user)->get(route('nudge.api-log.index'))->assertForbidden();
+    $this->actingAs($user)->getJson(route('nudge.api-log.show', $row))->assertForbidden();
 });
 
 test('bodies need the contacts view permission', function () {
@@ -131,11 +131,11 @@ test('bodies need the contacts view permission', function () {
     $row = ApiRequest::sole();
     $user = memberWith($this->workspace, ['api_tokens.manage']);
 
-    $this->actingAs($user)->getJson(route('marketing.api-log.show', $row))
+    $this->actingAs($user)->getJson(route('nudge.api-log.show', $row))
         ->assertOk()
         ->assertJson(['request_body' => null, 'response_body' => null, 'bodies_missing' => 'hidden']);
 
-    $this->actingAs($this->owner)->getJson(route('marketing.api-log.show', $row))
+    $this->actingAs($this->owner)->getJson(route('nudge.api-log.show', $row))
         ->assertOk()
         ->assertJson(['bodies_missing' => null])
         ->assertJsonPath('request_body', $row->request_body);
@@ -150,7 +150,7 @@ test('the log can be filtered', function () {
     logRow($this->workspace, ['token_name' => 'Old', 'status' => 200, 'created_at' => now()->subDays(10)]);
 
     $expectTotal = function (array $query, int $expected): void {
-        $this->actingAs($this->owner)->get(route('marketing.api-log.index', $query))
+        $this->actingAs($this->owner)->get(route('nudge.api-log.index', $query))
             ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload->where('requests.total', $expected)));
     };
 
@@ -171,7 +171,7 @@ test("the method and endpoint options come from this workspace's log", function 
     logRow($this->workspace, ['method' => 'GET', 'route' => 'me']);
     logRow($this->workspace, ['method' => 'PATCH', 'route' => 'me']);
 
-    $this->actingAs($this->owner)->get(route('marketing.api-log.index'))
+    $this->actingAs($this->owner)->get(route('nudge.api-log.index'))
         ->assertInertia(fn ($page) => $page
             ->where('methods', [['value' => 'GET', 'label' => 'GET'], ['value' => 'PATCH', 'label' => 'PATCH']])
             ->where('routes', [['value' => 'contacts/{email}', 'label' => 'contacts/{email}'], ['value' => 'me', 'label' => 'me']]));
@@ -190,12 +190,12 @@ test('pruning clears old bodies and deletes old rows', function () {
         ->and($recent->fresh()->request_body)->toBe('{"a":1}')
         ->and($recent->fresh()->response_body)->toBe('{"b":2}');
 
-    $this->actingAs($this->owner)->getJson(route('marketing.api-log.show', $middle))
+    $this->actingAs($this->owner)->getJson(route('nudge.api-log.show', $middle))
         ->assertJson(['bodies_missing' => 'cleared']);
 });
 
 test('logging can be turned off', function () {
-    config(['marketing.api_log.enabled' => false]);
+    config(['nudge.api_log.enabled' => false]);
     $token = logToken($this->workspace, $this->owner);
 
     putContact($token)->assertSuccessful();
@@ -219,20 +219,20 @@ test('a deleted token keeps its rows', function () {
 test('successful reads keep no bodies', function () {
     $token = logToken($this->workspace, $this->owner);
 
-    $this->withToken($token)->getJson(route('marketing.api.contacts.index'))->assertOk();
+    $this->withToken($token)->getJson(route('nudge.api.contacts.index'))->assertOk();
 
     $row = ApiRequest::sole();
     expect($row->request_body)->toBeNull()
         ->and($row->response_body)->toBeNull();
 
-    $this->actingAs($this->owner)->getJson(route('marketing.api-log.show', $row))
+    $this->actingAs($this->owner)->getJson(route('nudge.api-log.show', $row))
         ->assertJson(['bodies_missing' => 'not_kept']);
 });
 
 test('failed reads keep their bodies', function () {
     $token = logToken($this->workspace, $this->owner);
 
-    $this->withToken($token)->getJson(route('marketing.api.contacts.show', 'nobody@example.com'))->assertNotFound();
+    $this->withToken($token)->getJson(route('nudge.api.contacts.show', 'nobody@example.com'))->assertNotFound();
 
     $row = ApiRequest::sole();
     expect($row->status)->toBe(404)
@@ -244,14 +244,14 @@ test('a request can be found by its request ID', function () {
     $second = logRow($this->workspace, ['path' => '/api/v1/me', 'created_at' => now()->subDays(10)]);
 
     foreach (["req_{$second->ulid}", $second->ulid, strtoupper("req_{$second->ulid}")] as $search) {
-        $this->actingAs($this->owner)->get(route('marketing.api-log.index', ['search' => $search]))
+        $this->actingAs($this->owner)->get(route('nudge.api-log.index', ['search' => $search]))
             ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload
                 ->where('requests.total', 1)
                 ->where('requests.data.0.id', $second->id)
                 ->where('requests.data.0.request_id', $second->publicId())));
     }
 
-    $this->actingAs($this->owner)->get(route('marketing.api-log.index', ['search' => (string) $second->id]))
+    $this->actingAs($this->owner)->get(route('nudge.api-log.index', ['search' => (string) $second->id]))
         ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload->where('requests.total', 0)));
 });
 
@@ -265,10 +265,10 @@ test('API responses carry the logged request ID', function () {
 });
 
 test('the header is sent even when logging is off', function () {
-    config(['marketing.api_log.enabled' => false]);
+    config(['nudge.api_log.enabled' => false]);
     $token = logToken($this->workspace, $this->owner);
 
-    $this->withToken($token)->getJson(route('marketing.api.me'))->assertSuccessful()->assertHeader('X-Request-Id');
+    $this->withToken($token)->getJson(route('nudge.api.me'))->assertSuccessful()->assertHeader('X-Request-Id');
 
     expect(ApiRequest::withoutGlobalScopes()->count())->toBe(0);
 });
@@ -278,7 +278,7 @@ test('the log shows 25 rows a page', function () {
         logRow($this->workspace);
     }
 
-    $this->actingAs($this->owner)->get(route('marketing.api-log.index'))
+    $this->actingAs($this->owner)->get(route('nudge.api-log.index'))
         ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload
             ->where('requests.per_page', 25)
             ->has('requests.data', 25)));

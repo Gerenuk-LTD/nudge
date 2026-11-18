@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Contacts;
+namespace Gerenuk\Nudge\Actions\Contacts;
 
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\Contact;
 
 class ChangeContactStatus
 {

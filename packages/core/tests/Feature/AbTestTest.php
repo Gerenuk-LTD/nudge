@@ -1,17 +1,17 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Campaigns\AbTestResults;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Jobs\PickAbTestWinner;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Campaigns\AbTestResults;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Jobs\PickAbTestWinner;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
@@ -152,7 +152,7 @@ test('the test results stay as they were when the winner was chosen', function (
 test('an A/B test without a variant B cannot be sent', function () {
     $campaign = abCampaign($this, ['ab_subject_b' => null]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.schedule', $campaign))->assertSessionHasErrors('campaign');
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.schedule', $campaign))->assertSessionHasErrors('campaign');
 });
 
 test('duplicating a campaign does not copy its frozen a/b results', function () {
@@ -162,7 +162,7 @@ test('duplicating a campaign does not copy its frozen a/b results', function () 
         'ab_results' => ['a' => ['sent' => 2, 'opened' => 1, 'clicked' => 0, 'rate' => 0.5], 'b' => ['sent' => 2, 'opened' => 0, 'clicked' => 0, 'rate' => 0.0]],
     ]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.duplicate', $campaign))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.duplicate', $campaign))->assertRedirect();
 
     $copy = Campaign::query()->whereKeyNot($campaign->id)->sole();
 

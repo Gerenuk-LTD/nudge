@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Models\Account;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Contracts\AccountCreationPolicy;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Models\Account;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,7 +29,7 @@ class WorkspaceController extends Controller
             $message = $exception->getMessage();
         }
 
-        return Inertia::render('marketing/workspaces/create', ['allowed' => $allowed, 'message' => $message ?? null]);
+        return Inertia::render('nudge/workspaces/create', ['allowed' => $allowed, 'message' => $message ?? null]);
     }
 
     public function store(Request $request, CreateWorkspace $createWorkspace): RedirectResponse
@@ -42,7 +42,7 @@ class WorkspaceController extends Controller
         $workspace = $createWorkspace->handle($user, $validated['name'], $account);
         $user->switchWorkspace($workspace);
 
-        return to_route('marketing.home');
+        return to_route('nudge.home');
     }
 
     /**
@@ -50,7 +50,7 @@ class WorkspaceController extends Controller
      * the account they own, so billing stays together. Members who own no account can't create workspaces, or anyone
      * invited anywhere could start their own sending setup.
      */
-    private function accountForNewWorkspace(MarketingUser $user): ?Account
+    private function accountForNewWorkspace(NudgeUser $user): ?Account
     {
         $userId = $user->getAuthIdentifier();
 
@@ -67,7 +67,7 @@ class WorkspaceController extends Controller
     public function edit(CurrentWorkspace $currentWorkspace): Response
     {
         // Not "name": that prop is shared by every page as the app's name.
-        return Inertia::render('marketing/workspace/settings', [
+        return Inertia::render('nudge/workspace/settings', [
             'workspaceName' => $currentWorkspace->getOrFail()->name,
         ]);
     }
@@ -80,6 +80,6 @@ class WorkspaceController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Workspace updated.')]);
 
-        return to_route('marketing.workspace.edit');
+        return to_route('nudge.workspace.edit');
     }
 }

@@ -1,15 +1,15 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Contacts;
+namespace Gerenuk\Nudge\Actions\Contacts;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Automations\AutomationTriggers;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Support\ContactData;
-use Gerenuk\Marketing\Support\ContactRules;
+use Gerenuk\Nudge\Automations\AutomationTriggers;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Support\ContactData;
+use Gerenuk\Nudge\Support\ContactRules;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Enums;
+namespace Gerenuk\Nudge\Enums;
 
 enum ImportStatus: string
 {

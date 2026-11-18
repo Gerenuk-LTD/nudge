@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\Contact;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -1,6 +1,6 @@
 <?php
 
-use Gerenuk\Marketing\Models\EmailAsset;
+use Gerenuk\Nudge\Models\EmailAsset;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 test('an image can be uploaded for emails and comes back with a public address', function () {
-    $response = $this->actingAs($this->owner)->postJson(route('marketing.email-assets.store'), [
+    $response = $this->actingAs($this->owner)->postJson(route('nudge.email-assets.store'), [
         'file' => UploadedFile::fake()->image('team.png', 800, 600),
     ]);
 
@@ -28,7 +28,7 @@ test('an image can be uploaded for emails and comes back with a public address',
 });
 
 test('only common image formats can be uploaded', function (UploadedFile $file) {
-    $this->actingAs($this->owner)->postJson(route('marketing.email-assets.store'), ['file' => $file])
+    $this->actingAs($this->owner)->postJson(route('nudge.email-assets.store'), ['file' => $file])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('file');
 
@@ -40,12 +40,12 @@ test('only common image formats can be uploaded', function (UploadedFile $file) 
 ]);
 
 test('the image picker lists only this workspace\'s uploads', function () {
-    $this->actingAs($this->owner)->postJson(route('marketing.email-assets.store'), ['file' => UploadedFile::fake()->image('ours.png')]);
+    $this->actingAs($this->owner)->postJson(route('nudge.email-assets.store'), ['file' => UploadedFile::fake()->image('ours.png')]);
 
     [$otherOwner] = $this->createOwner('Globex');
-    $this->actingAs($otherOwner)->postJson(route('marketing.email-assets.store'), ['file' => UploadedFile::fake()->image('theirs.png')]);
+    $this->actingAs($otherOwner)->postJson(route('nudge.email-assets.store'), ['file' => UploadedFile::fake()->image('theirs.png')]);
 
-    $this->actingAs($this->owner)->getJson(route('marketing.email-assets.index'))
+    $this->actingAs($this->owner)->getJson(route('nudge.email-assets.index'))
         ->assertOk()
         ->assertJsonCount(1, 'assets')
         ->assertJsonPath('assets.0.name', 'ours.png');
@@ -54,6 +54,6 @@ test('the image picker lists only this workspace\'s uploads', function () {
 test('people who cannot edit emails cannot upload images', function () {
     $viewer = $this->addMember($this->workspace, 'Viewer');
 
-    $this->actingAs($viewer)->postJson(route('marketing.email-assets.store'), ['file' => UploadedFile::fake()->image('a.png')])->assertForbidden();
-    $this->actingAs($viewer)->getJson(route('marketing.email-assets.index'))->assertForbidden();
+    $this->actingAs($viewer)->postJson(route('nudge.email-assets.store'), ['file' => UploadedFile::fake()->image('a.png')])->assertForbidden();
+    $this->actingAs($viewer)->getJson(route('nudge.email-assets.index'))->assertForbidden();
 });

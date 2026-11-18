@@ -1,18 +1,18 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Actions\Automations\EnrollContact;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Segments\SegmentQuery;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Automations\EnrollContact;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Segments\SegmentQuery;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,7 +34,7 @@ class EnrollScheduledTriggers implements ShouldBeUnique, ShouldQueue
      */
     public function __construct(public array $triggers)
     {
-        $this->onQueue(config('marketing.sending.queue'));
+        $this->onQueue(config('nudge.sending.queue'));
     }
 
     public function uniqueId(): string

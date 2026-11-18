@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +25,7 @@ class RoleController extends Controller
         $order = array_flip(array_keys(CreateWorkspace::defaultRoles()));
         $actor = $this->actingRole($request);
 
-        return Inertia::render('marketing/workspace/roles', [
+        return Inertia::render('nudge/workspace/roles', [
             'roles' => Role::query()->withCount('memberships')->orderBy('id')->get()
                 ->sortBy(fn (Role $role) => [$order[$role->key] ?? count($order), $role->name])
                 ->values()
@@ -51,7 +51,7 @@ class RoleController extends Controller
 
         Role::create($this->validated($request, $actor));
 
-        return to_route('marketing.roles.index');
+        return to_route('nudge.roles.index');
     }
 
     public function update(Request $request, Role $role): RedirectResponse
@@ -86,7 +86,7 @@ class RoleController extends Controller
                 ->each(fn (Invitation $invitation) => $invitation->delete());
         });
 
-        return to_route('marketing.roles.index');
+        return to_route('nudge.roles.index');
     }
 
     public function destroy(Request $request, Role $role): RedirectResponse
@@ -100,7 +100,7 @@ class RoleController extends Controller
 
         $role->delete();
 
-        return to_route('marketing.roles.index');
+        return to_route('nudge.roles.index');
     }
 
     private function actingRole(Request $request): Role

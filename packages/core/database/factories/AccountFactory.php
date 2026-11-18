@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Models\Account;
+use Gerenuk\Nudge\Models\Account;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,7 +19,7 @@ class AccountFactory extends Factory
     {
         return [
             'name' => fake()->company(),
-            'owner_id' => config('marketing.user_model')::factory(),
+            'owner_id' => config('nudge.user_model')::factory(),
         ];
     }
 }

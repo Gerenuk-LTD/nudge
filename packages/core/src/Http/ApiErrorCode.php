@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Http;
+namespace Gerenuk\Nudge\Http;
 
 /**
  * Stable, machine-readable error codes of the public API. Add new ones; never rename.

@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
 /**
  * One credential a provider needs, described for the setup form.

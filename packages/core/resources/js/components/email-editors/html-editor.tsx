@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { fillVariables } from '@marketing/lib/merge-tags';
+import { fillVariables } from '@nudge/lib/merge-tags';
 import type { EmailEditorProps } from './types';
 
 /**

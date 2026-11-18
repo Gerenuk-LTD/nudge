@@ -1,17 +1,17 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Campaigns\CampaignAudience;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Campaigns\CampaignAudience;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -42,10 +42,10 @@ test('resending to non-openers drafts a copy aimed at the right segment', functi
     $campaign = sentToThreeWithOneOpen($this);
     expect($campaign->status)->toBe(CampaignStatus::Sent);
 
-    $response = $this->actingAs($this->owner)->post(route('marketing.campaigns.resend', $campaign));
+    $response = $this->actingAs($this->owner)->post(route('nudge.campaigns.resend', $campaign));
 
     $copy = Campaign::query()->whereKeyNot($campaign->id)->sole();
-    $response->assertRedirect(route('marketing.campaigns.edit', $copy));
+    $response->assertRedirect(route('nudge.campaigns.edit', $copy));
 
     expect($copy->status)->toBe(CampaignStatus::Draft)
         ->and($copy->name)->toBe('November news (resend)')
@@ -57,8 +57,8 @@ test('resending to non-openers drafts a copy aimed at the right segment', functi
 test('resending twice reuses the segment', function () {
     $campaign = sentToThreeWithOneOpen($this);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.resend', $campaign))->assertRedirect();
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.resend', $campaign))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.resend', $campaign))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.resend', $campaign))->assertRedirect();
 
     expect(Segment::count())->toBe(1)
         ->and(Campaign::query()->whereKeyNot($campaign->id)->pluck('segment_id')->unique()->all())->toBe([Segment::first()->id]);
@@ -67,7 +67,7 @@ test('resending twice reuses the segment', function () {
 test('only sent broadcasts can be resent', function () {
     $draft = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.resend', $draft))->assertNotFound();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.resend', $draft))->assertNotFound();
 
     expect(Segment::count())->toBe(0);
 });
@@ -76,7 +76,7 @@ test('viewers cannot resend', function () {
     $campaign = sentToThreeWithOneOpen($this);
     $viewer = $this->addMember($this->workspace, 'Viewer');
 
-    $this->actingAs($viewer)->post(route('marketing.campaigns.resend', $campaign))->assertForbidden();
+    $this->actingAs($viewer)->post(route('nudge.campaigns.resend', $campaign))->assertForbidden();
 
     expect(Campaign::count())->toBe(1);
 });

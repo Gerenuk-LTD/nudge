@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Workspaces\AcceptInvitation;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Actions\Workspaces\AcceptInvitation;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,7 +16,7 @@ class InvitationController extends Controller
     {
         $invitation = Invitation::findByToken($token);
 
-        return Inertia::render('marketing/invitations/show', [
+        return Inertia::render('nudge/invitations/show', [
             'token' => $token,
             'invitation' => $invitation === null ? null : [
                 'email' => $invitation->email,
@@ -35,6 +35,6 @@ class InvitationController extends Controller
 
         $acceptInvitation->handle($invitation, $this->user($request));
 
-        return to_route('marketing.home');
+        return to_route('nudge.home');
     }
 }

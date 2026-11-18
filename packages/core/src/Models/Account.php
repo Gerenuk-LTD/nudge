@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Models;
+namespace Gerenuk\Nudge\Models;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Database\Factories\AccountFactory;
-use Gerenuk\Marketing\Marketing;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Database\Factories\AccountFactory;
+use Gerenuk\Nudge\Nudge;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,11 +27,11 @@ class Account extends Model
     use HasFactory;
 
     /**
-     * @return BelongsTo<Model&MarketingUser, $this>
+     * @return BelongsTo<Model&NudgeUser, $this>
      */
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(Marketing::userModel(), 'owner_id');
+        return $this->belongsTo(Nudge::userModel(), 'owner_id');
     }
 
     /**

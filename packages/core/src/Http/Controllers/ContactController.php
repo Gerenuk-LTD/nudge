@@ -1,23 +1,23 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Contacts\ChangeContactStatus;
-use Gerenuk\Marketing\Actions\Contacts\UpdateContact;
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Http\Requests\ContactRequest;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Support\ContactData;
-use Gerenuk\Marketing\Support\ContactFilter;
-use Gerenuk\Marketing\Support\ContactTimeline;
-use Gerenuk\Marketing\Support\TableQuery;
+use Gerenuk\Nudge\Actions\Contacts\ChangeContactStatus;
+use Gerenuk\Nudge\Actions\Contacts\UpdateContact;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Http\Requests\ContactRequest;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Support\ContactData;
+use Gerenuk\Nudge\Support\ContactFilter;
+use Gerenuk\Nudge\Support\ContactTimeline;
+use Gerenuk\Nudge\Support\TableQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +51,7 @@ class ContactController extends Controller
                 'created_at' => $contact->created_at->toIso8601String(),
             ]);
 
-        return Inertia::render('marketing/contacts/index', [
+        return Inertia::render('nudge/contacts/index', [
             'contacts' => $contacts,
             'lists' => ContactList::query()->orderBy('name')->get(['id', 'name']),
             'tags' => Tag::query()->orderBy('name')->get(['id', 'name']),
@@ -66,7 +66,7 @@ class ContactController extends Controller
      */
     public function create(): RedirectResponse
     {
-        return to_route('marketing.contacts.index', ['add' => 1]);
+        return to_route('nudge.contacts.index', ['add' => 1]);
     }
 
     public function store(ContactRequest $request, UpsertContact $upsertContact): RedirectResponse
@@ -81,14 +81,14 @@ class ContactController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact added.')]);
 
-        return to_route('marketing.contacts.show', $contact);
+        return to_route('nudge.contacts.show', $contact);
     }
 
     public function show(Contact $contact, ContactTimeline $timeline): Response
     {
         $contact->load(['tags:id,name', 'lists:id']);
 
-        return Inertia::render('marketing/contacts/show', [
+        return Inertia::render('nudge/contacts/show', [
             'contact' => [
                 'id' => $contact->id,
                 'email' => $contact->email,
@@ -117,7 +117,7 @@ class ContactController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact saved.')]);
 
-        return to_route('marketing.contacts.show', $contact);
+        return to_route('nudge.contacts.show', $contact);
     }
 
     public function archive(Contact $contact): RedirectResponse
@@ -126,14 +126,14 @@ class ContactController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact archived.')]);
 
-        return to_route('marketing.contacts.index');
+        return to_route('nudge.contacts.index');
     }
 
     public function restore(Contact $contact): RedirectResponse
     {
         $contact->update(['archived_at' => null]);
 
-        return to_route('marketing.contacts.show', $contact);
+        return to_route('nudge.contacts.show', $contact);
     }
 
     /**

@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Api;
+namespace Gerenuk\Nudge\Http\Controllers\Api;
 
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Http\Resources\ContactResource;
-use Gerenuk\Marketing\Http\Resources\SegmentResource;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Segments\SegmentQuery;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Http\Resources\ContactResource;
+use Gerenuk\Nudge\Http\Resources\SegmentResource;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Segments\SegmentQuery;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 

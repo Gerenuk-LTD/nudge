@@ -1,17 +1,17 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Campaigns;
+namespace Gerenuk\Nudge\Actions\Campaigns;
 
-use Gerenuk\Marketing\Actions\Contacts\ChangeContactStatus;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Enums\SuppressionReason;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Sending\Webhooks\DeliveryEvent;
+use Gerenuk\Nudge\Actions\Contacts\ChangeContactStatus;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Sending\Webhooks\DeliveryEvent;
 use Illuminate\Support\Facades\DB;
 
 /**

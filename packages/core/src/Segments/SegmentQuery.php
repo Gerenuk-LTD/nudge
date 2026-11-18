@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Segments;
+namespace Gerenuk\Nudge\Segments;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Models\Contact;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 use InvalidArgumentException;

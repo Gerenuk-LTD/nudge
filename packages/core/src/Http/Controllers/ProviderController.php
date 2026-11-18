@@ -1,19 +1,19 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Providers\SaveProvider;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Http\Requests\ProviderRequest;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\CredentialField;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Sending\WebhookVerification;
-use Gerenuk\Marketing\Support\ProviderData;
+use Gerenuk\Nudge\Actions\Providers\SaveProvider;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Http\Requests\ProviderRequest;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\CredentialField;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\WebhookVerification;
+use Gerenuk\Nudge\Support\ProviderData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -40,7 +40,7 @@ class ProviderController extends Controller
 
         $count = fn (int $providerId, EventType $type): int => $recent["{$providerId}:{$type->value}"] ?? 0;
 
-        return Inertia::render('marketing/providers/index', [
+        return Inertia::render('nudge/providers/index', [
             'providers' => Provider::query()->orderBy('name')->get()->map(fn (Provider $provider) => [
                 'sent_7d' => $count($provider->id, EventType::Sent),
                 'bounced_7d' => $count($provider->id, EventType::Bounced),
@@ -59,7 +59,7 @@ class ProviderController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('marketing/providers/form', [
+        return Inertia::render('nudge/providers/form', [
             'provider' => null,
             'types' => array_map(fn (ProviderType $type) => $type->toArray(), ProviderType::cases()),
         ]);
@@ -71,7 +71,7 @@ class ProviderController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Provider connected. Set up its webhook next.')]);
 
-        return to_route('marketing.providers.show', $provider);
+        return to_route('nudge.providers.show', $provider);
     }
 
     public function show(Provider $provider): Response
@@ -86,7 +86,7 @@ class ProviderController extends Controller
             ->groupBy('type')
             ->pluck('total', 'type');
 
-        return Inertia::render('marketing/providers/show', [
+        return Inertia::render('nudge/providers/show', [
             'provider' => [
                 'id' => $provider->id,
                 'name' => $provider->name,
@@ -111,7 +111,7 @@ class ProviderController extends Controller
 
     public function edit(Provider $provider): Response
     {
-        return Inertia::render('marketing/providers/form', [
+        return Inertia::render('nudge/providers/form', [
             'provider' => [
                 'id' => $provider->id,
                 'name' => $provider->name,
@@ -136,7 +136,7 @@ class ProviderController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Provider saved.')]);
 
-        return to_route('marketing.providers.show', $provider);
+        return to_route('nudge.providers.show', $provider);
     }
 
     public function destroy(Provider $provider): RedirectResponse
@@ -147,7 +147,7 @@ class ProviderController extends Controller
 
         $provider->delete();
 
-        return to_route('marketing.providers.index');
+        return to_route('nudge.providers.index');
     }
 
     /**
@@ -174,7 +174,7 @@ class ProviderController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Test sent. Check the inbox for :email.', ['email' => $validated['to']])]);
 
-        return to_route('marketing.providers.show', $provider);
+        return to_route('nudge.providers.show', $provider);
     }
 
     /**
@@ -186,8 +186,8 @@ class ProviderController extends Controller
             return null;
         }
 
-        $base = rtrim((string) (config('marketing.tracking_url') ?: config('app.url')), '/');
-        $url = $base.route('marketing.webhooks.provider', $provider->webhook_token, absolute: false);
+        $base = rtrim((string) (config('nudge.tracking_url') ?: config('app.url')), '/');
+        $url = $base.route('nudge.webhooks.provider', $provider->webhook_token, absolute: false);
 
         if ($provider->type->webhookVerification() === WebhookVerification::BasicAuth && filled($provider->webhook_secret)) {
             [$scheme, $rest] = explode('://', $url, 2);

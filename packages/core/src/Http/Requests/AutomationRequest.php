@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Requests;
+namespace Gerenuk\Nudge\Http\Requests;
 
-use Gerenuk\Marketing\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

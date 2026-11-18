@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
 use Symfony\Component\Mailer\Bridge\Brevo\RemoteEvent\BrevoPayloadConverter;
 use Symfony\Component\Mailer\Bridge\Brevo\Webhook\BrevoRequestParser;

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Notifications\EmailAddressChanged;
-use Gerenuk\Marketing\Actions\Workspaces\RemoveUserFromWorkspaces;
+use Gerenuk\Nudge\Actions\Workspaces\RemoveUserFromWorkspaces;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

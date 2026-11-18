@@ -2,8 +2,8 @@
 
 @import 'tw-animate-css';
 
-/* The marketing core's screens: scans its components and adds the type step they use. */
-@import '../../vendor/gerenuk/marketing-core/resources/css/marketing.css';
+/* The core package's screens: scans its components and adds the type step they use. */
+@import '../../vendor/gerenuk/nudge-core/resources/css/nudge.css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -19,7 +19,7 @@
     /*
      * Type scale. Each size carries its line height, and the larger ones a slightly tighter tracking.
      * Roles: 24 page titles, 16 section headings, 14 body and controls, 13 labels, table cells and
-     * secondary text (`text-13`, from the marketing core's stylesheet), 12 metadata, badges and table headers.
+     * secondary text (`text-13`, from the core package's stylesheet), 12 metadata, badges and table headers.
      */
     --text-xs: 0.75rem;
     --text-xs--line-height: 1rem;

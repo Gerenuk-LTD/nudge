@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\ContactStatus;
 
 /**
  * Validated contact input. Tracks which fields were provided, because an upsert

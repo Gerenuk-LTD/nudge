@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Imports;
+namespace Gerenuk\Nudge\Actions\Imports;
 
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Jobs\ProcessImport;
-use Gerenuk\Marketing\Models\Import;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Jobs\ProcessImport;
+use Gerenuk\Nudge\Models\Import;
 
 class StartImport
 {

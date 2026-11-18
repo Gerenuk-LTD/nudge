@@ -1,34 +1,34 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Actions\Campaigns\SendTestEmail;
-use Gerenuk\Marketing\Campaigns\AbTestResults;
-use Gerenuk\Marketing\Campaigns\CampaignAudience;
-use Gerenuk\Marketing\Campaigns\CampaignChecklist;
-use Gerenuk\Marketing\Campaigns\ChecklistItem;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\CampaignKind;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Http\Requests\CampaignRequest;
-use Gerenuk\Marketing\Jobs\PickAbTestWinner;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
-use Gerenuk\Marketing\Sending\MergeTags;
-use Gerenuk\Marketing\Support\CampaignSummary;
-use Gerenuk\Marketing\Support\JsonChanges;
-use Gerenuk\Marketing\Support\MergeTagOptions;
-use Gerenuk\Marketing\Support\TableQuery;
-use Gerenuk\Marketing\Templates\TemplateChoice;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Actions\Campaigns\SendTestEmail;
+use Gerenuk\Nudge\Campaigns\AbTestResults;
+use Gerenuk\Nudge\Campaigns\CampaignAudience;
+use Gerenuk\Nudge\Campaigns\CampaignChecklist;
+use Gerenuk\Nudge\Campaigns\ChecklistItem;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\CampaignKind;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Http\Requests\CampaignRequest;
+use Gerenuk\Nudge\Jobs\PickAbTestWinner;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Segments\SegmentDefinitionValidator;
+use Gerenuk\Nudge\Sending\MergeTags;
+use Gerenuk\Nudge\Support\CampaignSummary;
+use Gerenuk\Nudge\Support\JsonChanges;
+use Gerenuk\Nudge\Support\MergeTagOptions;
+use Gerenuk\Nudge\Support\TableQuery;
+use Gerenuk\Nudge\Templates\TemplateChoice;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,7 +66,7 @@ class CampaignController extends Controller
 
         TableQuery::search($query, $request->string('search')->toString(), ['name', 'subject']);
 
-        return Inertia::render('marketing/campaigns/index', [
+        return Inertia::render('nudge/campaigns/index', [
             'campaigns' => TableQuery::sort($query, $request, [
                 'name' => 'name',
                 'status' => 'status',
@@ -109,22 +109,22 @@ class CampaignController extends Controller
             ...$templateChoice->content($validated['template'] ?? null),
         ]);
 
-        return to_route('marketing.campaigns.edit', $campaign);
+        return to_route('nudge.campaigns.edit', $campaign);
     }
 
     public function edit(Campaign $campaign, CampaignChecklist $checklist, CampaignAudience $audience, TemplateChoice $templateChoice): Response|RedirectResponse
     {
         if ($campaign->kind === CampaignKind::Automation) {
-            return to_route('marketing.automations.edit', (int) $campaign->automation_id);
+            return to_route('nudge.automations.edit', (int) $campaign->automation_id);
         }
 
         if (! $campaign->status->isEditable()) {
-            return to_route('marketing.campaigns.show', $campaign);
+            return to_route('nudge.campaigns.show', $campaign);
         }
 
         $workspace = $this->currentWorkspace->getOrFail();
 
-        return Inertia::render('marketing/campaigns/edit', [
+        return Inertia::render('nudge/campaigns/edit', [
             'campaign' => $this->details($campaign),
             'providers' => Provider::query()->orderBy('name')->get()->map(fn (Provider $provider) => [
                 'id' => $provider->id,
@@ -169,7 +169,7 @@ class CampaignController extends Controller
 
         $campaign->delete();
 
-        return to_route('marketing.campaigns.index');
+        return to_route('nudge.campaigns.index');
     }
 
     public function duplicate(Request $request, Campaign $campaign): RedirectResponse
@@ -178,7 +178,7 @@ class CampaignController extends Controller
 
         $copy = $this->copyOf($request, $campaign, __(':name (copy)', ['name' => $campaign->name]));
 
-        return to_route('marketing.campaigns.edit', $copy);
+        return to_route('nudge.campaigns.edit', $copy);
     }
 
     /**
@@ -206,7 +206,7 @@ class CampaignController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __("Resend drafted for people who didn't open. Change the subject line before sending.")]);
 
-        return to_route('marketing.campaigns.edit', $copy);
+        return to_route('nudge.campaigns.edit', $copy);
     }
 
     /**
@@ -298,7 +298,7 @@ class CampaignController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $sendAt ? __('Campaign scheduled.') : __('Campaign is sending.')]);
 
-        return to_route('marketing.campaigns.show', $campaign);
+        return to_route('nudge.campaigns.show', $campaign);
     }
 
     /**
@@ -312,7 +312,7 @@ class CampaignController extends Controller
 
         PickAbTestWinner::dispatch($campaign->id, $campaign->workspace_id, force: true);
 
-        return to_route('marketing.campaigns.show', $campaign);
+        return to_route('nudge.campaigns.show', $campaign);
     }
 
     public function unschedule(Campaign $campaign): RedirectResponse
@@ -326,7 +326,7 @@ class CampaignController extends Controller
             throw ValidationException::withMessages(['campaign' => __('This campaign has already started sending.')]);
         }
 
-        return to_route('marketing.campaigns.edit', $campaign);
+        return to_route('nudge.campaigns.edit', $campaign);
     }
 
     public function cancel(Campaign $campaign): RedirectResponse
@@ -340,18 +340,18 @@ class CampaignController extends Controller
             $campaign->recipients()->where('status', RecipientStatus::Queued)->update(['status' => RecipientStatus::Skipped]);
         }
 
-        return to_route('marketing.campaigns.show', $campaign);
+        return to_route('nudge.campaigns.show', $campaign);
     }
 
     public function show(Request $request, Campaign $campaign, AbTestResults $abResults): Response|RedirectResponse
     {
         if ($campaign->status === CampaignStatus::Draft) {
-            return to_route('marketing.campaigns.edit', $campaign);
+            return to_route('nudge.campaigns.edit', $campaign);
         }
 
         $canViewContacts = $this->user($request)->hasWorkspacePermission($this->currentWorkspace->getOrFail(), Permission::ContactsView);
 
-        return Inertia::render('marketing/campaigns/show', [
+        return Inertia::render('nudge/campaigns/show', [
             'campaign' => CampaignSummary::from($campaign),
             'snapshot' => $campaign->snapshot?->only(['subject', 'subject_b', 'preheader', 'from_name', 'from_email', 'reply_to', 'html', 'html_b']),
             'abTest' => $campaign->ab_enabled ? [

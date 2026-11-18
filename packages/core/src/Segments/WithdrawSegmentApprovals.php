@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Segments;
+namespace Gerenuk\Nudge\Segments;
 
-use Gerenuk\Marketing\Automations\SyncAutomationEmails;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Automations\SyncAutomationEmails;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 
 /**

@@ -7,8 +7,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { useTableQuery } from '@marketing/hooks/use-table-query';
-import type { Paginated } from '@marketing/types';
+import type { useTableQuery } from '@nudge/hooks/use-table-query';
+import type { Paginated } from '@nudge/types';
 
 /** The page sizes the server accepts, matching `TableQuery::PAGE_SIZES`. */
 const PAGE_SIZES = [10, 25, 50, 100];

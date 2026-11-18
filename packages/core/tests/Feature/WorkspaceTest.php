@@ -1,16 +1,16 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Events\WorkspaceCreated;
-use Gerenuk\Marketing\Models\Account;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\User;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Contracts\AccountCreationPolicy;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Events\WorkspaceCreated;
+use Gerenuk\Nudge\Models\Account;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\User;
 use Illuminate\Support\Facades\Event;
 
 test('creating a workspace gives it default roles and makes the creator owner', function () {
@@ -32,16 +32,16 @@ test('a user without a workspace is sent to create one', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get(route('marketing.contacts.index'))
-        ->assertRedirect(route('marketing.workspaces.create'));
+        ->get(route('nudge.contacts.index'))
+        ->assertRedirect(route('nudge.workspaces.create'));
 });
 
 test('a user can create a workspace and lands in it', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->post(route('marketing.workspaces.store'), ['name' => 'Acme'])
-        ->assertRedirect(route('marketing.home'));
+        ->post(route('nudge.workspaces.store'), ['name' => 'Acme'])
+        ->assertRedirect(route('nudge.home'));
 
     expect($user->fresh()->currentWorkspace->name)->toBe('Acme');
 });
@@ -49,7 +49,7 @@ test('a user can create a workspace and lands in it', function () {
 test('a second workspace joins the same account', function () {
     [$owner, $acme] = $this->createOwner('Acme');
 
-    $this->actingAs($owner)->post(route('marketing.workspaces.store'), ['name' => 'Globex']);
+    $this->actingAs($owner)->post(route('nudge.workspaces.store'), ['name' => 'Globex']);
 
     $globex = $owner->fresh()->currentWorkspace;
 
@@ -62,7 +62,7 @@ test('users can switch between their workspaces but not into others', function (
     [, $globex] = $this->createOwner('Globex');
 
     $this->actingAs($owner)
-        ->put(route('marketing.current-workspace.update'), ['workspace_id' => $globex->id])
+        ->put(route('nudge.current-workspace.update'), ['workspace_id' => $globex->id])
         ->assertForbidden();
 
     expect($owner->fresh()->current_workspace_id)->toBe($acme->id);
@@ -85,7 +85,7 @@ test('a removed member falls back to another workspace they belong to', function
 
 test('pages flag the most pressing reason campaigns cannot go out', function () {
     [$owner, $workspace] = $this->createOwner();
-    $sendingIssue = fn () => $this->actingAs($owner)->get(route('marketing.contacts.index'))->inertiaProps('workspace.sendingIssue');
+    $sendingIssue = fn () => $this->actingAs($owner)->get(route('nudge.contacts.index'))->inertiaProps('workspace.sendingIssue');
 
     $withoutProvider = $sendingIssue();
     Provider::create(['name' => 'SMTP', 'type' => ProviderType::Smtp, 'max_per_second' => 1, 'credentials' => ['host' => 'h', 'port' => '25', 'encryption' => 'starttls']]);
@@ -101,7 +101,7 @@ test('pages flag the most pressing reason campaigns cannot go out', function () 
 test('pages share the signed-in user\'s role in the current workspace', function () {
     [$owner] = $this->createOwner();
 
-    $response = $this->actingAs($owner)->get(route('marketing.contacts.index'));
+    $response = $this->actingAs($owner)->get(route('nudge.contacts.index'));
 
     expect($response->inertiaProps('workspace.role'))->toBe('Owner');
 });
@@ -110,11 +110,11 @@ test('a member who doesn\'t own an account cannot create a workspace', function 
     [, $acme] = $this->createOwner('Acme');
     $editor = $this->addMember($acme, 'Editor');
 
-    $this->actingAs($editor)->get(route('marketing.workspaces.create'))
+    $this->actingAs($editor)->get(route('nudge.workspaces.create'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('allowed', false));
-    $this->actingAs($editor)->post(route('marketing.workspaces.store'), ['name' => 'Side project'])->assertForbidden();
-    $this->actingAs($editor)->get(route('marketing.home'))
+    $this->actingAs($editor)->post(route('nudge.workspaces.store'), ['name' => 'Side project'])->assertForbidden();
+    $this->actingAs($editor)->get(route('nudge.home'))
         ->assertInertia(fn ($page) => $page->where('workspace.canCreateWorkspace', false));
 
     expect($editor->fresh()->workspaces()->count())->toBe(1);
@@ -130,9 +130,9 @@ test('an account owner\'s new workspace joins their own account', function () {
     ]);
     $owner->switchWorkspace($other);
 
-    $this->actingAs($owner)->get(route('marketing.home'))
+    $this->actingAs($owner)->get(route('nudge.home'))
         ->assertInertia(fn ($page) => $page->where('workspace.current.id', $other->id)->where('workspace.canCreateWorkspace', true));
-    $this->actingAs($owner)->post(route('marketing.workspaces.store'), ['name' => 'Third'])->assertRedirect();
+    $this->actingAs($owner)->post(route('nudge.workspaces.store'), ['name' => 'Third'])->assertRedirect();
 
     $third = $owner->fresh()->currentWorkspace;
 
@@ -148,7 +148,7 @@ function refuseAccountCreation(): void
 {
     app()->instance(AccountCreationPolicy::class, new class implements AccountCreationPolicy
     {
-        public function allows(MarketingUser $user): bool
+        public function allows(NudgeUser $user): bool
         {
             return false;
         }
@@ -159,7 +159,7 @@ test('a user the account policy refuses sees the page without the form', functio
     refuseAccountCreation();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('marketing.workspaces.create'))
+    $this->actingAs($user)->get(route('nudge.workspaces.create'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('allowed', false)->has('message'));
 });
@@ -168,7 +168,7 @@ test('a user the account policy refuses cannot create a workspace', function () 
     refuseAccountCreation();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Acme'])->assertForbidden();
+    $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'Acme'])->assertForbidden();
 
     expect(Workspace::withoutGlobalScopes()->count())->toBe(0);
 });
@@ -178,7 +178,7 @@ test('an account owner without a membership can still create a workspace when th
     $user = User::factory()->create();
     $account = Account::create(['name' => 'Acme', 'owner_id' => $user->id]);
 
-    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Acme'])->assertRedirect(route('marketing.home'));
+    $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'Acme'])->assertRedirect(route('nudge.home'));
 
     expect($user->fresh()->currentWorkspace->account_id)->toBe($account->id);
 });

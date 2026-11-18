@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Segments\SegmentDefinitionValidator;
 use Illuminate\Validation\ValidationException;
 
 /**

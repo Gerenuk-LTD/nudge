@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Resources;
+namespace Gerenuk\Nudge\Http\Resources;
 
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Models\Contact;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

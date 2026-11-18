@@ -3,7 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
-use Gerenuk\Marketing\Models\Invitation;
+use Gerenuk\Nudge\Models\Invitation;
 
 final class Registration
 {

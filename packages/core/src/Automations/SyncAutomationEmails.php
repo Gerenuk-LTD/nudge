@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\CampaignKind;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignSnapshot;
-use Gerenuk\Marketing\Sending\HtmlToText;
-use Gerenuk\Marketing\Sending\LinkExtractor;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\CampaignKind;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignSnapshot;
+use Gerenuk\Nudge\Sending\HtmlToText;
+use Gerenuk\Nudge\Sending\LinkExtractor;
 use Illuminate\Support\Facades\DB;
 
 /**

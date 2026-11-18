@@ -2,12 +2,12 @@
 
 use App\Models\User;
 use App\Notifications\EmailAddressChanged;
-use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;

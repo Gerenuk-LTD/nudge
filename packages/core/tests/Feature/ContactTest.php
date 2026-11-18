@@ -1,18 +1,18 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Support\ContactData;
-use Gerenuk\Marketing\Support\ContactTimeline;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Support\ContactData;
+use Gerenuk\Nudge\Support\ContactTimeline;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -20,12 +20,12 @@ beforeEach(function () {
 });
 
 test('contacts are unique per workspace by lowercased email', function () {
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => ' Jane@Example.COM ',
         'status' => 'subscribed',
     ])->assertRedirect();
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
     ])->assertSessionHasErrors('email');
@@ -34,31 +34,31 @@ test('contacts are unique per workspace by lowercased email', function () {
 });
 
 test('adding a contact opens its profile, or stays on the list to add another', function () {
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
-    ])->assertRedirect(route('marketing.contacts.show', Contact::firstWhere('email', 'jane@example.com')));
+    ])->assertRedirect(route('nudge.contacts.show', Contact::firstWhere('email', 'jane@example.com')));
 
     $this->actingAs($this->owner)
-        ->from(route('marketing.contacts.index', ['add' => 1]))
-        ->post(route('marketing.contacts.store'), [
+        ->from(route('nudge.contacts.index', ['add' => 1]))
+        ->post(route('nudge.contacts.store'), [
             'email' => 'bob@example.com',
             'status' => 'subscribed',
             'add_another' => true,
-        ])->assertRedirect(route('marketing.contacts.index', ['add' => 1]));
+        ])->assertRedirect(route('nudge.contacts.index', ['add' => 1]));
 
     expect(Contact::pluck('email')->sort()->values()->all())->toBe(['bob@example.com', 'jane@example.com']);
 });
 
 test('the add contact page opens the dialog on the list', function () {
-    $this->actingAs($this->owner)->get(route('marketing.contacts.create'))
-        ->assertRedirect(route('marketing.contacts.index', ['add' => 1]));
+    $this->actingAs($this->owner)->get(route('nudge.contacts.create'))
+        ->assertRedirect(route('nudge.contacts.index', ['add' => 1]));
 });
 
 test('a duplicate email says the person is already a contact', function () {
     Contact::factory()->create(['email' => 'jane@example.com']);
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
     ])->assertSessionHasErrors(['email' => 'Someone with this email is already a contact.']);
@@ -79,7 +79,7 @@ test('a contact profile counts each email received, opened and clicked once', fu
     ActivityEvent::recordFor($first, EventType::Clicked);
     ActivityEvent::create(['contact_id' => $contact->id, 'type' => EventType::Sent, 'occurred_at' => now()]);
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.show', $contact))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.show', $contact))
         ->assertInertia(fn (AssertableInertia $page) => $page->loadDeferredProps(fn ($reload) => $reload
             ->where('engagement', ['received' => 3, 'opened' => 1, 'clicked' => 1])));
 });
@@ -88,8 +88,8 @@ test('unsubscribing a contact takes effect at once and notes who did it', functi
     $this->travelTo('2026-10-29 10:00:00');
     $contact = Contact::factory()->create();
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.unsubscribe', $contact))->assertRedirect();
-    $this->actingAs($this->owner)->post(route('marketing.contacts.unsubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.contacts.unsubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.contacts.unsubscribe', $contact))->assertRedirect();
 
     expect($contact->refresh()->status)->toBe(ContactStatus::Unsubscribed)
         ->and($contact->unsubscribed_at->toDateTimeString())->toBe('2026-10-29 10:00:00')
@@ -100,7 +100,7 @@ test('unsubscribing a contact takes effect at once and notes who did it', functi
 test('an unsubscribed contact can be subscribed again', function () {
     $contact = Contact::factory()->unsubscribed()->create();
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.resubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.contacts.resubscribe', $contact))->assertRedirect();
 
     expect($contact->refresh())->status->toBe(ContactStatus::Subscribed)->unsubscribed_at->toBeNull();
 });
@@ -109,7 +109,7 @@ test('viewers cannot change a contact subscription', function () {
     $contact = Contact::factory()->create();
     $viewer = $this->addMember($this->workspace, 'Viewer');
 
-    $this->actingAs($viewer)->post(route('marketing.contacts.unsubscribe', $contact))->assertForbidden();
+    $this->actingAs($viewer)->post(route('nudge.contacts.unsubscribe', $contact))->assertForbidden();
 
     expect($contact->refresh()->status)->toBe(ContactStatus::Subscribed);
 });
@@ -152,7 +152,7 @@ test('upsert restores an archived contact', function () {
 test('unsubscribing records when it happened and resubscribing clears it', function () {
     $contact = Contact::factory()->create();
 
-    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), [
+    $this->actingAs($this->owner)->put(route('nudge.contacts.update', $contact), [
         'email' => $contact->email,
         'status' => 'unsubscribed',
     ])->assertRedirect();
@@ -160,7 +160,7 @@ test('unsubscribing records when it happened and resubscribing clears it', funct
     expect($contact->fresh()->status)->toBe(ContactStatus::Unsubscribed)
         ->and($contact->fresh()->unsubscribed_at)->not->toBeNull();
 
-    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), [
+    $this->actingAs($this->owner)->put(route('nudge.contacts.update', $contact), [
         'email' => $contact->email,
         'status' => 'subscribed',
     ]);
@@ -175,7 +175,7 @@ test('the edit form replaces tags and lists', function () {
     $contact->lists()->attach($customers);
     app(UpsertContact::class)->handle(ContactData::fromValidated(['email' => $contact->email, 'tags' => ['Old']]), ContactSource::Manual);
 
-    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), [
+    $this->actingAs($this->owner)->put(route('nudge.contacts.update', $contact), [
         'email' => $contact->email,
         'status' => 'subscribed',
         'tags' => ['New'],
@@ -189,13 +189,13 @@ test('the edit form replaces tags and lists', function () {
 test('custom field values are validated against their type', function () {
     CustomFieldDefinition::create(['key' => 'renewal', 'label' => 'Renewal', 'type' => 'date']);
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
         'custom_fields' => ['renewal' => 'next tuesday'],
     ])->assertSessionHasErrors('custom_fields.renewal');
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
         'custom_fields' => ['unknown' => 'x'],
@@ -207,7 +207,7 @@ test('lists from another workspace cannot be attached', function () {
     $foreignList = ContactList::factory()->create();
     $this->useWorkspace($this->workspace);
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.contacts.store'), [
         'email' => 'jane@example.com',
         'status' => 'subscribed',
         'lists' => [$foreignList->id],
@@ -218,13 +218,13 @@ test('archived contacts are hidden from the list unless asked for', function () 
     Contact::factory()->create(['email' => 'active@example.com']);
     Contact::factory()->archived()->create(['email' => 'archived@example.com']);
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.index'))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('marketing/contacts/index')
+            ->component('nudge/contacts/index')
             ->has('contacts.data', 1)
             ->where('contacts.data.0.email', 'active@example.com'));
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['archived' => 1]))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['archived' => 1]))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('contacts.data.0.email', 'archived@example.com'));
 });
 
@@ -232,7 +232,7 @@ test('contacts can be searched by email or name', function () {
     Contact::factory()->create(['email' => 'jane@example.com', 'first_name' => 'Jane']);
     Contact::factory()->create(['email' => 'bob@example.com', 'first_name' => 'Bob']);
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['search' => 'JAN']))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['search' => 'JAN']))
         ->assertInertia(fn (AssertableInertia $page) => $page->has('contacts.data', 1)->where('contacts.data.0.email', 'jane@example.com'));
 });
 
@@ -241,8 +241,8 @@ test('contacts can be sorted by an allowed column in either direction', function
     Contact::factory()->create(['email' => 'amy@example.com']);
     Contact::factory()->create(['email' => 'cat@example.com']);
 
-    $ascending = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['sort' => 'email']));
-    $descending = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['sort' => '-email']));
+    $ascending = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['sort' => 'email']));
+    $descending = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['sort' => '-email']));
 
     $ascending->assertInertia(fn (AssertableInertia $page) => $page
         ->where('contacts.data.0.email', 'amy@example.com')
@@ -256,7 +256,7 @@ test('an unknown sort or page size falls back to the newest contacts, 50 a page'
     $first = Contact::factory()->create();
     $latest = Contact::factory()->create();
 
-    $response = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['sort' => 'password', 'per_page' => 7]));
+    $response = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['sort' => 'password', 'per_page' => 7]));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->where('contacts.per_page', 50)
@@ -267,7 +267,7 @@ test('an unknown sort or page size falls back to the newest contacts, 50 a page'
 test('contacts can be paged by an allowed page size', function () {
     Contact::factory()->count(11)->create();
 
-    $response = $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['per_page' => 10]));
+    $response = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['per_page' => 10]));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->where('contacts.per_page', 10)
@@ -283,7 +283,7 @@ test('comma-separated filters keep contacts matching any of the values', functio
     $leads->contacts()->attach(Contact::factory()->create(['email' => 'lead@example.com']));
     $other->contacts()->attach(Contact::factory()->create(['email' => 'other@example.com']));
 
-    $response = $this->actingAs($this->owner)->get(route('marketing.contacts.index', [
+    $response = $this->actingAs($this->owner)->get(route('nudge.contacts.index', [
         'list' => "{$customers->id},{$leads->id}",
         'sort' => 'email',
     ]));
@@ -297,7 +297,7 @@ test('comma-separated filters keep contacts matching any of the values', functio
 test('list names are unique in a workspace', function () {
     ContactList::factory()->create(['name' => 'Newsletter']);
 
-    $this->actingAs($this->owner)->post(route('marketing.lists.store'), ['name' => 'Newsletter'])
+    $this->actingAs($this->owner)->post(route('nudge.lists.store'), ['name' => 'Newsletter'])
         ->assertSessionHasErrors(['name' => 'There is already a list with this name.']);
 });
 
@@ -308,7 +308,7 @@ test('lists show how many contacts joined each one per day', function () {
     $newsletter->contacts()->attach(Contact::factory()->count(2)->create(), ['created_at' => '2026-10-27 09:00:00']);
     $newsletter->contacts()->attach(Contact::factory()->unsubscribed()->create(), ['created_at' => '2026-08-01 09:00:00']);
 
-    $response = $this->actingAs($this->owner)->get(route('marketing.lists.index'));
+    $response = $this->actingAs($this->owner)->get(route('nudge.lists.index'));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->where('lists.0.name', 'Newsletter')
@@ -326,7 +326,7 @@ test('the contacts list loads a side panel preview only when asked for one', fun
     $contact = Contact::factory()->create(['email' => 'jane@example.com', 'first_name' => 'Jane', 'last_name' => 'Doe', 'custom_fields' => ['plan' => 'pro']]);
     $contact->lists()->attach($list);
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['preview' => $contact->id]))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['preview' => $contact->id]))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->missing('preview')
             ->reloadOnly('preview', fn (AssertableInertia $reload) => $reload
@@ -341,7 +341,7 @@ test('the side panel cannot preview a contact from another workspace', function 
     $foreign = Contact::factory()->create();
     $this->useWorkspace($this->workspace);
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['preview' => $foreign->id]))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['preview' => $foreign->id]))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->reloadOnly('preview', fn (AssertableInertia $reload) => $reload->where('preview', null)));
 });
@@ -349,7 +349,7 @@ test('the side panel cannot preview a contact from another workspace', function 
 test('subscribing someone again from the dashboard is recorded with who did it', function () {
     $contact = Contact::factory()->unsubscribed()->create();
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.resubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.contacts.resubscribe', $contact))->assertRedirect();
 
     $event = $contact->events()->where('type', EventType::Resubscribed)->sole();
 
@@ -361,9 +361,9 @@ test('subscribing someone again from the dashboard is recorded with who did it',
 test('changing status on the contact form is recorded', function () {
     $contact = Contact::factory()->create();
 
-    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), ['email' => $contact->email, 'status' => 'unsubscribed'])
+    $this->actingAs($this->owner)->put(route('nudge.contacts.update', $contact), ['email' => $contact->email, 'status' => 'unsubscribed'])
         ->assertRedirect();
-    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), ['email' => $contact->email, 'status' => 'subscribed'])
+    $this->actingAs($this->owner)->put(route('nudge.contacts.update', $contact), ['email' => $contact->email, 'status' => 'subscribed'])
         ->assertRedirect();
 
     expect($contact->events()->orderBy('id')->get()->map(fn (ActivityEvent $event) => [$event->type, $event->data])->all())->toBe([
@@ -375,8 +375,8 @@ test('changing status on the contact form is recorded', function () {
 test('no event is recorded when nothing changed', function () {
     $contact = Contact::factory()->create();
 
-    $this->actingAs($this->owner)->post(route('marketing.contacts.resubscribe', $contact))->assertRedirect();
-    $this->actingAs($this->owner)->put(route('marketing.contacts.update', $contact), ['email' => $contact->email, 'status' => 'subscribed'])
+    $this->actingAs($this->owner)->post(route('nudge.contacts.resubscribe', $contact))->assertRedirect();
+    $this->actingAs($this->owner)->put(route('nudge.contacts.update', $contact), ['email' => $contact->email, 'status' => 'subscribed'])
         ->assertRedirect();
 
     expect($contact->events()->count())->toBe(0);

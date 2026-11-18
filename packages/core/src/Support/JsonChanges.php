@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
 use Illuminate\Database\Eloquent\Model;
 

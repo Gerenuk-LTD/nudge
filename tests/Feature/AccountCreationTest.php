@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\User;
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Models\Account;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Models\Account;
 
 /**
  * Starts the installation's first account, so later workspace-less users are not the first.
@@ -17,7 +17,7 @@ test('in invite mode a workspace-less user cannot start a second account', funct
     accountCreationExistingAccount();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Mine'])->assertForbidden();
+    $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'Mine'])->assertForbidden();
 
     expect(Account::query()->count())->toBe(1);
 });
@@ -27,7 +27,7 @@ test('in closed mode a workspace-less user cannot start a second account', funct
     accountCreationExistingAccount();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Mine'])->assertForbidden();
+    $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'Mine'])->assertForbidden();
 
     expect(Account::query()->count())->toBe(1);
 });
@@ -37,7 +37,7 @@ test('in open mode a workspace-less user can start an account', function () {
     accountCreationExistingAccount();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'Mine'])->assertRedirect(route('marketing.home'));
+    $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'Mine'])->assertRedirect(route('nudge.home'));
 
     expect(Account::query()->count())->toBe(2);
 });
@@ -46,7 +46,7 @@ test('the installation\'s first account can be started in invite mode', function
     config(['registration.mode' => 'invite']);
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post(route('marketing.workspaces.store'), ['name' => 'First'])->assertRedirect(route('marketing.home'));
+    $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'First'])->assertRedirect(route('nudge.home'));
 
     expect(Account::query()->count())->toBe(1);
 });

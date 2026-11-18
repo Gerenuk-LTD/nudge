@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Models\EmailTemplate;
+use Gerenuk\Nudge\Models\EmailTemplate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { NativeSelect } from '@/components/ui/native-select';
-import { EmptyState } from '@marketing/components/empty-state';
+import { EmptyState } from '@nudge/components/empty-state';
 import type {
     SegmentCondition,
     SegmentField,
     SegmentGroup,
     SegmentNode,
-} from '@marketing/types';
+} from '@nudge/types';
 
 const MAX_DEPTH = 3;
 

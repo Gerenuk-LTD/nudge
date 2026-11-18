@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Models;
+namespace Gerenuk\Nudge\Models;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Automations\AutomationDefinition;
-use Gerenuk\Marketing\Database\Factories\AutomationFactory;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Concerns\BelongsToWorkspace;
+use Gerenuk\Nudge\Automations\AutomationDefinition;
+use Gerenuk\Nudge\Database\Factories\AutomationFactory;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

@@ -1,16 +1,16 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Sending\TrackingUrls;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\TrackingUrls;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -82,7 +82,7 @@ test('the unsubscribe page confirms before unsubscribing', function () {
     $url = pathOf($this->urls->unsubscribe($this->recipient));
 
     $this->get($url)->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('marketing/public/unsubscribe')
+        ->component('nudge/public/unsubscribe')
         ->where('email', 'ann@example.com')
         ->where('unsubscribed', false));
 
@@ -121,12 +121,12 @@ test('links signed with a key kept only for links still work', function () {
     $url = pathOf($this->urls->unsubscribe($this->recipient));
     $oldKey = config('app.key');
 
-    config(['app.previous_keys' => [], 'marketing.previous_link_keys' => [$oldKey], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+    config(['app.previous_keys' => [], 'nudge.previous_link_keys' => [$oldKey], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
 
     $this->get($url)->assertOk();
     $this->post($url, ['List-Unsubscribe' => 'One-Click'])->assertOk();
 
-    config(['marketing.previous_link_keys' => []]);
+    config(['nudge.previous_link_keys' => []]);
 
     $this->get($url)->assertNotFound();
 });

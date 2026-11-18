@@ -13,11 +13,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { update as switchWorkspace } from '@/routes/marketing/current-workspace';
-import { edit as workspaceSettings } from '@/routes/marketing/workspace';
-import { create as createWorkspace } from '@/routes/marketing/workspaces';
-import { WorkspaceAvatar } from '@marketing/components/workspace-avatar';
-import { useWorkspace } from '@marketing/hooks/use-workspace';
+import { update as switchWorkspace } from '@/routes/nudge/current-workspace';
+import { edit as workspaceSettings } from '@/routes/nudge/workspace';
+import { create as createWorkspace } from '@/routes/nudge/workspaces';
+import { WorkspaceAvatar } from '@nudge/components/workspace-avatar';
+import { useWorkspace } from '@nudge/hooks/use-workspace';
 
 export function WorkspaceSwitcher() {
     const workspace = useWorkspace();

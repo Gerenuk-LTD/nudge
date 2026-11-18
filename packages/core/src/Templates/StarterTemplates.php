@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Templates;
+namespace Gerenuk\Nudge\Templates;
 
 /**
  * The built-in designs every workspace can start an email from, kept as files in the package: drag-and-drop

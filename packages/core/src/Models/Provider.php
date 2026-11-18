@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Models;
+namespace Gerenuk\Nudge\Models;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Models\Concerns\BelongsToWorkspace;
-use Gerenuk\Marketing\Sending\ProviderType;
+use Gerenuk\Nudge\Models\Concerns\BelongsToWorkspace;
+use Gerenuk\Nudge\Sending\ProviderType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;

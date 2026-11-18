@@ -46,9 +46,9 @@ Passkeys and two-factor authentication can only be added once an account's email
 - **Redis:** `REDIS_HOST`, `REDIS_PASSWORD` and `REDIS_PORT`. Set `CACHE_STORE=redis` if you want the cache there too.
 - **Queue:** `QUEUE_CONNECTION=redis`. The connection's `retry_after` must exceed the longest job timeout (imports run for up to an hour). The default is 3660 seconds (`REDIS_QUEUE_RETRY_AFTER`). Don't lower it, or long jobs get handed to a second worker while they're still running.
 - **Mail:** set a real `MAIL_MAILER` (for example `smtp`) with its credentials, plus `MAIL_FROM_ADDRESS`. The default, `log`, writes password-reset and invitation links to the log file. This mailer only sends account email. Campaigns go through the sending providers configured in the app.
-- **Tracking:** `MARKETING_TRACKING_URL`, only if tracking links and the unsubscribe page should be served from another domain.
+- **Tracking:** `NUDGE_TRACKING_URL`, only if tracking links and the unsubscribe page should be served from another domain.
 - **Registration:** `REGISTRATION_MODE` is `invite` (the default: only email addresses with a pending workspace invitation), `closed` or `open`. The first account is created separately (see [First run](#first-run)).
-- **Shared installs:** set `MARKETING_ALLOW_PRIVATE_SMTP_HOSTS=false` so workspace owners can't point SMTP at internal services. Leave it `true` only if you trust every workspace owner and relay through a local mail server.
+- **Shared installs:** set `NUDGE_ALLOW_PRIVATE_SMTP_HOSTS=false` so workspace owners can't point SMTP at internal services. Leave it `true` only if you trust every workspace owner and relay through a local mail server.
 
 Optional settings:
 
@@ -81,7 +81,7 @@ redirect_stderr=true
 stdout_logfile=/var/www/nudge/storage/logs/worker.log
 ```
 
-Sending, automations and imports use the `default` queue unless you set `MARKETING_SENDING_QUEUE` or `MARKETING_IMPORTS_QUEUE`. If you do set them, pass the queue names to `queue:work --queue=...`.
+Sending, automations and imports use the `default` queue unless you set `NUDGE_SENDING_QUEUE` or `NUDGE_IMPORTS_QUEUE`. If you do set them, pass the queue names to `queue:work --queue=...`.
 
 The scheduler starts scheduled campaigns and recovers stuck work. Add this cron line:
 
@@ -100,11 +100,11 @@ The scheduler starts scheduled campaigns and recovers stuck work. Add this cron 
 
 Every install serves a reference for its own API at `{APP_URL}/api/v1/docs`, and the raw OpenAPI spec at `{APP_URL}/api/v1/openapi.json`. The spec names your install's own base URL, so it can be imported straight into Postman, Insomnia or Bruno. Neither address needs an API token, because they describe open-source code and hold no data.
 
-Set `MARKETING_API_DOCS=false` to turn both off. The docs page loads its viewer from a CDN (jsDelivr), so the reader's browser needs internet access; the spec itself is served from your own app.
+Set `NUDGE_API_DOCS=false` to turn both off. The docs page loads its viewer from a CDN (jsDelivr), so the reader's browser needs internet access; the spec itself is served from your own app.
 
 ## API log
 
-Every request made with an API token is recorded under Workspace settings, API log: time, token, endpoint, status and duration. Request and response bodies, which hold contact data, are kept only for writes and errors, cut to 16 KB, and cleared after `MARKETING_API_LOG_BODY_DAYS` days (default 7). The rows themselves are deleted after `MARKETING_API_LOG_DAYS` days (default 30), by a daily job in the scheduler. The token itself is never stored. Every logged API response carries an `X-Request-Id` header (`req_…`), and pasting it into the log's search box finds that request. Set `MARKETING_API_LOG=false` to turn the log off.
+Every request made with an API token is recorded under Workspace settings, API log: time, token, endpoint, status and duration. Request and response bodies, which hold contact data, are kept only for writes and errors, cut to 16 KB, and cleared after `NUDGE_API_LOG_BODY_DAYS` days (default 7). The rows themselves are deleted after `NUDGE_API_LOG_DAYS` days (default 30), by a daily job in the scheduler. The token itself is never stored. Every logged API response carries an `X-Request-Id` header (`req_…`), and pasting it into the log's search box finds that request. Set `NUDGE_API_LOG=false` to turn the log off.
 
 ## Keys
 
@@ -126,12 +126,12 @@ New links are signed with the new key. Unsubscribe, click and open links in emai
 
 While the old key is in `APP_PREVIOUS_KEYS`, Laravel still accepts links signed with it (so email-verification links stay forgeable) and it still decrypts stored secrets. To retire it fully:
 
-1. Copy the current `APP_KEY` into **both** `APP_PREVIOUS_KEYS` and `MARKETING_PREVIOUS_LINK_KEYS`. Separate several old keys with commas.
+1. Copy the current `APP_KEY` into **both** `APP_PREVIOUS_KEYS` and `NUDGE_PREVIOUS_LINK_KEYS`. Separate several old keys with commas.
 2. Run `php artisan key:generate`, then `php artisan config:cache`.
 3. Run `php artisan app:reencrypt-secrets`. It re-encrypts provider credentials, webhook secrets and two-factor settings with the new key.
-4. Remove the old key from `APP_PREVIOUS_KEYS` (keep it in `MARKETING_PREVIOUS_LINK_KEYS`), then run `php artisan config:cache` and `php artisan queue:restart`.
+4. Remove the old key from `APP_PREVIOUS_KEYS` (keep it in `NUDGE_PREVIOUS_LINK_KEYS`), then run `php artisan config:cache` and `php artisan queue:restart`.
 
-Everyone is signed out. Unsubscribe, pause, open and click links in emails already sent keep working, because `MARKETING_PREVIOUS_LINK_KEYS` is checked by those links only. Someone holding the old key can still forge those links (unsubscribing or pausing a recipient), so remove it from `MARKETING_PREVIOUS_LINK_KEYS` once old emails no longer matter. If the database may have leaked too, rotate each provider's API keys at the provider and update them in Settings. Passkeys keep working; setting `PASSKEYS_USER_HANDLE_SECRET` to its own value keeps passkey handles stable across rotations.
+Everyone is signed out. Unsubscribe, pause, open and click links in emails already sent keep working, because `NUDGE_PREVIOUS_LINK_KEYS` is checked by those links only. Someone holding the old key can still forge those links (unsubscribing or pausing a recipient), so remove it from `NUDGE_PREVIOUS_LINK_KEYS` once old emails no longer matter. If the database may have leaked too, rotate each provider's API keys at the provider and update them in Settings. Passkeys keep working; setting `PASSKEYS_USER_HANDLE_SECRET` to its own value keeps passkey handles stable across rotations.
 
 ## Upgrading
 

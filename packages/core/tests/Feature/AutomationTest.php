@@ -1,33 +1,33 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Automations\ActivateAutomation;
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
-use Gerenuk\Marketing\Automations\AutomationDefinition;
-use Gerenuk\Marketing\Automations\WebhookCaller;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Jobs\AdvanceAutomationRun;
-use Gerenuk\Marketing\Jobs\AdvanceDueAutomationRuns;
-use Gerenuk\Marketing\Jobs\EnrollScheduledTriggers;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Support\ContactData;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Automations\ActivateAutomation;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Nudge\Automations\AutomationDefinition;
+use Gerenuk\Nudge\Automations\WebhookCaller;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Jobs\AdvanceAutomationRun;
+use Gerenuk\Nudge\Jobs\AdvanceDueAutomationRuns;
+use Gerenuk\Nudge\Jobs\EnrollScheduledTriggers;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Support\ContactData;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -73,7 +73,7 @@ function apiEvent($test, string $email, string $event): void
 {
     $token = app(CreateApiToken::class)->handle($test->workspace, $test->owner, 'App', ['contacts.view', 'contacts.manage'])['plainToken'];
 
-    $test->withToken($token)->postJson(route('marketing.api.events.store'), ['email' => $email, 'event' => $event, 'create_contact' => true])->assertAccepted();
+    $test->withToken($token)->postJson(route('nudge.api.events.store'), ['email' => $email, 'event' => $event, 'create_contact' => true])->assertAccepted();
     $test->useWorkspace($test->workspace);
 }
 
@@ -183,7 +183,7 @@ test('a paused automation holds contacts and takes no new ones', function () {
     ]);
     apiEvent($this, 'ann@example.com', 'ping');
 
-    $this->actingAs($this->owner)->post(route('marketing.automations.pause', $automation));
+    $this->actingAs($this->owner)->post(route('nudge.automations.pause', $automation));
     apiEvent($this, 'bob@example.com', 'ping');
     $this->travel(2)->hours();
     (new AdvanceDueAutomationRuns)();
@@ -191,7 +191,7 @@ test('a paused automation holds contacts and takes no new ones', function () {
 
     expect($automation->fresh()->entered_count)->toBe(1)->and($this->transports->sent)->toBe([]);
 
-    $this->actingAs($this->owner)->post(route('marketing.automations.activate', $automation))->assertSessionHasNoErrors();
+    $this->actingAs($this->owner)->post(route('nudge.automations.activate', $automation))->assertSessionHasNoErrors();
     (new AdvanceDueAutomationRuns)();
     $this->useWorkspace($this->workspace);
 
@@ -271,7 +271,7 @@ test('an automation cannot start until its trigger and emails are complete', fun
 test('the builder rejects malformed definitions', function () {
     $automation = Automation::factory()->create();
 
-    $this->actingAs($this->owner)->put(route('marketing.automations.update', $automation), [
+    $this->actingAs($this->owner)->put(route('nudge.automations.update', $automation), [
         'name' => 'X', 'trigger_type' => 'api_event', 'trigger_config' => ['event' => 'x'], 'allow_reentry' => false,
         'definition' => ['steps' => [['id' => 'a', 'type' => 'wait', 'config' => ['amount' => 0, 'unit' => 'days']], ['id' => 'a', 'type' => 'exit']]],
     ])->assertSessionHasErrors(['definition.steps.0', 'definition.steps.1']);
@@ -307,7 +307,7 @@ test('custom events land on the contact timeline', function () {
     apiEvent($this, 'ann@example.com', 'order_placed');
     $contact = Contact::first();
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.show', $contact))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.show', $contact))
         ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload->where('timeline.0.title', 'Event: order_placed')));
 });
 
@@ -367,9 +367,9 @@ test('automation emails cannot be deleted or cancelled as campaigns', function (
     liveAutomation($this, AutomationTrigger::ApiEvent, ['event' => 'signed_up'], [emailStep('e1', 'Welcome', $this->provider->id)]);
     $stepCampaign = Campaign::where('automation_step_id', 'e1')->firstOrFail();
 
-    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $stepCampaign))->assertNotFound();
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.cancel', $stepCampaign))->assertNotFound();
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.unschedule', $stepCampaign))->assertNotFound();
+    $this->actingAs($this->owner)->delete(route('nudge.campaigns.destroy', $stepCampaign))->assertNotFound();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.cancel', $stepCampaign))->assertNotFound();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.unschedule', $stepCampaign))->assertNotFound();
 
     expect($stepCampaign->fresh())->not->toBeNull()
         ->and($stepCampaign->fresh()->status)->toBe($stepCampaign->status);

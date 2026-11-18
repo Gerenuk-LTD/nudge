@@ -1,19 +1,19 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Automations\AutomationTriggers;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Imports\ColumnMapping;
-use Gerenuk\Marketing\Imports\CsvReader;
-use Gerenuk\Marketing\Models\Import;
-use Gerenuk\Marketing\Models\ImportError;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Support\ContactData;
-use Gerenuk\Marketing\Support\ContactRules;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Automations\AutomationTriggers;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Imports\ColumnMapping;
+use Gerenuk\Nudge\Imports\CsvReader;
+use Gerenuk\Nudge\Models\Import;
+use Gerenuk\Nudge\Models\ImportError;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Support\ContactData;
+use Gerenuk\Nudge\Support\ContactRules;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Queue\Queueable;
@@ -35,7 +35,7 @@ class ProcessImport implements ShouldQueue
 
     public function __construct(public Import $import)
     {
-        $this->onQueue(config('marketing.imports.queue'));
+        $this->onQueue(config('nudge.imports.queue'));
     }
 
     public function handle(CurrentWorkspace $currentWorkspace): void
@@ -62,7 +62,7 @@ class ProcessImport implements ShouldQueue
     public static function deleteUpload(Import $import): void
     {
         try {
-            Storage::disk(config('marketing.imports.disk'))->delete($import->file_path);
+            Storage::disk(config('nudge.imports.disk'))->delete($import->file_path);
         } catch (Throwable $exception) {
             Log::warning('Import upload could not be deleted', ['import' => $import->id, 'exception' => $exception::class]);
         }
@@ -84,9 +84,9 @@ class ProcessImport implements ShouldQueue
         $rules = $contactRules->rules();
         $customFields = $contactRules->definitions()->keyBy('key');
         $tagIds = UpsertContact::resolveTagIds($import->tags ?? []);
-        $chunkSize = (int) config('marketing.imports.chunk_size');
+        $chunkSize = (int) config('nudge.imports.chunk_size');
 
-        $reader = new CsvReader(config('marketing.imports.disk'), $import->file_path);
+        $reader = new CsvReader(config('nudge.imports.disk'), $import->file_path);
         $counts = ['processed_rows' => 0, 'created_count' => 0, 'updated_count' => 0, 'failed_count' => 0];
         $errors = [];
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
 use Illuminate\Support\Facades\URL;
 
 /**
@@ -15,7 +15,7 @@ class TrackingUrls
 {
     public function click(CampaignRecipient $recipient, CampaignLink $link): string
     {
-        return $this->url('marketing.track.click', [
+        return $this->url('nudge.track.click', [
             'recipient' => $recipient->id,
             'link' => $link->id,
             'signature' => $this->sign("click:{$recipient->id}:{$link->id}"),
@@ -24,7 +24,7 @@ class TrackingUrls
 
     public function open(CampaignRecipient $recipient): string
     {
-        return $this->url('marketing.track.open', [
+        return $this->url('nudge.track.open', [
             'recipient' => $recipient->id,
             'signature' => $this->sign("open:{$recipient->id}"),
         ]);
@@ -32,7 +32,7 @@ class TrackingUrls
 
     public function unsubscribe(CampaignRecipient $recipient): string
     {
-        return $this->url('marketing.unsubscribe.show', [
+        return $this->url('nudge.unsubscribe.show', [
             'recipient' => $recipient->id,
             'signature' => $this->sign("unsubscribe:{$recipient->id}"),
         ]);
@@ -43,7 +43,7 @@ class TrackingUrls
      */
     public function pause(CampaignRecipient $recipient): string
     {
-        return $this->url('marketing.unsubscribe.pause', [
+        return $this->url('nudge.unsubscribe.pause', [
             'recipient' => $recipient->id,
             'signature' => $this->sign("unsubscribe:{$recipient->id}"),
         ]);
@@ -51,7 +51,7 @@ class TrackingUrls
 
     public function verify(string $payload, string $signature): bool
     {
-        foreach ([config('app.key'), ...config('app.previous_keys', []), ...config('marketing.previous_link_keys', [])] as $key) {
+        foreach ([config('app.key'), ...config('app.previous_keys', []), ...config('nudge.previous_link_keys', [])] as $key) {
             if (is_string($key) && $key !== '' && hash_equals($this->sign($payload, $key), $signature)) {
                 return true;
             }
@@ -65,7 +65,7 @@ class TrackingUrls
      */
     private function sign(string $payload, ?string $key = null): string
     {
-        return substr(hash_hmac('sha256', $payload, 'marketing-tracking|'.($key ?? config('app.key'))), 0, 24);
+        return substr(hash_hmac('sha256', $payload, 'nudge-tracking|'.($key ?? config('app.key'))), 0, 24);
     }
 
     /**
@@ -73,7 +73,7 @@ class TrackingUrls
      */
     private function url(string $route, array $parameters): string
     {
-        $base = rtrim((string) (config('marketing.tracking_url') ?: config('app.url')), '/');
+        $base = rtrim((string) (config('nudge.tracking_url') ?: config('app.url')), '/');
 
         return $base.URL::route($route, $parameters, absolute: false);
     }

@@ -1,6 +1,6 @@
 import { router, useForm, usePage } from '@inertiajs/react';
 import { BookmarkPlus, Check, LayoutTemplate } from 'lucide-react';
-import EmailTemplateController from '@/actions/Gerenuk/Marketing/Http/Controllers/EmailTemplateController';
+import EmailTemplateController from '@/actions/Gerenuk/Nudge/Http/Controllers/EmailTemplateController';
 import InputError from '@/components/input-error';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -18,9 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { asDocument } from '@marketing/components/email-editors/blocks/model';
-import { renderEmail } from '@marketing/components/email-editors/blocks/render';
-import type { TemplateOption } from '@marketing/types';
+import { asDocument } from '@nudge/components/email-editors/blocks/model';
+import { renderEmail } from '@nudge/components/email-editors/blocks/render';
+import type { TemplateOption } from '@nudge/types';
 
 /**
  * The HTML to show for a template. Builder starters carry only their document, so they are rendered here.

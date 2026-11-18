@@ -1,21 +1,21 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
-use Gerenuk\Marketing\Actions\Contacts\ChangeContactStatus;
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Segments\SegmentQuery;
-use Gerenuk\Marketing\Sending\DeliveryOutcome;
-use Gerenuk\Marketing\Sending\RecipientDelivery;
+use Gerenuk\Nudge\Actions\Contacts\ChangeContactStatus;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Segments\SegmentQuery;
+use Gerenuk\Nudge\Sending\DeliveryOutcome;
+use Gerenuk\Nudge\Sending\RecipientDelivery;
 use Throwable;
 
 /**

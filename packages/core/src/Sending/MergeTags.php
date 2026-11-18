@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Models\Contact;
 
 /**
  * Replaces tags like {{ first_name }}, {{ custom.plan }} or {{ first_name | there }} (with a fallback).

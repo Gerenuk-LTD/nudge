@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Segments\SegmentQuery;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Segments\SegmentQuery;
 use Illuminate\Database\Eloquent\Builder;
 
 /**

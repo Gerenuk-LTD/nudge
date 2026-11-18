@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
 /**
  * How a provider's delivery webhooks are authenticated.

@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Nudge\Models\Campaign;
 
 /**
  * A campaign as the dashboard shows it in lists, cards and reports.

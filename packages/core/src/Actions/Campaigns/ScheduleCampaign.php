@@ -1,15 +1,15 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Campaigns;
+namespace Gerenuk\Nudge\Actions\Campaigns;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Campaigns\CampaignChecklist;
-use Gerenuk\Marketing\Campaigns\ChecklistItem;
-use Gerenuk\Marketing\Enums\CampaignKind;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Jobs\PrepareCampaign;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Campaigns\CampaignChecklist;
+use Gerenuk\Nudge\Campaigns\ChecklistItem;
+use Gerenuk\Nudge\Enums\CampaignKind;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Jobs\PrepareCampaign;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Validation\ValidationException;
 
 class ScheduleCampaign

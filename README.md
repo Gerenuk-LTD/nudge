@@ -66,7 +66,7 @@ See [DEPLOYING.md](DEPLOYING.md) for the production checklist. It covers environ
 ## Project layout
 
 - `app/`: the host application, which handles authentication, registration, account settings and console commands.
-- `packages/core/`: `gerenuk/marketing-core`, the marketing engine. It holds the models, sending, automations, segments, imports, the API, and the marketing UI pages.
+- `packages/core/`: `gerenuk/nudge-core`, the core engine. It holds the models, sending, automations, segments, imports, the API, and the UI pages.
 - `resources/js/`: the auth and settings pages, and shared React components.
 
 ## Development

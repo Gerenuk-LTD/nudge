@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Public;
+namespace Gerenuk\Nudge\Http\Controllers\Public;
 
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Jobs\ProcessDeliveryEvents;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\Webhooks\WebhookParser;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Jobs\ProcessDeliveryEvents;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\Webhooks\WebhookParser;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Symfony\Component\Webhook\Exception\RejectWebhookException;

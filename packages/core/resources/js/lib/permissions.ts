@@ -1,4 +1,4 @@
-import type { Permission } from '@marketing/types';
+import type { Permission } from '@nudge/types';
 
 /** Permissions by the area they cover, each with a short name for summaries. */
 export const PERMISSION_GROUPS: {

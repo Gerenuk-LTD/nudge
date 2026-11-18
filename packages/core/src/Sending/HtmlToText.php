@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
 /**
  * A readable plain-text version of an HTML email, used when the campaign has no text of its own.

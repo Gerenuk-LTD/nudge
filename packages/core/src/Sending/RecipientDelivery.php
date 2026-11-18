@@ -1,18 +1,18 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\CampaignSnapshot;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\CampaignSnapshot;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 

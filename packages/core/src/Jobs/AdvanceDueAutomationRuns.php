@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Models\AutomationRun;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Models\AutomationRun;
 
 /**
  * Runs every minute and wakes up contacts whose wait is over, in every workspace.

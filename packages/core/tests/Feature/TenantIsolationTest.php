@@ -1,10 +1,10 @@
 <?php
 
-use Gerenuk\Marketing\Models\Concerns\BelongsToWorkspace;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
-use Gerenuk\Marketing\Tenancy\MissingWorkspaceException;
+use Gerenuk\Nudge\Models\Concerns\BelongsToWorkspace;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Tenancy\MissingWorkspaceException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 
@@ -31,7 +31,7 @@ function packageModelsByTable(): array
     $models = [];
 
     foreach (glob(__DIR__.'/../../src/Models/*.php') as $file) {
-        $class = 'Gerenuk\\Marketing\\Models\\'.basename($file, '.php');
+        $class = 'Gerenuk\\Nudge\\Models\\'.basename($file, '.php');
         $models[(new $class)->getTable()] = $class;
     }
 
@@ -101,7 +101,7 @@ test('a contact in another workspace cannot be opened in the dashboard', functio
     $foreign = Contact::factory()->create();
 
     $this->actingAs($owner)
-        ->get(route('marketing.contacts.show', $foreign))
+        ->get(route('nudge.contacts.show', $foreign))
         ->assertNotFound();
 });
 
@@ -112,7 +112,7 @@ test('a list in another workspace cannot be changed through the dashboard', func
     $foreign = ContactList::factory()->create(['name' => 'Customers']);
 
     $this->actingAs($owner)
-        ->put(route('marketing.lists.update', $foreign), ['name' => 'Hijacked'])
+        ->put(route('nudge.lists.update', $foreign), ['name' => 'Hijacked'])
         ->assertNotFound();
 
     expect($foreign->fresh()->name)->toBe('Customers');

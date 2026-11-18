@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Tests\Fixtures\Factories;
+namespace Gerenuk\Nudge\Tests\Fixtures\Factories;
 
-use Gerenuk\Marketing\Tests\Fixtures\User;
+use Gerenuk\Nudge\Tests\Fixtures\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

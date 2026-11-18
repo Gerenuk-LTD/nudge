@@ -1,10 +1,10 @@
 import { ImagePlus, LoaderCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
-import EmailAssetController from '@/actions/Gerenuk/Marketing/Http/Controllers/EmailAssetController';
+import EmailAssetController from '@/actions/Gerenuk/Nudge/Http/Controllers/EmailAssetController';
 import InputError from '@/components/input-error';
 import { cn } from '@/lib/utils';
-import { getJson, uploadFile } from '@marketing/lib/http';
+import { getJson, uploadFile } from '@nudge/lib/http';
 
 export type EmailAsset = {
     id: number;

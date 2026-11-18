@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Imports;
+namespace Gerenuk\Nudge\Actions\Imports;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Imports\CsvReader;
-use Gerenuk\Marketing\Models\Import;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Imports\CsvReader;
+use Gerenuk\Nudge\Models\Import;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -17,9 +17,9 @@ class CreateImport
     /**
      * Store an uploaded CSV and record its headers. The import waits for column mapping before it runs.
      */
-    public function handle(Workspace $workspace, MarketingUser $user, UploadedFile $file): Import
+    public function handle(Workspace $workspace, NudgeUser $user, UploadedFile $file): Import
     {
-        $disk = config('marketing.imports.disk');
+        $disk = config('nudge.imports.disk');
         $path = $file->store("imports/{$workspace->id}", $disk)
             ?: throw new RuntimeException('The import file could not be stored.');
 

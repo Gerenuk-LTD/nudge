@@ -24,10 +24,10 @@ import type { Appearance } from '@/hooks/use-appearance';
 import { useAppearance } from '@/hooks/use-appearance';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
-import { edit as editWorkspace } from '@/routes/marketing/workspace';
+import { edit as editWorkspace } from '@/routes/nudge/workspace';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
-import { useWorkspace } from '@marketing/hooks/use-workspace';
+import { useWorkspace } from '@nudge/hooks/use-workspace';
 
 type Props = {
     user: User;

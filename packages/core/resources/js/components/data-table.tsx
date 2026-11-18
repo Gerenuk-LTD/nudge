@@ -32,7 +32,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import type { TableSort } from '@marketing/hooks/use-table-query';
+import type { TableSort } from '@nudge/hooks/use-table-query';
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

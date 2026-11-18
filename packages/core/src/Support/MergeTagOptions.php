@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
 
 /**
  * The merge tags an email editor offers to insert: the built-in ones, then one per custom field.

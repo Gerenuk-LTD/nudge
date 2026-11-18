@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Models\Campaign;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -1,20 +1,20 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Middleware;
+namespace Gerenuk\Nudge\Http\Middleware;
 
 use Closure;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\Account;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\Account;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Sets the signed-in user's current workspace and shares it with every Inertia page.
- * Users without a workspace are sent to create one, unless the route uses `marketing.workspace:optional`,
+ * Users without a workspace are sent to create one, unless the route uses `nudge.workspace:optional`,
  * as account pages do: those render for everyone and only gain the workspace when there is one.
  */
 class SetCurrentWorkspace
@@ -27,7 +27,7 @@ class SetCurrentWorkspace
         $workspace = $user?->resolveCurrentWorkspace();
 
         if ($workspace === null) {
-            return $mode === 'optional' ? $next($request) : redirect()->route('marketing.workspaces.create');
+            return $mode === 'optional' ? $next($request) : redirect()->route('nudge.workspaces.create');
         }
 
         $this->currentWorkspace->set($workspace);

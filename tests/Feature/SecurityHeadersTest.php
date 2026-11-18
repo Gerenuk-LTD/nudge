@@ -16,11 +16,11 @@ test('web responses carry the baseline security headers', function () {
 });
 
 test('API and API docs responses carry the security headers too', function () {
-    $this->getJson(route('marketing.api.me'))->assertUnauthorized()
+    $this->getJson(route('nudge.api.me'))->assertUnauthorized()
         ->assertHeader('X-Content-Type-Options', 'nosniff')
         ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
 
-    $this->get(route('marketing.api.docs.spec'))->assertOk()
+    $this->get(route('nudge.api.docs.spec'))->assertOk()
         ->assertHeader('X-Content-Type-Options', 'nosniff')
         ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
 });

@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Workspaces;
+namespace Gerenuk\Nudge\Actions\Workspaces;
 
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Membership;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Membership;
 use Illuminate\Support\Facades\DB;
 
 class RemoveMember

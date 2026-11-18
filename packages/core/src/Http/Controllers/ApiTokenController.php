@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,7 +18,7 @@ class ApiTokenController extends Controller
 
     public function index(Request $request): Response
     {
-        return Inertia::render('marketing/workspace/api-tokens', [
+        return Inertia::render('nudge/workspace/api-tokens', [
             'tokens' => ApiToken::query()->latest('id')->get()->map(fn (ApiToken $token) => [
                 'id' => $token->id,
                 'name' => $token->name,
@@ -54,14 +54,14 @@ class ApiTokenController extends Controller
 
         Inertia::flash('plainToken', $plainToken);
 
-        return to_route('marketing.api-tokens.index');
+        return to_route('nudge.api-tokens.index');
     }
 
     public function destroy(ApiToken $apiToken): RedirectResponse
     {
         $apiToken->delete();
 
-        return to_route('marketing.api-tokens.index');
+        return to_route('nudge.api-tokens.index');
     }
 
     /**

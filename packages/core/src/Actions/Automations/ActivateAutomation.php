@@ -1,17 +1,17 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Automations;
+namespace Gerenuk\Nudge\Actions\Automations;
 
-use Gerenuk\Marketing\Automations\ActivationChecklist;
-use Gerenuk\Marketing\Automations\SyncAutomationEmails;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Segments\SegmentQuery;
+use Gerenuk\Nudge\Automations\ActivationChecklist;
+use Gerenuk\Nudge\Automations\SyncAutomationEmails;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Segments\SegmentQuery;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 

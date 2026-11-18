@@ -1,21 +1,21 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Support\CampaignSummary;
-use Gerenuk\Marketing\Support\DailySeries;
-use Gerenuk\Marketing\Support\HomeNotices;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Support\CampaignSummary;
+use Gerenuk\Nudge\Support\DailySeries;
+use Gerenuk\Nudge\Support\HomeNotices;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
@@ -37,7 +37,7 @@ class HomeController extends Controller
         $workspace = $this->currentWorkspace->getOrFail();
         $can = fn (Permission $permission): bool => $user->hasWorkspacePermission($workspace, $permission);
 
-        return Inertia::render('marketing/home', [
+        return Inertia::render('nudge/home', [
             'days' => self::DAYS,
             'audience' => $can(Permission::ContactsView) ? $this->audience() : null,
             'sending' => $can(Permission::CampaignsView) ? $this->sending() : null,

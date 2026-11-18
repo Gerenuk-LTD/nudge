@@ -1,18 +1,18 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Campaigns;
+namespace Gerenuk\Nudge\Actions\Campaigns;
 
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\CampaignSnapshot;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\CampaignMessage;
-use Gerenuk\Marketing\Sending\HtmlToText;
-use Gerenuk\Marketing\Sending\MergeTags;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\SendRateLimiter;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\CampaignSnapshot;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\CampaignMessage;
+use Gerenuk\Nudge\Sending\HtmlToText;
+use Gerenuk\Nudge\Sending\MergeTags;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\SendRateLimiter;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 

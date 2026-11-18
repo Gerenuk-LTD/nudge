@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Campaigns\QueueCampaignBatches;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Campaigns\QueueCampaignBatches;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -22,13 +22,13 @@ class SendingSettingsController extends Controller
     {
         $workspace = $this->currentWorkspace->getOrFail();
 
-        return Inertia::render('marketing/workspace/sending', [
+        return Inertia::render('nudge/workspace/sending', [
             'postal_address' => $workspace->postal_address,
             'requires_campaign_approval' => $workspace->requires_campaign_approval,
             'canChangeApproval' => $this->user($request)->hasWorkspacePermission($workspace, Permission::CampaignsApprove),
             'paused_at' => $workspace->sending_paused_at?->toIso8601String(),
             'paused_reason' => $workspace->sending_paused_reason,
-            'thresholds' => config('marketing.sending.auto_pause'),
+            'thresholds' => config('nudge.sending.auto_pause'),
         ]);
     }
 
@@ -60,7 +60,7 @@ class SendingSettingsController extends Controller
             default => __('Sending settings saved. Campaigns no longer need approval.'),
         }]);
 
-        return to_route('marketing.sending.edit');
+        return to_route('nudge.sending.edit');
     }
 
     /**
@@ -75,6 +75,6 @@ class SendingSettingsController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sending resumed.')]);
 
-        return to_route('marketing.sending.edit');
+        return to_route('nudge.sending.edit');
     }
 }

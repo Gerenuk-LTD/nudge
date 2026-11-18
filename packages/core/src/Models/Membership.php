@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Models;
+namespace Gerenuk\Nudge\Models;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Marketing;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Nudge;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,11 +29,11 @@ class Membership extends Model
     }
 
     /**
-     * @return BelongsTo<Model&MarketingUser, $this>
+     * @return BelongsTo<Model&NudgeUser, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(Marketing::userModel());
+        return $this->belongsTo(Nudge::userModel());
     }
 
     /**

@@ -1,15 +1,15 @@
 <?php
 
-namespace Gerenuk\Marketing\Campaigns;
+namespace Gerenuk\Nudge\Campaigns;
 
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Segments\SegmentQuery;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Segments\SegmentQuery;
 use Illuminate\Database\Eloquent\Builder;
 
 /**

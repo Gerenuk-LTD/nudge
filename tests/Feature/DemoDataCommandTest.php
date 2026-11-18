@@ -1,30 +1,30 @@
 <?php
 
 use App\Models\User;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\ApiRequest;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\EmailTemplate;
-use Gerenuk\Marketing\Models\Import;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Segments\SegmentQuery;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\ApiRequest;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\EmailTemplate;
+use Gerenuk\Nudge\Models\Import;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Segments\SegmentQuery;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Support\Facades\Storage;
 
 test('it creates a demo workspace with contacts, campaigns and engagement', function () {
-    Storage::fake(config('marketing.imports.disk'));
+    Storage::fake(config('nudge.imports.disk'));
 
     $this->artisan('app:demo-data', ['--contacts' => 40, '--email' => 'demo@example.com'])->assertSuccessful();
 
@@ -49,7 +49,7 @@ test('it creates a demo workspace with contacts, campaigns and engagement', func
 });
 
 test('it adds a team, templates, imports, automation runs, an API log and custom events', function () {
-    Storage::fake(config('marketing.imports.disk'));
+    Storage::fake(config('nudge.imports.disk'));
 
     $this->artisan('app:demo-data', ['--contacts' => 40, '--email' => 'demo@example.com'])->assertSuccessful();
 
@@ -82,27 +82,27 @@ test('it adds a team, templates, imports, automation runs, an API log and custom
 test('every main page loads with demo data', function () {
     $this->withoutVite();
 
-    Storage::fake(config('marketing.imports.disk'));
+    Storage::fake(config('nudge.imports.disk'));
 
     $this->artisan('app:demo-data', ['--contacts' => 40, '--email' => 'demo@example.com'])->assertSuccessful();
 
     $owner = User::query()->where('email', 'demo@example.com')->firstOrFail();
 
     $urls = app(CurrentWorkspace::class)->runAs(Workspace::query()->sole(), fn () => [
-        route('marketing.contacts.index'),
-        route('marketing.contacts.show', ActivityEvent::query()->where('type', EventType::Custom)->firstOrFail()->contact_id),
-        route('marketing.campaigns.index'),
-        route('marketing.campaigns.show', Campaign::query()->where('status', CampaignStatus::Sent)->firstOrFail()),
-        route('marketing.templates.index'),
-        route('marketing.automations.index'),
-        route('marketing.automations.edit', Automation::query()->where('name', 'Welcome series')->firstOrFail()),
-        route('marketing.imports.index'),
-        route('marketing.imports.show', Import::query()->where('status', ImportStatus::Completed)->firstOrFail()),
-        route('marketing.segments.index'),
-        route('marketing.members.index'),
-        route('marketing.roles.index'),
-        route('marketing.api-tokens.index'),
-        route('marketing.api-log.index'),
+        route('nudge.contacts.index'),
+        route('nudge.contacts.show', ActivityEvent::query()->where('type', EventType::Custom)->firstOrFail()->contact_id),
+        route('nudge.campaigns.index'),
+        route('nudge.campaigns.show', Campaign::query()->where('status', CampaignStatus::Sent)->firstOrFail()),
+        route('nudge.templates.index'),
+        route('nudge.automations.index'),
+        route('nudge.automations.edit', Automation::query()->where('name', 'Welcome series')->firstOrFail()),
+        route('nudge.imports.index'),
+        route('nudge.imports.show', Import::query()->where('status', ImportStatus::Completed)->firstOrFail()),
+        route('nudge.segments.index'),
+        route('nudge.members.index'),
+        route('nudge.roles.index'),
+        route('nudge.api-tokens.index'),
+        route('nudge.api-log.index'),
     ]);
 
     foreach ($urls as $url) {
@@ -111,7 +111,7 @@ test('every main page loads with demo data', function () {
 });
 
 test('seeding the database creates the demo workspace for the test user', function () {
-    Storage::fake(config('marketing.imports.disk'));
+    Storage::fake(config('nudge.imports.disk'));
 
     $this->seed();
 

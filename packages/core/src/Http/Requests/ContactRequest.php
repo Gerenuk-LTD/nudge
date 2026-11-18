@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Requests;
+namespace Gerenuk\Nudge\Http\Requests;
 
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Support\ContactRules;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Support\ContactRules;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

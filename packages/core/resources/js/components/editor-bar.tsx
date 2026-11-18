@@ -59,7 +59,7 @@ export function EditorBar({
     const state = saveState ? saveStates[saveState] : null;
 
     return (
-        <div className="sticky top-[var(--marketing-header-height,4rem)] z-10 -mx-4 -mt-6 border-b bg-background/85 px-4 py-3 backdrop-blur md:-mx-8 md:-mt-8 md:px-8">
+        <div className="sticky top-[var(--nudge-header-height,4rem)] z-10 -mx-4 -mt-6 border-b bg-background/85 px-4 py-3 backdrop-blur md:-mx-8 md:-mt-8 md:px-8">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Link

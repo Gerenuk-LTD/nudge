@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Support\TagReferences;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Support\TagReferences;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +29,7 @@ class TagController extends Controller
 
         $usage = $this->references->usage($tags->pluck('name', 'id')->all());
 
-        return Inertia::render('marketing/tags/index', [
+        return Inertia::render('nudge/tags/index', [
             'tags' => $tags->map(fn (Tag $tag) => [
                 ...$tag->only(['id', 'name', 'contacts_count']),
                 'used_by' => $usage[$tag->id],
@@ -44,7 +44,7 @@ class TagController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tag created.')]);
 
-        return to_route('marketing.tags.index');
+        return to_route('nudge.tags.index');
     }
 
     public function update(Request $request, Tag $tag): RedirectResponse
@@ -58,7 +58,7 @@ class TagController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tag renamed.')]);
 
-        return to_route('marketing.tags.index');
+        return to_route('nudge.tags.index');
     }
 
     /**
@@ -75,7 +75,7 @@ class TagController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Merged :from into :into.', ['from' => $tag->name, 'into' => $into->name])]);
 
-        return to_route('marketing.tags.index');
+        return to_route('nudge.tags.index');
     }
 
     public function destroy(Tag $tag): RedirectResponse
@@ -84,7 +84,7 @@ class TagController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tag deleted.')]);
 
-        return to_route('marketing.tags.index');
+        return to_route('nudge.tags.index');
     }
 
     /**

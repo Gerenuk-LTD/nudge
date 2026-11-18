@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
-import ContactController from '@/actions/Gerenuk/Marketing/Http/Controllers/ContactController';
+import ContactController from '@/actions/Gerenuk/Nudge/Http/Controllers/ContactController';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -11,7 +11,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
-import type { ContactStatus } from '@marketing/types';
+import type { ContactStatus } from '@nudge/types';
 
 export type SubscriptionTarget = {
     id: number;

@@ -4,7 +4,7 @@ import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegi
 import PasskeyItem from '@/components/passkey-item';
 import PasskeyRegistration from '@/components/passkey-register';
 import { usePasswordConfirmation } from '@/hooks/use-password-confirmation';
-import { SettingsSection } from '@marketing/components/settings-section';
+import { SettingsSection } from '@nudge/components/settings-section';
 import type { Passkey } from '@/types/auth';
 
 export type Props = {

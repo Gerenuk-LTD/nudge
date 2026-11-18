@@ -1,17 +1,17 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Workspaces;
+namespace Gerenuk\Nudge\Actions\Workspaces;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Membership;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Membership;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AcceptInvitation
 {
-    public function handle(Invitation $invitation, MarketingUser $user): Membership
+    public function handle(Invitation $invitation, NudgeUser $user): Membership
     {
         if ($invitation->isExpired()) {
             throw ValidationException::withMessages(['invitation' => __('This invitation has expired.')]);

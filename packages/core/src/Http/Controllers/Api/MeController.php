@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Api;
+namespace Gerenuk\Nudge\Http\Controllers\Api;
 
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,7 +22,7 @@ class MeController extends Controller
     public function __invoke(Request $request, CurrentWorkspace $currentWorkspace): JsonResponse
     {
         /** @var ApiToken $token */
-        $token = $request->attributes->get('marketing_api_token');
+        $token = $request->attributes->get('nudge_api_token');
         $workspace = $currentWorkspace->getOrFail();
 
         return response()->json(['data' => [

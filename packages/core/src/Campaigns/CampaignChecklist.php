@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Campaigns;
+namespace Gerenuk\Nudge\Campaigns;
 
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\LinkExtractor;
-use Gerenuk\Marketing\Sending\MergeTags;
-use Gerenuk\Marketing\Sending\WebhookVerification;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\LinkExtractor;
+use Gerenuk\Nudge\Sending\MergeTags;
+use Gerenuk\Nudge\Sending\WebhookVerification;
 
 /**
  * Checks run before a campaign can be sent. Blocking failures stop the send; the rest are warnings.

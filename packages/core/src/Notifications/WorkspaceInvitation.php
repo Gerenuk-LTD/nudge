@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Notifications;
+namespace Gerenuk\Nudge\Notifications;
 
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -34,7 +34,7 @@ class WorkspaceInvitation extends Notification implements ShouldQueue
                 'inviter' => $this->inviterName,
                 'workspace' => $this->workspace->name,
             ]))
-            ->action(__('Accept invitation'), route('marketing.invitations.show', $this->token))
-            ->line(__('This invitation expires in :days days.', ['days' => config('marketing.invitation_expiry_days')]));
+            ->action(__('Accept invitation'), route('nudge.invitations.show', $this->token))
+            ->line(__('This invitation expires in :days days.', ['days' => config('nudge.invitation_expiry_days')]));
     }
 }

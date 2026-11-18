@@ -2,9 +2,9 @@
 
 namespace App\Support;
 
-use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Models\Account;
+use Gerenuk\Nudge\Contracts\AccountCreationPolicy;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Models\Account;
 
 /**
  * In open mode anyone signed in may start an account. In invite and closed mode only the installation's first
@@ -14,7 +14,7 @@ final class RegistrationAccountPolicy implements AccountCreationPolicy
 {
     public function __construct(private readonly Registration $registration) {}
 
-    public function allows(MarketingUser $user): bool
+    public function allows(NudgeUser $user): bool
     {
         return $this->registration->mode() === 'open' || ! Account::query()->exists();
     }

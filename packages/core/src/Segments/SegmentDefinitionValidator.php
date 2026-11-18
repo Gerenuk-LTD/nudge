@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Segments;
+namespace Gerenuk\Nudge\Segments;
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\ValidationException;

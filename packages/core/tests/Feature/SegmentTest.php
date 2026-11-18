@@ -1,20 +1,20 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Contacts\UpsertContact;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
-use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
-use Gerenuk\Marketing\Segments\SegmentQuery;
-use Gerenuk\Marketing\Support\ContactData;
+use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Segments\SegmentDefinitionValidator;
+use Gerenuk\Nudge\Segments\SegmentFieldCatalog;
+use Gerenuk\Nudge\Segments\SegmentQuery;
+use Gerenuk\Nudge\Support\ContactData;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
@@ -138,7 +138,7 @@ test('invalid definitions are rejected with a reason', function (array $definiti
 
 test('the preview endpoint returns a count out of all active contacts, and a sample', function () {
     $this->actingAs($this->owner)
-        ->postJson(route('marketing.segments.preview'), ['definition' => ['match' => 'all', 'conditions' => [condition('status', 'is', 'subscribed')]]])
+        ->postJson(route('nudge.segments.preview'), ['definition' => ['match' => 'all', 'conditions' => [condition('status', 'is', 'subscribed')]]])
         ->assertOk()
         ->assertJsonPath('count', 2)
         ->assertJsonPath('total', 3)
@@ -146,14 +146,14 @@ test('the preview endpoint returns a count out of all active contacts, and a sam
 });
 
 test('segments can be saved and used to filter contacts', function () {
-    $this->actingAs($this->owner)->post(route('marketing.segments.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.segments.store'), [
         'name' => 'Pro customers',
         'definition' => ['match' => 'all', 'conditions' => [condition('custom:plan', 'equals', 'pro')]],
     ])->assertRedirect();
 
     $segment = Segment::first();
 
-    $this->actingAs($this->owner)->get(route('marketing.contacts.index', ['segment' => $segment->id]))
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['segment' => $segment->id]))
         ->assertInertia(fn ($page) => $page->has('contacts.data', 1));
 });
 
@@ -161,7 +161,7 @@ test('the segment list shows each segment\'s rules and its share of active conta
     $definition = ['match' => 'any', 'conditions' => [condition('custom:plan', 'equals', 'pro')]];
     Segment::create(['name' => 'Pro customers', 'definition' => $definition]);
 
-    $this->actingAs($this->owner)->get(route('marketing.segments.index'))
+    $this->actingAs($this->owner)->get(route('nudge.segments.index'))
         ->assertInertia(fn ($page) => $page
             ->where('segments.0.definition', $definition)
             ->where('segments.0.contacts_count', 1)

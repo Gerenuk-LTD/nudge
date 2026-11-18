@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Templates;
+namespace Gerenuk\Nudge\Templates;
 
 /**
  * The editors an email's content can be made with. The front end has a matching registry of editor components.

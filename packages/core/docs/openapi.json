@@ -1,7 +1,7 @@
 {
     "openapi": "3.1.2",
     "info": {
-        "title": "Gerenuk Marketing API",
+        "title": "Nudge API",
         "version": "1",
         "description": "Manage contacts, lists, custom fields and events in a workspace.\n\nEvery request needs a workspace API token, sent as `Authorization: Bearer <token>`. A token carries permissions; each operation says which one it needs. Requests are limited per token each minute.\n\nRequest bodies are flat JSON. A record comes back inside `data`. Lists are cursor-paginated: pass `per_page` and `cursor`, and follow `meta.next_cursor` until it is null. Errors have a stable `code` and a `message`, and 422 adds `errors` keyed by field. A 429 response includes a `Retry-After` header."
     },
@@ -42,7 +42,7 @@
     "paths": {
         "/me": {
             "get": {
-                "operationId": "marketing.api.me",
+                "operationId": "nudge.api.me",
                 "description": "The workspace this token belongs to, and the token's name and permissions. Works with any valid token, so it is a cheap way to check a token.",
                 "summary": "Identify the token",
                 "tags": [
@@ -175,7 +175,7 @@
         },
         "/contacts": {
             "get": {
-                "operationId": "marketing.api.contacts.index",
+                "operationId": "nudge.api.contacts.index",
                 "description": "Requires a token with the `contacts.view` permission.\n\nContacts in ID order, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List contacts",
                 "tags": [
@@ -496,7 +496,7 @@
         },
         "/contacts/{email}": {
             "get": {
-                "operationId": "marketing.api.contacts.show",
+                "operationId": "nudge.api.contacts.show",
                 "description": "Requires a token with the `contacts.view` permission.",
                 "summary": "Get a contact",
                 "tags": [
@@ -651,7 +651,7 @@
                 "x-required-permission": "contacts.view"
             },
             "put": {
-                "operationId": "marketing.api.contacts.upsert",
+                "operationId": "nudge.api.contacts.upsert",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nCreate or update a contact. Custom fields are merged; tags and lists are added, never removed.\nSomeone who unsubscribed is only subscribed again when `resubscribe` is true.\n\nAnswers `201` with the new contact when this call created it, and `200` with the updated contact when it already existed.",
                 "summary": "Create or update a contact",
                 "tags": [
@@ -877,7 +877,7 @@
                 "x-required-permission": "contacts.manage"
             },
             "delete": {
-                "operationId": "marketing.api.contacts.archive",
+                "operationId": "nudge.api.contacts.archive",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nArchives the contact (it is not deleted) and answers `204` with no body.",
                 "summary": "Archive a contact",
                 "tags": [
@@ -1019,7 +1019,7 @@
         },
         "/custom-fields": {
             "get": {
-                "operationId": "marketing.api.custom-fields.index",
+                "operationId": "nudge.api.custom-fields.index",
                 "description": "Requires a token with the `contacts.view` permission.\n\nThe custom fields defined in the workspace, ordered by key, 100 per page by default. These keys are the ones accepted in a contact's `custom_fields`. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List custom fields",
                 "tags": [
@@ -1239,7 +1239,7 @@
                 "x-required-permission": "contacts.view"
             },
             "post": {
-                "operationId": "marketing.api.custom-fields.store",
+                "operationId": "nudge.api.custom-fields.store",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nDefines a new custom field. Its type cannot be changed afterwards through this API.",
                 "summary": "Create a custom field",
                 "tags": [
@@ -1429,7 +1429,7 @@
         },
         "/contacts/{email}/events": {
             "get": {
-                "operationId": "marketing.api.contacts.events",
+                "operationId": "nudge.api.contacts.events",
                 "description": "Requires a token with the `contacts.view` permission.\n\nCursor-paginated, 100 events per page by default. Pass `meta.next_cursor` as `cursor` to read the next page; it is null on the last page.",
                 "summary": "A contact's activity, newest first",
                 "tags": [
@@ -1683,7 +1683,7 @@
         },
         "/events": {
             "post": {
-                "operationId": "marketing.api.events.store",
+                "operationId": "nudge.api.events.store",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nRecords a named event on a contact's timeline and starts any automations triggered by it. The event is processed asynchronously, so this answers `202`.",
                 "summary": "Record an event",
                 "tags": [
@@ -1903,7 +1903,7 @@
         },
         "/lists": {
             "get": {
-                "operationId": "marketing.api.lists.index",
+                "operationId": "nudge.api.lists.index",
                 "description": "Requires a token with the `contacts.view` permission.\n\nEvery list in the workspace, by name, with the number of contacts on each, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List the lists",
                 "tags": [
@@ -2123,7 +2123,7 @@
                 "x-required-permission": "contacts.view"
             },
             "post": {
-                "operationId": "marketing.api.lists.store",
+                "operationId": "nudge.api.lists.store",
                 "description": "Requires a token with the `contacts.manage` permission.",
                 "summary": "Create a list",
                 "tags": [
@@ -2301,7 +2301,7 @@
         },
         "/lists/{list}": {
             "get": {
-                "operationId": "marketing.api.lists.show",
+                "operationId": "nudge.api.lists.show",
                 "description": "Requires a token with the `contacts.view` permission.",
                 "summary": "Get a list",
                 "tags": [
@@ -2455,7 +2455,7 @@
                 "x-required-permission": "contacts.view"
             },
             "put": {
-                "operationId": "marketing.api.lists.update",
+                "operationId": "nudge.api.lists.update",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nOnly the fields you send are changed.",
                 "summary": "Update a list",
                 "tags": [
@@ -2660,7 +2660,7 @@
                 "x-required-permission": "contacts.manage"
             },
             "delete": {
-                "operationId": "marketing.api.lists.destroy",
+                "operationId": "nudge.api.lists.destroy",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nDeletes the list. Its contacts are not deleted.",
                 "summary": "Delete a list",
                 "tags": [
@@ -2801,7 +2801,7 @@
         },
         "/lists/{list}/contacts": {
             "post": {
-                "operationId": "marketing.api.lists.contacts.store",
+                "operationId": "nudge.api.lists.contacts.store",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nAdd existing contacts to the list by email. Unknown emails are reported back, not created.",
                 "summary": "Add contacts to a list",
                 "tags": [
@@ -3024,7 +3024,7 @@
                 "x-required-permission": "contacts.manage"
             },
             "delete": {
-                "operationId": "marketing.api.lists.contacts.destroy",
+                "operationId": "nudge.api.lists.contacts.destroy",
                 "description": "Requires a token with the `contacts.manage` permission.\n\nRemoves contacts from the list by email. The contacts themselves are not deleted, and unknown emails are reported back.",
                 "summary": "Remove contacts from a list",
                 "tags": [
@@ -3249,7 +3249,7 @@
         },
         "/segments": {
             "get": {
-                "operationId": "marketing.api.segments.index",
+                "operationId": "nudge.api.segments.index",
                 "description": "Requires a token with the `contacts.view` permission.\n\nEvery segment in the workspace, by name, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page. `contacts_count` is only on `GET /segments/{segment}`, because counting a segment runs its whole query.",
                 "summary": "List segments",
                 "tags": [
@@ -3471,7 +3471,7 @@
         },
         "/segments/{segment}": {
             "get": {
-                "operationId": "marketing.api.segments.show",
+                "operationId": "nudge.api.segments.show",
                 "description": "Requires a token with the `contacts.view` permission.\n\nThe segment's rule definition and the number of contacts that currently match it.",
                 "summary": "Get a segment",
                 "tags": [
@@ -3627,7 +3627,7 @@
         },
         "/segments/{segment}/contacts": {
             "get": {
-                "operationId": "marketing.api.segments.contacts",
+                "operationId": "nudge.api.segments.contacts",
                 "description": "Requires a token with the `contacts.view` permission.\n\nContacts that currently match the segment, in ID order, 100 per page by default. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List the contacts in a segment",
                 "tags": [
@@ -3880,7 +3880,7 @@
         },
         "/tags": {
             "get": {
-                "operationId": "marketing.api.tags.index",
+                "operationId": "nudge.api.tags.index",
                 "description": "Requires a token with the `contacts.view` permission.\n\nEvery tag in the workspace, by name, with the number of contacts carrying each, 100 per page by default. Tags are created by sending their names when upserting a contact. Follow `meta.next_cursor` (pass it as `cursor`) to read the next page.",
                 "summary": "List tags",
                 "tags": [

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import type { StatusTone } from '@marketing/components/status-badge';
+import type { StatusTone } from '@nudge/components/status-badge';
 
 /**
  * A neutral tile with a provider's initials. No provider's logo is shown, so none is favoured over the others.

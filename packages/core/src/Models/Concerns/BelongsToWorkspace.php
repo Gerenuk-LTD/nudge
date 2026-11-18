@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Models\Concerns;
+namespace Gerenuk\Nudge\Models\Concerns;
 
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
-use Gerenuk\Marketing\Tenancy\WorkspaceScope;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Tenancy\WorkspaceScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 

@@ -5,7 +5,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { envelopeInput } from '@marketing/components/email-envelope';
+import { envelopeInput } from '@nudge/components/email-envelope';
 
 /** Turns a variable's tag into a label people read: promo_code → Promo code. */
 function labelFor(tag: string): string {

@@ -1,14 +1,14 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Automations\ActivateAutomation;
-use Gerenuk\Marketing\Actions\Workspaces\CreateApiToken;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Jobs\StartAutomationsForTrigger;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Actions\Automations\ActivateAutomation;
+use Gerenuk\Nudge\Actions\Workspaces\CreateApiToken;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Jobs\StartAutomationsForTrigger;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Contact;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
@@ -29,7 +29,7 @@ function postEvent($test, array $body = [], ?string $key = null, ?string $token 
         $request = $request->withHeader('Idempotency-Key', $key);
     }
 
-    return $request->postJson(route('marketing.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true, ...$body]);
+    return $request->postJson(route('nudge.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true, ...$body]);
 }
 
 function customEventCount(): int
@@ -130,7 +130,7 @@ test('a job run twice for one event enrols once', function () {
 test('a bad key is refused', function () {
     foreach (['', str_repeat('a', 256), 'has space'] as $key) {
         $request = $this->withToken($this->token)->withHeader('Idempotency-Key', $key);
-        $request->postJson(route('marketing.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true])
+        $request->postJson(route('nudge.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true])
             ->assertStatus(422);
     }
 

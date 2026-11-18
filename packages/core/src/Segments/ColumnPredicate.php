@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Segments;
+namespace Gerenuk\Nudge\Segments;
 
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Grammar;

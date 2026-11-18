@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Models\ContactList;
+use Gerenuk\Nudge\Models\ContactList;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

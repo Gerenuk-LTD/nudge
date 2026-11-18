@@ -1,17 +1,17 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
 use Closure;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Import;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\WebhookVerification;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Import;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\WebhookVerification;
 
 /**
  * What the home page flags: things that stop or harm sending, and work waiting on someone, each with a link to the
@@ -37,7 +37,7 @@ class HomeNotices
                 'danger',
                 __('Sending is paused'),
                 trim(($workspace->sending_paused_reason ?? '').' '.__('Campaigns and automation emails are held until someone resumes sending.')),
-                $manageSending ? [__('Review and resume'), route('marketing.sending.edit')] : null,
+                $manageSending ? [__('Review and resume'), route('nudge.sending.edit')] : null,
             );
         }
 
@@ -49,7 +49,7 @@ class HomeNotices
                 $manageSending
                     ? __('Connect the email service you send with before your first campaign.')
                     : __('Ask someone who manages sending to connect a provider.'),
-                $manageSending ? [__('Connect provider'), route('marketing.providers.create')] : null,
+                $manageSending ? [__('Connect provider'), route('nudge.providers.create')] : null,
             );
         }
 
@@ -59,7 +59,7 @@ class HomeNotices
                 'warning',
                 __('Add a postal address'),
                 __('Anti-spam law requires one in every campaign, so campaigns cannot go out without it.'),
-                $manageSending ? [__('Add it'), route('marketing.sending.edit')] : null,
+                $manageSending ? [__('Add it'), route('nudge.sending.edit')] : null,
             );
         }
 
@@ -76,7 +76,7 @@ class HomeNotices
                     'warning',
                     __(':name is not reporting deliveries', ['name' => $provider->name]),
                     __('It has sent email, but no delivery webhooks have arrived, so bounces and complaints are not being recorded.'),
-                    [__('Set up webhooks'), route('marketing.providers.show', $provider)],
+                    [__('Set up webhooks'), route('nudge.providers.show', $provider)],
                 );
             }
         }
@@ -90,7 +90,7 @@ class HomeNotices
                     'warning',
                     trans_choice('An import failed|:count imports failed', $failed),
                     __('Rows before the problem were saved. Open the import to see what went wrong.'),
-                    [__('View imports'), route('marketing.imports.index')],
+                    [__('View imports'), route('nudge.imports.index')],
                 );
             }
 
@@ -102,7 +102,7 @@ class HomeNotices
                     'info',
                     trans_choice('An upload is waiting for its columns|:count uploads are waiting for their columns', $waiting),
                     __('Match the columns to contact fields to bring the contacts in.'),
-                    [__('Finish importing'), route('marketing.imports.index')],
+                    [__('Finish importing'), route('nudge.imports.index')],
                 );
             }
         }
@@ -123,10 +123,10 @@ class HomeNotices
         }
 
         $steps = [
-            ['key' => 'provider', 'label' => __('Connect a sending provider'), 'done' => Provider::query()->exists(), 'href' => route('marketing.providers.create')],
-            ['key' => 'address', 'label' => __('Add your postal address'), 'done' => filled($workspace->postal_address), 'href' => route('marketing.sending.edit')],
-            ['key' => 'contacts', 'label' => __('Bring in your contacts'), 'done' => Contact::query()->exists(), 'href' => route('marketing.imports.create')],
-            ['key' => 'campaign', 'label' => __('Send your first campaign'), 'done' => Campaign::query()->broadcasts()->where('status', CampaignStatus::Sent)->exists(), 'href' => route('marketing.campaigns.index', ['new' => 1])],
+            ['key' => 'provider', 'label' => __('Connect a sending provider'), 'done' => Provider::query()->exists(), 'href' => route('nudge.providers.create')],
+            ['key' => 'address', 'label' => __('Add your postal address'), 'done' => filled($workspace->postal_address), 'href' => route('nudge.sending.edit')],
+            ['key' => 'contacts', 'label' => __('Bring in your contacts'), 'done' => Contact::query()->exists(), 'href' => route('nudge.imports.create')],
+            ['key' => 'campaign', 'label' => __('Send your first campaign'), 'done' => Campaign::query()->broadcasts()->where('status', CampaignStatus::Sent)->exists(), 'href' => route('nudge.campaigns.index', ['new' => 1])],
         ];
 
         return collect($steps)->every(fn (array $step) => $step['done']) ? null : $steps;

@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Campaigns;
+namespace Gerenuk\Nudge\Actions\Campaigns;
 
-use Gerenuk\Marketing\Actions\Contacts\ChangeContactStatus;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
+use Gerenuk\Nudge\Actions\Contacts\ChangeContactStatus;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
 use Illuminate\Support\Facades\DB;
 
 /**

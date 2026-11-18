@@ -4,14 +4,14 @@ use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'marketing.workspace:optional'])->group(function () {
+Route::middleware(['auth', 'nudge.workspace:optional'])->group(function () {
     Route::redirect('settings', '/settings/profile');
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-Route::middleware(['auth', 'verified', 'marketing.workspace:optional'])->group(function () {
+Route::middleware(['auth', 'verified', 'nudge.workspace:optional'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->middleware('throttle:6,1')->name('profile.destroy');
 
     // No password gate on the page itself: changing the password asks for the current one, and two-factor and

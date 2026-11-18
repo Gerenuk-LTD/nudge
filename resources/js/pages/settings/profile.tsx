@@ -3,7 +3,7 @@ import { MailWarning } from 'lucide-react';
 import { useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import InputError from '@/components/input-error';
-import { SettingsSection } from '@marketing/components/settings-section';
+import { SettingsSection } from '@nudge/components/settings-section';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';

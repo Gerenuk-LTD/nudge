@@ -15,18 +15,18 @@ function committedSpec(): array
 }
 
 test('the spec is served as JSON without a token', function () {
-    $response = $this->getJson(route('marketing.api.docs.spec'))->assertOk();
+    $response = $this->getJson(route('nudge.api.docs.spec'))->assertOk();
 
     expect($response->headers->get('Cache-Control'))->toContain('max-age=3600')
         ->and($response->json('openapi'))->toBeString()
-        ->and($response->json('servers.0.url'))->toEndWith('/'.config('marketing.api_prefix'))
+        ->and($response->json('servers.0.url'))->toEndWith('/'.config('nudge.api_prefix'))
         ->and($response->json('paths'))->not->toBeEmpty();
 });
 
 test('the spec names this install\'s own base URL, even when the prefix is changed', function () {
-    config(['marketing.api_prefix' => 'api/v2']);
+    config(['nudge.api_prefix' => 'api/v2']);
 
-    $this->getJson(route('marketing.api.docs.spec'))
+    $this->getJson(route('nudge.api.docs.spec'))
         ->assertOk()
         ->assertJsonPath('servers.0.url', url('api/v2'));
 });
@@ -34,16 +34,16 @@ test('the spec names this install\'s own base URL, even when the prefix is chang
 test('the spec ignores the request\'s host', function () {
     config(['app.url' => 'https://mail.example.com']);
 
-    $this->getJson('http://evil.example/'.config('marketing.api_prefix').'/openapi.json')
+    $this->getJson('http://evil.example/'.config('nudge.api_prefix').'/openapi.json')
         ->assertOk()
-        ->assertJsonPath('servers.0.url', 'https://mail.example.com/'.trim((string) config('marketing.api_prefix'), '/'));
+        ->assertJsonPath('servers.0.url', 'https://mail.example.com/'.trim((string) config('nudge.api_prefix'), '/'));
 });
 
 test('the docs page is a standalone page that points at the spec', function () {
-    $response = $this->get(route('marketing.api.docs'))->assertOk();
+    $response = $this->get(route('nudge.api.docs'))->assertOk();
 
     expect($response->headers->get('Content-Type'))->toContain('text/html')
-        ->and($response->getContent())->toContain(route('marketing.api.docs.spec', absolute: false));
+        ->and($response->getContent())->toContain(route('nudge.api.docs.spec', absolute: false));
 });
 
 test('the docs routes are not documented in the spec', function () {
@@ -54,14 +54,14 @@ test('the docs routes are not documented in the spec', function () {
 
 test('every API route is in the committed spec', function () {
     $spec = committedSpec();
-    $prefix = trim((string) config('marketing.api_prefix'), '/');
+    $prefix = trim((string) config('nudge.api_prefix'), '/');
     $missing = [];
     $checked = 0;
 
     foreach (Route::getRoutes()->getRoutes() as $route) {
         $name = (string) $route->getName();
 
-        if (! str_starts_with($name, 'marketing.api.') || str_starts_with($name, 'marketing.api.docs')) {
+        if (! str_starts_with($name, 'nudge.api.') || str_starts_with($name, 'nudge.api.docs')) {
             continue;
         }
 
@@ -81,11 +81,11 @@ test('every API route is in the committed spec', function () {
 });
 
 test('every operation in the spec is a route of the API', function () {
-    $prefix = trim((string) config('marketing.api_prefix'), '/');
+    $prefix = trim((string) config('nudge.api_prefix'), '/');
     $routes = [];
 
     foreach (Route::getRoutes()->getRoutes() as $route) {
-        if (str_starts_with((string) $route->getName(), 'marketing.api.') && ! str_starts_with((string) $route->getName(), 'marketing.api.docs')) {
+        if (str_starts_with((string) $route->getName(), 'nudge.api.') && ! str_starts_with((string) $route->getName(), 'nudge.api.docs')) {
             foreach (array_diff($route->methods(), ['HEAD']) as $method) {
                 $routes[] = strtolower($method).' /'.Str::after($route->uri(), $prefix.'/');
             }

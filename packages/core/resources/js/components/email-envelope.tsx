@@ -10,7 +10,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { MergeTag } from '@marketing/components/email-editors';
+import type { MergeTag } from '@nudge/components/email-editors';
 
 export type EnvelopeRow = {
     name: string;

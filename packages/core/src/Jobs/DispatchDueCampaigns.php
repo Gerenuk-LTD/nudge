@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Models\Campaign;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Models\Campaign;
 
 /**
  * Runs every minute and starts scheduled campaigns whose time has come, in every workspace.

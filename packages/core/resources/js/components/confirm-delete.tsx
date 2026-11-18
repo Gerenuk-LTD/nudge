@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { ConfirmDialog } from '@marketing/components/confirm-dialog';
+import { ConfirmDialog } from '@nudge/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 
 /**

@@ -2,7 +2,7 @@ import { Link, useForm } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import ContactController from '@/actions/Gerenuk/Marketing/Http/Controllers/ContactController';
+import ContactController from '@/actions/Gerenuk/Nudge/Http/Controllers/ContactController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,16 +16,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { create as createImport } from '@/routes/marketing/imports';
+import { create as createImport } from '@/routes/nudge/imports';
 import {
     CustomFieldInput,
     ListPicker,
     SubscriptionSwitch,
-} from '@marketing/components/contact-fields';
-import type { CustomFieldValue } from '@marketing/components/contact-fields';
-import { TagInput } from '@marketing/components/tag-input';
-import { useCan } from '@marketing/hooks/use-workspace';
-import type { ContactStatus, CustomField, Option } from '@marketing/types';
+} from '@nudge/components/contact-fields';
+import type { CustomFieldValue } from '@nudge/components/contact-fields';
+import { TagInput } from '@nudge/components/tag-input';
+import { useCan } from '@nudge/hooks/use-workspace';
+import type { ContactStatus, CustomField, Option } from '@nudge/types';
 
 type FormData = {
     email: string;

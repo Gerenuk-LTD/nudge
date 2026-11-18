@@ -1,21 +1,21 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Campaigns\CampaignAudience;
-use Gerenuk\Marketing\Campaigns\QueueCampaignBatches;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\CampaignSnapshot;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\HtmlToText;
-use Gerenuk\Marketing\Sending\LinkExtractor;
-use Gerenuk\Marketing\Sending\MergeTags;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Campaigns\CampaignAudience;
+use Gerenuk\Nudge\Campaigns\QueueCampaignBatches;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\CampaignSnapshot;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\HtmlToText;
+use Gerenuk\Nudge\Sending\LinkExtractor;
+use Gerenuk\Nudge\Sending\MergeTags;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -38,7 +38,7 @@ class PrepareCampaign implements ShouldBeUnique, ShouldQueue
 
     public function __construct(public int $campaignId, public int $workspaceId)
     {
-        $this->onQueue(config('marketing.sending.queue'));
+        $this->onQueue(config('nudge.sending.queue'));
     }
 
     public static function dispatchFor(Campaign $campaign): void

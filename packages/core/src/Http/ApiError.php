@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Http;
+namespace Gerenuk\Nudge\Http;
 
 use Illuminate\Http\JsonResponse;
 

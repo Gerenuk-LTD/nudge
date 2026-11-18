@@ -2,9 +2,9 @@
 
 use App\Models\User;
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Role;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Role;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {

@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Workspaces;
+namespace Gerenuk\Nudge\Actions\Workspaces;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Models\Account;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Membership;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Models\Account;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Membership;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,7 +20,7 @@ class RemoveUserFromWorkspaces
     /**
      * @throws ValidationException when the user owns an account or is the last owner of a workspace
      */
-    public function handle(MarketingUser $user): void
+    public function handle(NudgeUser $user): void
     {
         $userId = $user->getAuthIdentifier();
 

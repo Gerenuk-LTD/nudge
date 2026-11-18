@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Events;
+namespace Gerenuk\Nudge\Events;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
@@ -15,6 +15,6 @@ class WorkspaceCreated
 
     public function __construct(
         public readonly Workspace $workspace,
-        public readonly MarketingUser $owner,
+        public readonly NudgeUser $owner,
     ) {}
 }

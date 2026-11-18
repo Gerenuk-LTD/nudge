@@ -7,16 +7,16 @@ import {
     Users,
 } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
-import { SettingsShell } from '@marketing/components/settings-shell';
-import type { SettingsTab } from '@marketing/components/settings-shell';
-import { index as apiLogIndex } from '@/routes/marketing/api-log';
-import { index as apiTokensIndex } from '@/routes/marketing/api-tokens';
-import { index as membersIndex } from '@/routes/marketing/members';
-import { index as rolesIndex } from '@/routes/marketing/roles';
-import { edit as sendingEdit } from '@/routes/marketing/sending';
-import { edit as workspaceEdit } from '@/routes/marketing/workspace';
-import { useCan, useWorkspace } from '@marketing/hooks/use-workspace';
-import type { Permission } from '@marketing/types';
+import { SettingsShell } from '@nudge/components/settings-shell';
+import type { SettingsTab } from '@nudge/components/settings-shell';
+import { index as apiLogIndex } from '@/routes/nudge/api-log';
+import { index as apiTokensIndex } from '@/routes/nudge/api-tokens';
+import { index as membersIndex } from '@/routes/nudge/members';
+import { index as rolesIndex } from '@/routes/nudge/roles';
+import { edit as sendingEdit } from '@/routes/nudge/sending';
+import { edit as workspaceEdit } from '@/routes/nudge/workspace';
+import { useCan, useWorkspace } from '@nudge/hooks/use-workspace';
+import type { Permission } from '@nudge/types';
 
 /** The workspace settings pages and the permission each needs, also offered by the command palette. */
 export const workspaceSettingsTabs: (SettingsTab & {

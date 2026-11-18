@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
-import { PageBody, PageHeader } from '@marketing/components/page-header';
+import { PageBody, PageHeader } from '@nudge/components/page-header';
 
 export type SettingsTab = {
     title: string;

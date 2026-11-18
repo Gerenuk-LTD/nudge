@@ -1,14 +1,14 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Actions\Workspaces\ChangeMemberRole;
-use Gerenuk\Marketing\Actions\Workspaces\InviteMember;
-use Gerenuk\Marketing\Actions\Workspaces\RemoveMember;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Workspaces\ChangeMemberRole;
+use Gerenuk\Nudge\Actions\Workspaces\InviteMember;
+use Gerenuk\Nudge\Actions\Workspaces\RemoveMember;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,7 +24,7 @@ class MemberController extends Controller
         $workspace = $this->currentWorkspace->getOrFail();
         $userId = $this->user($request)->getAuthIdentifier();
 
-        return Inertia::render('marketing/workspace/members', [
+        return Inertia::render('nudge/workspace/members', [
             'members' => $workspace->memberships()->with(['user', 'role'])->orderBy('id')->get()
                 ->map(fn (Membership $membership) => [
                     'id' => $membership->id,
@@ -71,7 +71,7 @@ class MemberController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation sent.')]);
 
-        return to_route('marketing.members.index');
+        return to_route('nudge.members.index');
     }
 
     public function revokeInvitation(Request $request, Invitation $invitation): RedirectResponse
@@ -80,7 +80,7 @@ class MemberController extends Controller
 
         $invitation->delete();
 
-        return to_route('marketing.members.index');
+        return to_route('nudge.members.index');
     }
 
     public function update(Request $request, Membership $membership, ChangeMemberRole $changeMemberRole): RedirectResponse
@@ -97,7 +97,7 @@ class MemberController extends Controller
 
         $changeMemberRole->handle($membership, $role);
 
-        return to_route('marketing.members.index');
+        return to_route('nudge.members.index');
     }
 
     public function destroy(Request $request, Membership $membership, RemoveMember $removeMember): RedirectResponse
@@ -107,7 +107,7 @@ class MemberController extends Controller
 
         $removeMember->handle($membership);
 
-        return to_route('marketing.members.index');
+        return to_route('nudge.members.index');
     }
 
     /**

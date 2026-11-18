@@ -1,14 +1,14 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Workspaces;
+namespace Gerenuk\Nudge\Actions\Workspaces;
 
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Events\WorkspaceCreated;
-use Gerenuk\Marketing\Models\Account;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Events\WorkspaceCreated;
+use Gerenuk\Nudge\Models\Account;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 
 class CreateWorkspace
@@ -17,7 +17,7 @@ class CreateWorkspace
      * Create a workspace with the default roles and make the user its owner.
      * A new account is created when none is given.
      */
-    public function handle(MarketingUser $owner, string $name, ?Account $account = null): Workspace
+    public function handle(NudgeUser $owner, string $name, ?Account $account = null): Workspace
     {
         $workspace = DB::transaction(function () use ($owner, $name, $account): Workspace {
             $account ??= Account::create(['name' => $name, 'owner_id' => $owner->getAuthIdentifier()]);

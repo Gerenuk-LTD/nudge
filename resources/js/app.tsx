@@ -6,16 +6,14 @@ import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import WorkspaceSettingsLayout from '@marketing/layouts/workspace-settings-layout';
+import WorkspaceSettingsLayout from '@nudge/layouts/workspace-settings-layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Nudge';
 
-// Pages come from this app and from the core package, whose pages are all under `marketing/`.
+// Pages come from this app and from the core package, whose pages are all under `nudge/`.
 const pages = {
     ...import.meta.glob<{ default: ComponentType }>('./pages/**/*.tsx'),
-    ...import.meta.glob<{ default: ComponentType }>(
-        '@marketing/pages/**/*.tsx',
-    ),
+    ...import.meta.glob<{ default: ComponentType }>('@nudge/pages/**/*.tsx'),
 };
 
 function resolvePage(name: string) {
@@ -35,16 +33,16 @@ void createInertiaApp({
     resolve: resolvePage,
     layout: (name) => {
         switch (true) {
-            case name.startsWith('marketing/public/'):
+            case name.startsWith('nudge/public/'):
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
-            case name.startsWith('marketing/workspace/'):
+            case name.startsWith('nudge/workspace/'):
                 return [AppLayout, WorkspaceSettingsLayout];
-            case name === 'marketing/workspaces/create' ||
-                name === 'marketing/invitations/show':
+            case name === 'nudge/workspaces/create' ||
+                name === 'nudge/invitations/show':
                 return AuthLayout;
             default:
                 return AppLayout;

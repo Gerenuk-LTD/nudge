@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Contracts;
+namespace Gerenuk\Nudge\Contracts;
 
 /**
  * Whether a user with no workspace may start a new account (their own sending setup). The host decides, because it
@@ -8,5 +8,5 @@ namespace Gerenuk\Marketing\Contracts;
  */
 interface AccountCreationPolicy
 {
-    public function allows(MarketingUser $user): bool;
+    public function allows(NudgeUser $user): bool;
 }

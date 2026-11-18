@@ -6,10 +6,10 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { index as providersIndex } from '@/routes/marketing/providers';
-import { edit as sendingEdit } from '@/routes/marketing/sending';
-import { useCan, useWorkspace } from '@marketing/hooks/use-workspace';
-import type { WorkspaceSharedProps } from '@marketing/types';
+import { index as providersIndex } from '@/routes/nudge/providers';
+import { edit as sendingEdit } from '@/routes/nudge/sending';
+import { useCan, useWorkspace } from '@nudge/hooks/use-workspace';
+import type { WorkspaceSharedProps } from '@nudge/types';
 
 const issues: Record<
     NonNullable<WorkspaceSharedProps['sendingIssue']>,

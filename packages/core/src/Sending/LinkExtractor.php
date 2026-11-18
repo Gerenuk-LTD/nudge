@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
 /**
  * Finds trackable links in email HTML: absolute http(s) hrefs without merge tags.

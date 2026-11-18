@@ -1,5 +1,5 @@
-import { StatusBadge } from '@marketing/components/status-badge';
-import type { ContactStatus } from '@marketing/types';
+import { StatusBadge } from '@nudge/components/status-badge';
+import type { ContactStatus } from '@nudge/types';
 
 /** Whether a contact can be emailed: subscribed or unsubscribed. */
 export function ContactStatusBadge({ status }: { status: ContactStatus }) {

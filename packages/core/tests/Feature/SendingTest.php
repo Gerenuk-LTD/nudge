@@ -1,26 +1,26 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Campaigns\CampaignChecklist;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Enums\SuppressionReason;
-use Gerenuk\Marketing\Jobs\DispatchDueCampaigns;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Campaigns\CampaignChecklist;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Jobs\DispatchDueCampaigns;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -137,14 +137,14 @@ test('approval is required when the workspace asks for it, and edits withdraw it
     Contact::factory()->create();
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.schedule', $campaign))->assertSessionHasErrors('campaign');
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.schedule', $campaign))->assertSessionHasErrors('campaign');
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.approve', $campaign));
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['subject' => 'Changed']);
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.approve', $campaign));
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['subject' => 'Changed']);
     expect($campaign->fresh()->approved_at)->toBeNull();
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.approve', $campaign));
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.schedule', $campaign))->assertSessionHasNoErrors();
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.approve', $campaign));
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.schedule', $campaign))->assertSessionHasNoErrors();
 
     $this->useWorkspace($this->workspace);
     expect($campaign->fresh()->status)->toBe(CampaignStatus::Sent);
@@ -154,14 +154,14 @@ test('editors can send but cannot approve', function () {
     $editor = $this->addMember($this->workspace, 'Editor');
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($editor)->post(route('marketing.campaigns.approve', $campaign))->assertForbidden();
+    $this->actingAs($editor)->post(route('nudge.campaigns.approve', $campaign))->assertForbidden();
 });
 
 test('scheduled campaigns start when their time comes', function () {
     Contact::factory()->create();
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.schedule', $campaign), ['send_at' => now()->addHour()->toIso8601String()])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.schedule', $campaign), ['send_at' => now()->addHour()->toIso8601String()])
         ->assertSessionHasNoErrors();
 
     $this->useWorkspace($this->workspace);
@@ -195,7 +195,7 @@ test('the daily limit holds back the rest of a batch', function () {
 test('test emails go to the given address without tracking', function () {
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['me@example.com']])
         ->assertSessionHasNoErrors();
 
     $email = $this->transports->sent[0];
@@ -209,7 +209,7 @@ test('test sends are refused while sending is paused', function () {
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
     $this->workspace->update(['sending_paused_at' => now(), 'sending_paused_reason' => 'Bounce rate']);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['me@example.com']])
         ->assertSessionHasErrors('emails');
 
     expect($this->transports->sent)->toBeEmpty();
@@ -219,19 +219,19 @@ test('test sends skip suppressed addresses and count against the daily limit', f
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
     Suppression::suppress('bounced@example.com', SuppressionReason::Bounce);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['Bounced@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['Bounced@example.com']])
         ->assertSessionHasErrors('emails');
     expect($this->transports->sent)->toBeEmpty();
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['bounced@example.com', 'me@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['bounced@example.com', 'me@example.com']])
         ->assertSessionHasNoErrors();
     expect($this->transports->recipients())->toBe(['me@example.com']);
 
     $this->provider->update(['daily_limit' => 2]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['me@example.com']])
         ->assertSessionHasNoErrors();
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['me@example.com']])
         ->assertSessionHasErrors('emails');
     expect($this->transports->sent)->toHaveCount(2);
 });
@@ -240,11 +240,11 @@ test('test sends are rate limited', function () {
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
     foreach (range(1, 20) as $attempt) {
-        $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ["me{$attempt}@example.com"]])
+        $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ["me{$attempt}@example.com"]])
             ->assertSessionHasNoErrors();
     }
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.test', $campaign), ['emails' => ['me21@example.com']])
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.test', $campaign), ['emails' => ['me21@example.com']])
         ->assertTooManyRequests();
     expect($this->transports->sent)->toHaveCount(20);
 });
@@ -253,7 +253,7 @@ test('sent campaigns cannot be edited', function () {
     Contact::factory()->create();
     $campaign = sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id]));
 
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['subject' => 'Too late'])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['subject' => 'Too late'])
         ->assertSessionHasErrors('campaign');
 });
 
@@ -265,7 +265,7 @@ test('the campaign history is filtered by status and sorted by open rate, leavin
     Campaign::factory()->create(['name' => 'Mostly opened', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Sent])
         ->forceFill(['sent_count' => 4, 'opened_count' => 3])->save();
 
-    $response = $this->actingAs($this->owner)->get(route('marketing.campaigns.index', ['status' => 'sent,draft', 'sort' => '-opened']));
+    $response = $this->actingAs($this->owner)->get(route('nudge.campaigns.index', ['status' => 'sent,draft', 'sort' => '-opened']));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->has('campaigns.data', 2)
@@ -279,7 +279,7 @@ test('drafts and scheduled campaigns sit on the shelf, soonest scheduled first',
     Campaign::factory()->create(['name' => 'Tomorrow', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Scheduled, 'scheduled_at' => now()->addDay()]);
     Campaign::factory()->create(['name' => 'Sent', 'provider_id' => $this->provider->id, 'status' => CampaignStatus::Sent]);
 
-    $response = $this->actingAs($this->owner)->get(route('marketing.campaigns.index'));
+    $response = $this->actingAs($this->owner)->get(route('nudge.campaigns.index'));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->where('upcoming', fn ($upcoming) => collect($upcoming)->pluck('name')->all() === ['Tomorrow', 'Next week', 'Draft'])
@@ -300,7 +300,7 @@ test('the campaign editor shows how many people each audience choice reaches', f
     ]]]);
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->get(route('marketing.campaigns.edit', $campaign))
+    $this->actingAs($this->owner)->get(route('nudge.campaigns.edit', $campaign))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->loadDeferredProps(fn (AssertableInertia $reload) => $reload
                 ->where('audienceSizes.everyone', 1)
@@ -309,22 +309,22 @@ test('the campaign editor shows how many people each audience choice reaches', f
 });
 
 test('only approvers can switch campaign approval', function () {
-    $this->actingAs($this->owner)->post(route('marketing.roles.store'), ['name' => 'Deliverability', 'permissions' => ['providers.manage']])
+    $this->actingAs($this->owner)->post(route('nudge.roles.store'), ['name' => 'Deliverability', 'permissions' => ['providers.manage']])
         ->assertRedirect();
     $manager = $this->addMember($this->workspace, 'Deliverability');
     $settings = ['postal_address' => "1 High Street\nLondon", 'requires_campaign_approval' => true];
 
-    $this->actingAs($manager)->get(route('marketing.sending.edit'))
+    $this->actingAs($manager)->get(route('nudge.sending.edit'))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('canChangeApproval', false));
-    $this->actingAs($manager)->put(route('marketing.sending.update'), $settings)
+    $this->actingAs($manager)->put(route('nudge.sending.update'), $settings)
         ->assertSessionHasErrors('requires_campaign_approval');
     expect($this->workspace->fresh()->requires_campaign_approval)->toBeFalse();
 
-    $this->actingAs($manager)->put(route('marketing.sending.update'), [...$settings, 'requires_campaign_approval' => false, 'postal_address' => 'New address'])
+    $this->actingAs($manager)->put(route('nudge.sending.update'), [...$settings, 'requires_campaign_approval' => false, 'postal_address' => 'New address'])
         ->assertSessionHasNoErrors();
     expect($this->workspace->fresh()->postal_address)->toBe('New address');
 
-    $this->actingAs($this->owner)->put(route('marketing.sending.update'), $settings)->assertSessionHasNoErrors();
+    $this->actingAs($this->owner)->put(route('nudge.sending.update'), $settings)->assertSessionHasNoErrors();
     expect($this->workspace->fresh()->requires_campaign_approval)->toBeTrue();
 });
 
@@ -448,20 +448,20 @@ test('a subject and preheader that grow past 255 characters once variables are f
 test('variable names are validated', function () {
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['Bad-Key' => 'x']])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['Bad-Key' => 'x']])
         ->assertSessionHasErrors('variables');
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['first_name' => 'x']])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['first_name' => 'x']])
         ->assertSessionHasErrors('variables');
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']])
         ->assertSessionHasNoErrors();
 });
 
 test('variable names are at most 50 characters', function () {
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => [str_repeat('a', 51) => 'x']])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => [str_repeat('a', 51) => 'x']])
         ->assertSessionHasErrors('variables');
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => [str_repeat('a', 50) => 'x']])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => [str_repeat('a', 50) => 'x']])
         ->assertSessionHasNoErrors();
 });
 
@@ -469,10 +469,10 @@ test('changing variables withdraws approval', function () {
     $this->workspace->update(['requires_campaign_approval' => true]);
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.approve', $campaign));
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.approve', $campaign));
     expect($campaign->fresh()->approved_at)->not->toBeNull();
 
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']]);
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']]);
     expect($campaign->fresh()->approved_at)->toBeNull();
 });
 
@@ -481,25 +481,25 @@ test('re-saving unchanged JSON content keeps approval when the database reorders
     $editorState = ['type' => 'doc', 'content' => [['text' => 'Hi', 'marks' => []]]];
     $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id, 'editor_state' => $editorState]);
 
-    $this->actingAs($this->owner)->post(route('marketing.campaigns.approve', $campaign));
+    $this->actingAs($this->owner)->post(route('nudge.campaigns.approve', $campaign));
 
     // MySQL stores JSON object keys in its own order; simulate that on any database.
     DB::table('campaigns')->where('id', $campaign->id)
         ->update(['editor_state' => json_encode(['content' => [['marks' => [], 'text' => 'Hi']], 'type' => 'doc'])]);
 
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['editor_state' => $editorState])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['editor_state' => $editorState])
         ->assertSessionHasNoErrors();
     expect($campaign->fresh()->approved_at)->not->toBeNull();
 
-    $this->actingAs($this->owner)->put(route('marketing.campaigns.update', $campaign), ['editor_state' => [...$editorState, 'type' => 'other']]);
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['editor_state' => [...$editorState, 'type' => 'other']]);
     expect($campaign->fresh()->approved_at)->toBeNull();
 });
 
 test('a draft campaign can be deleted', function () {
     $draft = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $draft))
-        ->assertRedirect(route('marketing.campaigns.index'));
+    $this->actingAs($this->owner)->delete(route('nudge.campaigns.destroy', $draft))
+        ->assertRedirect(route('nudge.campaigns.index'));
 
     expect(Campaign::find($draft->id))->toBeNull();
 });
@@ -511,8 +511,8 @@ test('a cancelled campaign is deleted along with its recipients', function () {
 
     expect(CampaignRecipient::where('campaign_id', $campaign->id)->count())->toBeGreaterThan(0);
 
-    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $campaign))
-        ->assertRedirect(route('marketing.campaigns.index'));
+    $this->actingAs($this->owner)->delete(route('nudge.campaigns.destroy', $campaign))
+        ->assertRedirect(route('nudge.campaigns.index'));
 
     expect(Campaign::find($campaign->id))->toBeNull();
 
@@ -527,8 +527,8 @@ test('sent and scheduled campaigns cannot be deleted', function () {
     $sent = sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id]));
     $scheduled = Campaign::factory()->create(['provider_id' => $this->provider->id, 'status' => CampaignStatus::Scheduled, 'scheduled_at' => now()->addDay()]);
 
-    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $sent))->assertForbidden();
-    $this->actingAs($this->owner)->delete(route('marketing.campaigns.destroy', $scheduled))->assertForbidden();
+    $this->actingAs($this->owner)->delete(route('nudge.campaigns.destroy', $sent))->assertForbidden();
+    $this->actingAs($this->owner)->delete(route('nudge.campaigns.destroy', $scheduled))->assertForbidden();
 
     expect(Campaign::find($sent->id))->not->toBeNull()
         ->and(Campaign::find($scheduled->id))->not->toBeNull();
@@ -538,7 +538,7 @@ test('viewers cannot delete a campaign', function () {
     $draft = Campaign::factory()->create(['provider_id' => $this->provider->id]);
     $viewer = $this->addMember($this->workspace, 'Viewer');
 
-    $this->actingAs($viewer)->delete(route('marketing.campaigns.destroy', $draft))->assertForbidden();
+    $this->actingAs($viewer)->delete(route('nudge.campaigns.destroy', $draft))->assertForbidden();
 
     expect(Campaign::find($draft->id))->not->toBeNull();
 });

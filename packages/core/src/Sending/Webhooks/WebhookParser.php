@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending\Webhooks;
+namespace Gerenuk\Nudge\Sending\Webhooks;
 
 use Carbon\CarbonImmutable;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\MessageHeaders;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Sending\WebhookVerification;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\MessageHeaders;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\WebhookVerification;
 use Illuminate\Http\Request;
 use Symfony\Component\RemoteEvent\Event\Mailer\AbstractMailerEvent;
 use Symfony\Component\RemoteEvent\Event\Mailer\MailerDeliveryEvent;

@@ -22,17 +22,17 @@ import {
 import { useAppearance } from '@/hooks/use-appearance';
 import { accountSettingsTabs } from '@/layouts/settings/layout';
 import { cn } from '@/lib/utils';
-import { index as automationsIndex } from '@/routes/marketing/automations';
-import { index as campaignsIndex } from '@/routes/marketing/campaigns';
-import { create as createContact } from '@/routes/marketing/contacts';
-import { update as switchWorkspace } from '@/routes/marketing/current-workspace';
-import { create as createImport } from '@/routes/marketing/imports';
-import { create as createProvider } from '@/routes/marketing/providers';
-import { create as createSegment } from '@/routes/marketing/segments';
-import { useCan, useWorkspace } from '@marketing/hooks/use-workspace';
-import { workspaceSettingsTabs } from '@marketing/layouts/workspace-settings-layout';
-import { marketingNavItems } from '@marketing/navigation';
-import type { Permission } from '@marketing/types';
+import { index as automationsIndex } from '@/routes/nudge/automations';
+import { index as campaignsIndex } from '@/routes/nudge/campaigns';
+import { create as createContact } from '@/routes/nudge/contacts';
+import { update as switchWorkspace } from '@/routes/nudge/current-workspace';
+import { create as createImport } from '@/routes/nudge/imports';
+import { create as createProvider } from '@/routes/nudge/providers';
+import { create as createSegment } from '@/routes/nudge/segments';
+import { useCan, useWorkspace } from '@nudge/hooks/use-workspace';
+import { workspaceSettingsTabs } from '@nudge/layouts/workspace-settings-layout';
+import { nudgeNavItems } from '@nudge/navigation';
+import type { Permission } from '@nudge/types';
 
 type Href = NonNullable<InertiaLinkProps['href']>;
 
@@ -121,7 +121,7 @@ export function CommandPalette() {
     const visit = (href: Href) => () => router.visit(href);
 
     const commands: Command[] = [
-        ...marketingNavItems
+        ...nudgeNavItems
             .filter((item) => can(item.permission))
             .map((item) => ({
                 id: `go-${item.title}`,

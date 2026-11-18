@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Jobs\StartAutomationsForTrigger;
-use Gerenuk\Marketing\Models\Contact;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Jobs\StartAutomationsForTrigger;
+use Gerenuk\Nudge\Models\Contact;
 
 /**
  * The single place contact changes are reported to automations. Matching runs on the queue,

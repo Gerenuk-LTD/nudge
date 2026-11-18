@@ -1,11 +1,11 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Workspaces;
+namespace Gerenuk\Nudge\Actions\Workspaces;
 
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Contracts\MarketingUser;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Contracts\NudgeUser;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Support\Str;
 
 class CreateApiToken
@@ -16,7 +16,7 @@ class CreateApiToken
      * @param  list<string>  $permissions
      * @return array{token: ApiToken, plainToken: string}
      */
-    public function handle(Workspace $workspace, MarketingUser $creator, string $name, array $permissions, ?CarbonInterface $expiresAt = null): array
+    public function handle(Workspace $workspace, NudgeUser $creator, string $name, array $permissions, ?CarbonInterface $expiresAt = null): array
     {
         $plainToken = ApiToken::PREFIX.Str::random(48);
 

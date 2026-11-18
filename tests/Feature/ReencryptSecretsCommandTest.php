@@ -1,9 +1,9 @@
 <?php
 
 use App\Models\User;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\ProviderType;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\ProviderType;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;

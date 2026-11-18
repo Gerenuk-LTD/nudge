@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\ApiRequest;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Support\TableQuery;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\ApiRequest;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Support\TableQuery;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +22,7 @@ class ApiRequestController extends Controller
 
     public function index(Request $request): Response
     {
-        return Inertia::render('marketing/workspace/api-log', [
+        return Inertia::render('nudge/workspace/api-log', [
             'requests' => Inertia::defer(fn () => $this->requests($request)),
             'tokens' => ApiToken::query()->orderBy('name')->get(['id', 'name'])
                 ->map(fn (ApiToken $token) => ['value' => (string) $token->id, 'label' => $token->name])
@@ -31,8 +31,8 @@ class ApiRequestController extends Controller
                 ->map(fn (string $route) => ['value' => $route, 'label' => $route])
                 ->values(),
             'methods' => $this->methods(),
-            'retentionDays' => (int) config('marketing.api_log.retention_days'),
-            'bodyRetentionDays' => (int) config('marketing.api_log.body_retention_days'),
+            'retentionDays' => (int) config('nudge.api_log.retention_days'),
+            'bodyRetentionDays' => (int) config('nudge.api_log.body_retention_days'),
             'canViewBodies' => $this->canViewBodies($request),
         ]);
     }
@@ -61,7 +61,7 @@ class ApiRequestController extends Controller
             ! $this->canViewBodies($request) => 'hidden',
             in_array($apiRequest->method, ['GET', 'HEAD'], true) && $apiRequest->status < 400 => 'not_kept',
             $apiRequest->request_body === null && $apiRequest->response_body === null
-                && $apiRequest->created_at?->lt(now()->subDays((int) config('marketing.api_log.body_retention_days'))) => 'cleared',
+                && $apiRequest->created_at?->lt(now()->subDays((int) config('nudge.api_log.body_retention_days'))) => 'cleared',
             default => null,
         };
 

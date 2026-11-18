@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Models\Import;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Models\Import;
 
 /**
  * Runs daily and removes imports that were uploaded but never started, in every workspace, along with their

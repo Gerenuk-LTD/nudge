@@ -53,7 +53,7 @@ import {
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { fillVariables } from '@marketing/lib/merge-tags';
+import { fillVariables } from '@nudge/lib/merge-tags';
 import type { EmailEditorProps } from '../types';
 import { Inspector } from './inspector';
 import {

@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Database\Factories;
+namespace Gerenuk\Nudge\Database\Factories;
 
-use Gerenuk\Marketing\Models\Account;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Models\Account;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

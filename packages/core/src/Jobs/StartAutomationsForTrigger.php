@@ -1,15 +1,15 @@
 <?php
 
-namespace Gerenuk\Marketing\Jobs;
+namespace Gerenuk\Nudge\Jobs;
 
-use Gerenuk\Marketing\Actions\Automations\EnrollContact;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Automations\EnrollContact;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -33,7 +33,7 @@ class StartAutomationsForTrigger implements ShouldQueueAfterCommit
         public array $context = [],
         public ?int $eventId = null,
     ) {
-        $this->onQueue(config('marketing.sending.queue'));
+        $this->onQueue(config('nudge.sending.queue'));
     }
 
     public function handle(CurrentWorkspace $currentWorkspace, EnrollContact $enroll): void
@@ -47,7 +47,7 @@ class StartAutomationsForTrigger implements ShouldQueueAfterCommit
 
             // The same event can be dispatched more than once (a replayed request, a retried job).
             // The lock keeps two copies apart, and triggered_at tells a later copy there is nothing to do.
-            Cache::lock("marketing:event-trigger:{$this->eventId}", 60)->block(10, function () use ($enroll): void {
+            Cache::lock("nudge:event-trigger:{$this->eventId}", 60)->block(10, function () use ($enroll): void {
                 $event = ActivityEvent::query()->whereKey($this->eventId)->first();
 
                 if ($event === null || $event->triggered_at !== null) {

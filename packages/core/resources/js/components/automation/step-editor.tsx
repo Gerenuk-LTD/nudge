@@ -3,22 +3,22 @@ import { text } from './steps';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { EmailContentEditor } from '@marketing/components/email-editors';
-import type { MergeTag } from '@marketing/components/email-editors';
+import { EmailContentEditor } from '@nudge/components/email-editors';
+import type { MergeTag } from '@nudge/components/email-editors';
 import { NativeSelect } from '@/components/ui/native-select';
-import { SegmentGroupEditor } from '@marketing/components/segment-builder';
-import { TagInput } from '@marketing/components/tag-input';
+import { SegmentGroupEditor } from '@nudge/components/segment-builder';
+import { TagInput } from '@nudge/components/tag-input';
 import {
     TemplateDialog,
     templateHtml,
-} from '@marketing/components/template-picker';
+} from '@nudge/components/template-picker';
 import type {
     AutomationStep,
     CustomField,
     Option,
     SegmentField,
     SegmentGroup,
-} from '@marketing/types';
+} from '@nudge/types';
 
 export type StepEditorOptions = {
     providers: {
@@ -114,7 +114,7 @@ export function StepEditor({ step, options, readOnly, onChange }: Props) {
                     <Input
                         id="webhook-url"
                         type="url"
-                        placeholder="https://example.com/hooks/marketing"
+                        placeholder="https://example.com/hooks/nudge"
                         value={text(config.url)}
                         onChange={(event) => set('url', event.target.value)}
                     />

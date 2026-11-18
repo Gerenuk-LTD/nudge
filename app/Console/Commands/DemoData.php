@@ -4,49 +4,49 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Carbon\CarbonInterface;
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Automations\SyncAutomationEmails;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\AutomationRunStatus;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\CustomFieldType;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\ImportStatus;
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Enums\SuppressionReason;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\ApiRequest;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\AutomationRun;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignLink;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\CampaignSnapshot;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\EmailTemplate;
-use Gerenuk\Marketing\Models\Import;
-use Gerenuk\Marketing\Models\ImportError;
-use Gerenuk\Marketing\Models\Invitation;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Role;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\HtmlToText;
-use Gerenuk\Marketing\Sending\LinkExtractor;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Templates\EmailEditor;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Automations\SyncAutomationEmails;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\AutomationRunStatus;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\CustomFieldType;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\ImportStatus;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\ApiRequest;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\AutomationRun;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignLink;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\CampaignSnapshot;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\EmailTemplate;
+use Gerenuk\Nudge\Models\Import;
+use Gerenuk\Nudge\Models\ImportError;
+use Gerenuk\Nudge\Models\Invitation;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Role;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\HtmlToText;
+use Gerenuk\Nudge\Sending\LinkExtractor;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Templates\EmailEditor;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -494,7 +494,7 @@ class DemoData extends Command
             'role_id' => Role::query()->where('name', 'Editor')->value('id'),
             'invited_by' => $owner->id,
             'token_hash' => hash('sha256', Str::random(48)),
-            'expires_at' => now()->addDays(config('marketing.invitation_expiry_days')),
+            'expires_at' => now()->addDays(config('nudge.invitation_expiry_days')),
         ]);
     }
 
@@ -547,7 +547,7 @@ class DemoData extends Command
 
     private function createImports(User $owner): void
     {
-        $disk = Storage::disk(config('marketing.imports.disk'));
+        $disk = Storage::disk(config('nudge.imports.disk'));
         $customers = ContactList::query()->where('name', 'Customers')->firstOrFail();
         $workspaceId = $customers->workspace_id;
         $headers = ['email', 'first_name', 'last_name'];

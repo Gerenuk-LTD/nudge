@@ -3,23 +3,23 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Gerenuk\Marketing\Actions\Workspaces\CreateWorkspace;
-use Gerenuk\Marketing\Enums\AudienceType;
-use Gerenuk\Marketing\Enums\ContactSource;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\CustomFieldType;
-use Gerenuk\Marketing\Enums\SuppressionReason;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\EmailTemplate;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Models\Tag;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Templates\EmailEditor;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Workspaces\CreateWorkspace;
+use Gerenuk\Nudge\Enums\AudienceType;
+use Gerenuk\Nudge\Enums\ContactSource;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\CustomFieldType;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\EmailTemplate;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Models\Tag;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Templates\EmailEditor;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -228,7 +228,7 @@ class SendTestSeeder extends Seeder
                 ['id' => 'cta', 'type' => 'button', 'label' => 'Record a click', 'url' => 'https://example.org/', 'align' => 'left', 'background' => '#18181b', 'color' => '#ffffff'],
                 $text('unsubscribe', '<p>Finally, try the unsubscribe link in the footer on one of the aliases.</p>'),
                 ['id' => 'rule', 'type' => 'divider'],
-                ['id' => 'footer', 'type' => 'footer', 'html' => '<p>You are receiving this because you are testing the marketing platform.</p>', 'align' => 'left'],
+                ['id' => 'footer', 'type' => 'footer', 'html' => '<p>You are receiving this because you are testing Nudge.</p>', 'align' => 'left'],
             ],
         ];
     }

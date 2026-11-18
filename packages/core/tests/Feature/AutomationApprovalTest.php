@@ -1,16 +1,16 @@
 <?php
 
-use Gerenuk\Marketing\Automations\AutomationApproval;
-use Gerenuk\Marketing\Enums\AutomationStatus;
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Enums\CampaignStatus;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\ContactList;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Automations\AutomationApproval;
+use Gerenuk\Nudge\Enums\AutomationStatus;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Enums\CampaignStatus;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\ContactList;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 
 beforeEach(function () {
     [$this->owner, $this->workspace] = $this->createOwner();
@@ -65,8 +65,8 @@ function approvalLive($test, ?Automation $automation = null): Automation
 {
     $automation ??= approvalDraft($test);
 
-    $test->actingAs($test->owner)->post(route('marketing.automations.approve', $automation))->assertRedirect();
-    $test->actingAs($test->editor)->post(route('marketing.automations.activate', $automation))->assertSessionHasNoErrors();
+    $test->actingAs($test->owner)->post(route('nudge.automations.approve', $automation))->assertRedirect();
+    $test->actingAs($test->editor)->post(route('nudge.automations.activate', $automation))->assertSessionHasNoErrors();
 
     return $automation->fresh();
 }
@@ -79,7 +79,7 @@ function approvalSubjectChange(Automation $automation, string $subject, int $pro
 test('an unapproved automation cannot start', function () {
     $automation = approvalDraft($this);
 
-    $this->actingAs($this->editor)->post(route('marketing.automations.activate', $automation))->assertSessionHasErrors('automation');
+    $this->actingAs($this->editor)->post(route('nudge.automations.activate', $automation))->assertSessionHasErrors('automation');
 
     expect($automation->fresh()->status)->toBe(AutomationStatus::Draft);
 });
@@ -95,7 +95,7 @@ test('approval lets it start', function () {
 test('editors cannot approve', function () {
     $automation = approvalDraft($this);
 
-    $this->actingAs($this->editor)->post(route('marketing.automations.approve', $automation))->assertForbidden();
+    $this->actingAs($this->editor)->post(route('nudge.automations.approve', $automation))->assertForbidden();
 
     expect($automation->fresh()->approved_at)->toBeNull();
 });
@@ -104,7 +104,7 @@ test('an editor changing the emails pauses a live approved automation and keeps 
     $automation = approvalLive($this);
 
     $this->actingAs($this->editor)
-        ->put(route('marketing.automations.update', $automation), approvalSubjectChange($automation, 'Changed', $this->provider->id))
+        ->put(route('nudge.automations.update', $automation), approvalSubjectChange($automation, 'Changed', $this->provider->id))
         ->assertSessionHasNoErrors();
 
     $automation->refresh();
@@ -115,8 +115,8 @@ test('an editor changing the emails pauses a live approved automation and keeps 
         ->and($campaign->status)->toBe(CampaignStatus::Draft)
         ->and($campaign->snapshot->subject)->toBe('Hello');
 
-    $this->actingAs($this->owner)->post(route('marketing.automations.approve', $automation))->assertRedirect();
-    $this->actingAs($this->owner)->post(route('marketing.automations.activate', $automation))->assertSessionHasNoErrors();
+    $this->actingAs($this->owner)->post(route('nudge.automations.approve', $automation))->assertRedirect();
+    $this->actingAs($this->owner)->post(route('nudge.automations.activate', $automation))->assertSessionHasNoErrors();
 
     $campaign = Campaign::query()->where('automation_id', $automation->id)->firstOrFail();
 
@@ -129,7 +129,7 @@ test('an approver changing the emails keeps it live and re-stamps the approval',
     $this->travel(1)->hours();
 
     $this->actingAs($this->owner)
-        ->put(route('marketing.automations.update', $automation), approvalSubjectChange($automation, 'Changed', $this->provider->id))
+        ->put(route('nudge.automations.update', $automation), approvalSubjectChange($automation, 'Changed', $this->provider->id))
         ->assertSessionHasNoErrors();
 
     $fresh = $automation->fresh();
@@ -148,7 +148,7 @@ test('renaming leaves the fingerprint and approval alone', function () {
     expect(AutomationApproval::fingerprint((clone $automation)->fill(['name' => 'Other'])))->toBe($original);
 
     $this->actingAs($this->editor)
-        ->put(route('marketing.automations.update', $automation), approvalPayload($automation, ['name' => 'Other']))
+        ->put(route('nudge.automations.update', $automation), approvalPayload($automation, ['name' => 'Other']))
         ->assertSessionHasNoErrors();
 
     $fresh = $automation->fresh();
@@ -188,7 +188,7 @@ test('an editor adding a webhook pauses a live approved automation', function ()
     $steps = [...$automation->definition['steps'], ['id' => 'h1', 'type' => 'webhook', 'config' => ['url' => 'https://example.com/a']]];
 
     $this->actingAs($this->editor)
-        ->put(route('marketing.automations.update', $automation), approvalPayload($automation, ['definition' => ['steps' => $steps]]))
+        ->put(route('nudge.automations.update', $automation), approvalPayload($automation, ['definition' => ['steps' => $steps]]))
         ->assertSessionHasNoErrors();
 
     $fresh = $automation->fresh();
@@ -221,12 +221,12 @@ test('without the workspace setting nothing changes', function () {
     $this->workspace->update(['requires_campaign_approval' => false]);
     $automation = approvalDraft($this);
 
-    $this->actingAs($this->editor)->post(route('marketing.automations.activate', $automation))->assertSessionHasNoErrors();
+    $this->actingAs($this->editor)->post(route('nudge.automations.activate', $automation))->assertSessionHasNoErrors();
 
     expect($automation->fresh()->status)->toBe(AutomationStatus::Active);
 
     $this->actingAs($this->editor)
-        ->put(route('marketing.automations.update', $automation), approvalSubjectChange($automation, 'Changed', $this->provider->id))
+        ->put(route('nudge.automations.update', $automation), approvalSubjectChange($automation, 'Changed', $this->provider->id))
         ->assertSessionHasNoErrors();
 
     expect($automation->fresh()->status)->toBe(AutomationStatus::Active);

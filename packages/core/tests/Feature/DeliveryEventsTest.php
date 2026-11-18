@@ -1,23 +1,23 @@
 <?php
 
-use Gerenuk\Marketing\Actions\Campaigns\ScheduleCampaign;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Enums\SuppressionReason;
-use Gerenuk\Marketing\Jobs\ProcessDeliveryEvents;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Models\Suppression;
-use Gerenuk\Marketing\Sending\MessageHeaders;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Sending\Webhooks\BounceClassifier;
-use Gerenuk\Marketing\Sending\WebhookVerification;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Jobs\ProcessDeliveryEvents;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Sending\MessageHeaders;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\Webhooks\BounceClassifier;
+use Gerenuk\Nudge\Sending\WebhookVerification;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -69,7 +69,7 @@ describe('Mailgun', function () {
         $campaign = sentCampaignThrough($this->provider, $this);
         $recipient = CampaignRecipient::first();
 
-        $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
+        $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
             'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'No such mailbox', 'message' => ''],
         ]))->assertNoContent();
 
@@ -86,7 +86,7 @@ describe('Mailgun', function () {
         $recipient = CampaignRecipient::first();
 
         foreach ([1, 2] as $attempt) {
-            $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'delivered', $recipient->email, $recipient->id))
+            $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'delivered', $recipient->email, $recipient->id))
                 ->assertNoContent();
         }
 
@@ -101,7 +101,7 @@ describe('Mailgun', function () {
         $recipient = CampaignRecipient::first();
 
         foreach ([1, 2] as $attempt) {
-            $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
+            $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
                 'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'No such mailbox', 'message' => ''],
             ]))->assertNoContent();
         }
@@ -113,12 +113,12 @@ describe('Mailgun', function () {
     });
 
     test('repeated complaints cannot pause a workspace on their own', function () {
-        config(['marketing.sending.auto_pause.minimum_sends' => 2]);
+        config(['nudge.sending.auto_pause.minimum_sends' => 2]);
         sentCampaignThrough($this->provider, $this, contacts: 4);
         $recipient = CampaignRecipient::first();
 
         foreach ([1, 2, 3] as $attempt) {
-            $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
+            $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
                 ->assertNoContent();
         }
 
@@ -131,7 +131,7 @@ describe('Mailgun', function () {
         sentCampaignThrough($this->provider, $this);
         $recipient = CampaignRecipient::first();
 
-        $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
+        $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
             ->assertNoContent();
 
         $this->useWorkspace($this->workspace);
@@ -144,7 +144,7 @@ describe('Mailgun', function () {
         sentCampaignThrough($this->provider, $this);
         $recipient = CampaignRecipient::first();
 
-        $this->postJson(route('marketing.webhooks.provider', $this->provider->webhook_token), mailgunEvent('wrong-key', 'complained', $recipient->email, $recipient->id))
+        $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('wrong-key', 'complained', $recipient->email, $recipient->id))
             ->assertStatus(406);
 
         $this->useWorkspace($this->workspace);
@@ -161,7 +161,7 @@ describe('Mailgun', function () {
             'credentials' => ['api_key' => 'k', 'domain' => 'd', 'region' => 'us'], 'webhook_secret' => 'attacker-key',
         ]);
 
-        $this->postJson(route('marketing.webhooks.provider', $attackerProvider->webhook_token), mailgunEvent('attacker-key', 'complained', $victim->email, $victim->id))
+        $this->postJson(route('nudge.webhooks.provider', $attackerProvider->webhook_token), mailgunEvent('attacker-key', 'complained', $victim->email, $victim->id))
             ->assertNoContent();
 
         $this->useWorkspace($this->workspace);
@@ -201,7 +201,7 @@ test('a soft bounce is recorded as a deferral and does not suppress', function (
     $campaign = sentCampaignThrough($provider, $this);
     $recipient = CampaignRecipient::first();
 
-    $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), [
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), [
         'event' => 'bounce',
         'time' => time(),
         'email' => $recipient->email,
@@ -221,14 +221,14 @@ test('a soft bounce is recorded as a deferral and does not suppress', function (
 });
 
 test('unknown webhook tokens are not found', function () {
-    $this->postJson(route('marketing.webhooks.provider', 'nope'), [])->assertNotFound();
+    $this->postJson(route('nudge.webhooks.provider', 'nope'), [])->assertNotFound();
 });
 
 describe('Amazon SES through SNS', function () {
     beforeEach(function () {
         $this->provider = Provider::create([
             'name' => 'SES', 'type' => ProviderType::AmazonSes, 'max_per_second' => 14,
-            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => 's', 'region' => 'eu-west-1', 'configuration_set' => 'marketing'],
+            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => 's', 'region' => 'eu-west-1', 'configuration_set' => 'nudge'],
         ]);
 
         $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
@@ -273,7 +273,7 @@ describe('Amazon SES through SNS', function () {
             'bounce' => ['bounceType' => 'Permanent', 'bounceSubType' => 'General', 'timestamp' => now()->toIso8601String(), 'bouncedRecipients' => [['emailAddress' => $recipient->email]]],
         ]);
 
-        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], ['CONTENT_TYPE' => 'text/plain'],
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], ['CONTENT_TYPE' => 'text/plain'],
             json_encode(snsMessage(['Type' => 'Notification', 'Message' => $notification], $this->snsKey, $this->certUrl)))
             ->assertNoContent();
 
@@ -286,14 +286,14 @@ describe('Amazon SES through SNS', function () {
         $message = snsMessage(['Type' => 'Notification', 'Message' => '{"eventType":"Complaint"}'], $this->snsKey, $this->certUrl);
         $message['Message'] = '{"eventType":"Bounce"}';
 
-        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [], json_encode($message))
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [], json_encode($message))
             ->assertStatus(406);
     });
 
     test('certificates from outside Amazon are refused', function () {
         $message = snsMessage(['Type' => 'Notification', 'Message' => '{}'], $this->snsKey, 'https://evil.example.com/cert.pem');
 
-        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [], json_encode($message))
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [], json_encode($message))
             ->assertStatus(406);
 
         Http::assertNothingSent();
@@ -302,7 +302,7 @@ describe('Amazon SES through SNS', function () {
     test('subscription confirmations are accepted automatically', function () {
         $subscribeUrl = 'https://sns.eu-west-1.amazonaws.com/?Action=ConfirmSubscription&Token=abc';
 
-        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
             json_encode(snsMessage(['Type' => 'SubscriptionConfirmation', 'Message' => 'Confirm', 'SubscribeURL' => $subscribeUrl, 'Token' => 'abc'], $this->snsKey, $this->certUrl)))
             ->assertNoContent();
 
@@ -310,7 +310,7 @@ describe('Amazon SES through SNS', function () {
     });
 
     test('the first signed message pins the SNS topic', function () {
-        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
             json_encode(snsMessage(['Type' => 'Notification', 'Message' => '{}'], $this->snsKey, $this->certUrl)))
             ->assertNoContent();
 
@@ -328,7 +328,7 @@ describe('Amazon SES through SNS', function () {
             'bounce' => ['bounceType' => 'Permanent', 'bounceSubType' => 'General', 'timestamp' => now()->toIso8601String(), 'bouncedRecipients' => [['emailAddress' => $recipient->email]]],
         ]);
 
-        $this->call('POST', route('marketing.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
             json_encode(snsMessage(['Type' => 'Notification', 'Message' => $notification, 'TopicArn' => 'arn:aws:sns:eu-west-1:999:attacker'], $this->snsKey, $this->certUrl)))
             ->assertStatus(403);
 
@@ -340,9 +340,9 @@ describe('Amazon SES through SNS', function () {
     test('saving an SES provider clears the pinned topic', function () {
         $this->provider->forceFill(['webhook_topic_arn' => 'arn:aws:sns:eu-west-1:1:ses'])->save();
 
-        $this->actingAs($this->owner)->put(route('marketing.providers.update', $this->provider), [
+        $this->actingAs($this->owner)->put(route('nudge.providers.update', $this->provider), [
             'name' => 'SES', 'max_per_second' => 14,
-            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => '', 'region' => 'eu-west-1', 'configuration_set' => 'marketing'],
+            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => '', 'region' => 'eu-west-1', 'configuration_set' => 'nudge'],
         ])->assertSessionHasNoErrors();
 
         expect($this->provider->fresh()->webhook_topic_arn)->toBeNull();
@@ -350,7 +350,7 @@ describe('Amazon SES through SNS', function () {
 });
 
 test('too many bounces pause the workspace', function () {
-    config(['marketing.sending.auto_pause.minimum_sends' => 2]);
+    config(['nudge.sending.auto_pause.minimum_sends' => 2]);
     $provider = Provider::create([
         'name' => 'Mailgun', 'type' => ProviderType::Mailgun, 'max_per_second' => 100,
         'credentials' => ['api_key' => 'key', 'domain' => 'mg.test', 'region' => 'us'], 'webhook_secret' => 'k',
@@ -358,7 +358,7 @@ test('too many bounces pause the workspace', function () {
     sentCampaignThrough($provider, $this, contacts: 4);
     $recipient = CampaignRecipient::first();
 
-    $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), mailgunEvent('k', 'failed', $recipient->email, $recipient->id, [
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), mailgunEvent('k', 'failed', $recipient->email, $recipient->id, [
         'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'gone', 'message' => ''],
     ]))->assertNoContent();
 
@@ -373,7 +373,7 @@ test('a payload the parser cannot read is rejected rather than erroring', functi
     ]);
     $payload = mailgunEvent('k', 'failed', 'a@example.com', 1, ['severity' => 'permanent', 'reason' => 'bounce']);
 
-    $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), $payload)->assertStatus(400);
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), $payload)->assertStatus(400);
 });
 
 test('a signing-secret provider without a key refuses webhooks', function (ProviderType $type) {
@@ -386,7 +386,7 @@ test('a signing-secret provider without a key refuses webhooks', function (Provi
 
     $provider = Provider::create(['name' => 'No key', 'type' => $type, 'max_per_second' => 1, 'credentials' => $credentials, 'webhook_secret' => null]);
 
-    $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), ['any' => 'payload'])->assertStatus(403);
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), ['any' => 'payload'])->assertStatus(403);
 
     Queue::assertNotPushed(ProcessDeliveryEvents::class);
 })->with([ProviderType::Mailgun, ProviderType::SendGrid, ProviderType::Resend, ProviderType::MailerSend, ProviderType::Mandrill]);
@@ -402,7 +402,7 @@ test('every webhook provider rejects requests with the wrong credentials', funct
     $basic = $type->webhookVerification() === WebhookVerification::BasicAuth;
     $provider = Provider::create(['name' => 'Wrong', 'type' => $type, 'max_per_second' => 1, 'credentials' => $credentials, 'webhook_secret' => $basic ? 'gmk:wrong' : 'wrong']);
 
-    $response = $this->postJson(route('marketing.webhooks.provider', $provider->webhook_token), ['any' => 'payload'], ['Authorization' => 'Basic '.base64_encode('gmk:other')]);
+    $response = $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), ['any' => 'payload'], ['Authorization' => 'Basic '.base64_encode('gmk:other')]);
 
     expect($response->status())->toBeGreaterThanOrEqual(400)->toBeLessThan(500);
     Queue::assertNotPushed(ProcessDeliveryEvents::class);

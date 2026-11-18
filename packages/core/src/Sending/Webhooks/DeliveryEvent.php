@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending\Webhooks;
+namespace Gerenuk\Nudge\Sending\Webhooks;
 
 use Carbon\CarbonImmutable;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Sending\MessageHeaders;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Sending\MessageHeaders;
 
 /**
  * A provider webhook event in one shape, whichever provider sent it. Serialisable for the queue.

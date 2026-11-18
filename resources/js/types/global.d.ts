@@ -1,5 +1,5 @@
 import type { Auth } from '@/types/auth';
-import type { WorkspaceSharedProps } from '@marketing/types';
+import type { WorkspaceSharedProps } from '@nudge/types';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {

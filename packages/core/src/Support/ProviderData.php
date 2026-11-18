@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
 /**
  * Validated provider settings from the connect and edit forms.

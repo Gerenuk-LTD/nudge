@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending;
+namespace Gerenuk\Nudge\Sending;
 
 /**
  * Names of the metadata we attach to every message so webhook events can be traced back to a recipient.

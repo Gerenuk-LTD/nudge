@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Permission } from '@marketing/types';
+import type { Permission } from '@nudge/types';
 import {
     PERMISSION_GROUPS,
     countChanges,

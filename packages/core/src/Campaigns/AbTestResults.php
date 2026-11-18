@@ -1,9 +1,9 @@
 <?php
 
-namespace Gerenuk\Marketing\Campaigns;
+namespace Gerenuk\Nudge\Campaigns;
 
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
 
 /**
  * How each A/B variant performed among the test sample.

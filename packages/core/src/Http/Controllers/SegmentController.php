@@ -1,17 +1,17 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Segment;
-use Gerenuk\Marketing\Segments\SegmentDefinitionValidator;
-use Gerenuk\Marketing\Segments\SegmentField;
-use Gerenuk\Marketing\Segments\SegmentFieldCatalog;
-use Gerenuk\Marketing\Segments\SegmentQuery;
-use Gerenuk\Marketing\Segments\WithdrawSegmentApprovals;
-use Gerenuk\Marketing\Support\JsonChanges;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Segment;
+use Gerenuk\Nudge\Segments\SegmentDefinitionValidator;
+use Gerenuk\Nudge\Segments\SegmentField;
+use Gerenuk\Nudge\Segments\SegmentFieldCatalog;
+use Gerenuk\Nudge\Segments\SegmentQuery;
+use Gerenuk\Nudge\Segments\WithdrawSegmentApprovals;
+use Gerenuk\Nudge\Support\JsonChanges;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ class SegmentController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('marketing/segments/index', [
+        return Inertia::render('nudge/segments/index', [
             'segments' => Segment::query()->orderBy('name')->get()->map(fn (Segment $segment) => [
                 'id' => $segment->id,
                 'name' => $segment->name,
@@ -53,7 +53,7 @@ class SegmentController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Segment saved.')]);
 
-        return to_route('marketing.segments.edit', $segment);
+        return to_route('nudge.segments.edit', $segment);
     }
 
     public function edit(Segment $segment): Response
@@ -78,14 +78,14 @@ class SegmentController extends Controller
             ? ['type' => 'warning', 'message' => __('Segment saved. Approval was withdrawn from :count campaigns or automations that use it.', ['count' => $count])]
             : ['type' => 'success', 'message' => __('Segment saved.')]);
 
-        return to_route('marketing.segments.edit', $segment);
+        return to_route('nudge.segments.edit', $segment);
     }
 
     public function destroy(Segment $segment): RedirectResponse
     {
         $segment->delete();
 
-        return to_route('marketing.segments.index');
+        return to_route('nudge.segments.index');
     }
 
     /**
@@ -114,7 +114,7 @@ class SegmentController extends Controller
 
     private function form(?Segment $segment): Response
     {
-        return Inertia::render('marketing/segments/form', [
+        return Inertia::render('nudge/segments/form', [
             'segment' => $segment === null ? null : [
                 'id' => $segment->id,
                 'name' => $segment->name,

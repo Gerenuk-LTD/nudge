@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers;
+namespace Gerenuk\Nudge\Http\Controllers;
 
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\EmailAsset;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\EmailAsset;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -33,11 +33,11 @@ class EmailAssetController extends Controller
 
         // SVG is left out on purpose: it can carry scripts, and many inboxes will not show it anyway.
         $request->validate([
-            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:'.config('marketing.email_assets.max_file_kilobytes')],
+            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:'.config('nudge.email_assets.max_file_kilobytes')],
         ]);
 
         $file = $request->file('file');
-        $disk = config('marketing.email_assets.disk');
+        $disk = config('nudge.email_assets.disk');
         $workspace = $currentWorkspace->getOrFail();
         $path = $file->store("email-assets/{$workspace->id}", ['disk' => $disk, 'visibility' => 'public'])
             ?: throw new RuntimeException('The image could not be stored.');

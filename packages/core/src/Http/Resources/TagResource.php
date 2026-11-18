@@ -1,8 +1,8 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Resources;
+namespace Gerenuk\Nudge\Http\Resources;
 
-use Gerenuk\Marketing\Models\Tag;
+use Gerenuk\Nudge\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

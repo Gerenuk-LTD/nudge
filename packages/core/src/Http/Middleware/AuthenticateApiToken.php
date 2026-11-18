@@ -1,13 +1,13 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Middleware;
+namespace Gerenuk\Nudge\Http\Middleware;
 
 use Closure;
-use Gerenuk\Marketing\Http\ApiError;
-use Gerenuk\Marketing\Http\ApiErrorCode;
-use Gerenuk\Marketing\Models\ApiToken;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Http\ApiError;
+use Gerenuk\Nudge\Http\ApiErrorCode;
+use Gerenuk\Nudge\Models\ApiToken;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +21,7 @@ class AuthenticateApiToken
 
     public function handle(Request $request, Closure $next): Response
     {
-        $failureKey = 'marketing-api-auth:'.$request->ip();
+        $failureKey = 'nudge-api-auth:'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($failureKey, 30)) {
             return ApiError::response(ApiErrorCode::RateLimited, 'Too many requests.', 429, ['Retry-After' => (string) RateLimiter::availableIn($failureKey)]);
@@ -41,7 +41,7 @@ class AuthenticateApiToken
         }
 
         $this->currentWorkspace->set(Workspace::findOrFail($token->workspace_id));
-        $request->attributes->set('marketing_api_token', $token);
+        $request->attributes->set('nudge_api_token', $token);
 
         return $next($request);
     }

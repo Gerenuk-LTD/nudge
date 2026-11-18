@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Http\Controllers\Public;
+namespace Gerenuk\Nudge\Http\Controllers\Public;
 
-use Gerenuk\Marketing\Actions\Campaigns\RecordEngagement;
-use Gerenuk\Marketing\Enums\ContactStatus;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Http\Controllers\Controller;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Workspace;
-use Gerenuk\Marketing\Sending\TrackingUrls;
-use Gerenuk\Marketing\Tenancy\CurrentWorkspace;
+use Gerenuk\Nudge\Actions\Campaigns\RecordEngagement;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Http\Controllers\Controller;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Workspace;
+use Gerenuk\Nudge\Sending\TrackingUrls;
+use Gerenuk\Nudge\Tenancy\CurrentWorkspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -34,7 +34,7 @@ class UnsubscribeController extends Controller
         $model = $this->recipient($recipient, $signature);
         $workspace = Workspace::findOrFail($model->workspace_id);
 
-        return $this->currentWorkspace->runAs($workspace, fn () => Inertia::render('marketing/public/unsubscribe', [
+        return $this->currentWorkspace->runAs($workspace, fn () => Inertia::render('nudge/public/unsubscribe', [
             'workspace' => $workspace->name,
             'email' => $model->email,
             'unsubscribed' => $model->contact->status === ContactStatus::Unsubscribed,

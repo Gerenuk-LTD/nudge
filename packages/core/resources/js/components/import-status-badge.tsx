@@ -1,6 +1,6 @@
-import { StatusBadge } from '@marketing/components/status-badge';
-import type { StatusTone } from '@marketing/components/status-badge';
-import type { ImportStatus } from '@marketing/types';
+import { StatusBadge } from '@nudge/components/status-badge';
+import type { StatusTone } from '@nudge/components/status-badge';
+import type { ImportStatus } from '@nudge/types';
 
 const statuses: Record<ImportStatus, { label: string; tone: StatusTone }> = {
     pending: { label: 'Needs mapping', tone: 'warning' },

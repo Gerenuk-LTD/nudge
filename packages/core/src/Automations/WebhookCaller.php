@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Automations;
+namespace Gerenuk\Nudge\Automations;
 
 use Illuminate\Http\Client\Factory as Http;
 use RuntimeException;

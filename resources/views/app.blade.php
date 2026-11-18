@@ -39,7 +39,7 @@
 
         @viteReactRefresh
         {{-- Core package pages live outside resources/js/pages; app.tsx loads them itself. --}}
-        @vite(['resources/css/app.css', 'resources/js/app.tsx', ...(str_starts_with($page['component'], 'marketing/') ? [] : ["resources/js/pages/{$page['component']}.tsx"])])
+        @vite(['resources/css/app.css', 'resources/js/app.tsx', ...(str_starts_with($page['component'], 'nudge/') ? [] : ["resources/js/pages/{$page['component']}.tsx"])])
         <x-inertia::head>
             <title>{{ config('app.name', 'Nudge') }}</title>
         </x-inertia::head>

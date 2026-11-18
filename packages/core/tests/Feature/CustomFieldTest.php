@@ -1,10 +1,10 @@
 <?php
 
-use Gerenuk\Marketing\Enums\AutomationTrigger;
-use Gerenuk\Marketing\Models\Automation;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\CustomFieldDefinition;
-use Gerenuk\Marketing\Models\Segment;
+use Gerenuk\Nudge\Enums\AutomationTrigger;
+use Gerenuk\Nudge\Models\Automation;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\CustomFieldDefinition;
+use Gerenuk\Nudge\Models\Segment;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -28,7 +28,7 @@ test('the field list shows how many contacts have a value and where each field i
         'definition' => ['steps' => [['id' => 'set', 'type' => 'update_contact', 'config' => ['fields' => ['plan' => 'gift']]]]],
     ]);
 
-    $this->actingAs($this->owner)->get(route('marketing.custom-fields.index'))
+    $this->actingAs($this->owner)->get(route('nudge.custom-fields.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('activeContacts', 3)
             ->where('fields.0.key', 'birthday')
@@ -44,11 +44,11 @@ test('the field list shows how many contacts have a value and where each field i
 test('a new field needs a well formed key that no other field uses', function () {
     CustomFieldDefinition::create(['key' => 'plan', 'label' => 'Plan', 'type' => 'text']);
 
-    $this->actingAs($this->owner)->post(route('marketing.custom-fields.store'), ['label' => 'Plan', 'key' => 'plan', 'type' => 'text'])
+    $this->actingAs($this->owner)->post(route('nudge.custom-fields.store'), ['label' => 'Plan', 'key' => 'plan', 'type' => 'text'])
         ->assertSessionHasErrors(['key' => 'Another field already uses this key.']);
-    $this->actingAs($this->owner)->post(route('marketing.custom-fields.store'), ['label' => 'Size', 'key' => 'Company Size', 'type' => 'text'])
+    $this->actingAs($this->owner)->post(route('nudge.custom-fields.store'), ['label' => 'Size', 'key' => 'Company Size', 'type' => 'text'])
         ->assertSessionHasErrors(['key' => 'Use lowercase letters, numbers and underscores, starting with a letter.']);
-    $this->actingAs($this->owner)->post(route('marketing.custom-fields.store'), ['label' => 'Size', 'key' => 'company_size', 'type' => 'number'])
+    $this->actingAs($this->owner)->post(route('nudge.custom-fields.store'), ['label' => 'Size', 'key' => 'company_size', 'type' => 'number'])
         ->assertSessionHasNoErrors();
 
     expect(CustomFieldDefinition::pluck('key')->sort()->values()->all())->toBe(['company_size', 'plan']);

@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Models\Concerns;
+namespace Gerenuk\Nudge\Models\Concerns;
 
-use Gerenuk\Marketing\Enums\Permission;
-use Gerenuk\Marketing\Models\Membership;
-use Gerenuk\Marketing\Models\Workspace;
+use Gerenuk\Nudge\Enums\Permission;
+use Gerenuk\Nudge\Models\Membership;
+use Gerenuk\Nudge\Models\Workspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;

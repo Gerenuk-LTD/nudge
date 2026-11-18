@@ -1,15 +1,15 @@
 <?php
 
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Enums\RecipientStatus;
-use Gerenuk\Marketing\Models\ActivityEvent;
-use Gerenuk\Marketing\Models\Campaign;
-use Gerenuk\Marketing\Models\CampaignRecipient;
-use Gerenuk\Marketing\Models\Contact;
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\ProviderTransports;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Tests\Fixtures\CapturingTransports;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Symfony\Component\Mailer\Transport;
@@ -29,7 +29,7 @@ test('every provider type builds a working transport from its default credential
 })->with(ProviderType::cases());
 
 test('credentials and the webhook secret are encrypted at rest', function () {
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
         'name' => 'Main', 'type' => 'mailgun', 'max_per_second' => 10,
         'credentials' => ['api_key' => 'key-123', 'domain' => 'mg.acme.test', 'region' => 'eu'],
         'webhook_secret' => 'signing-456',
@@ -43,16 +43,16 @@ test('credentials and the webhook secret are encrypted at rest', function () {
 });
 
 test('leaving a secret blank on edit keeps the saved one', function () {
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
         'name' => 'Main', 'type' => 'postmark', 'max_per_second' => 10,
         'credentials' => ['server_token' => 'secret-token', 'message_stream' => 'broadcast'],
     ]);
     $provider = Provider::first();
 
-    $this->actingAs($this->owner)->get(route('marketing.providers.edit', $provider))
+    $this->actingAs($this->owner)->get(route('nudge.providers.edit', $provider))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('provider.credentials.server_token', ''));
 
-    $this->actingAs($this->owner)->put(route('marketing.providers.update', $provider), [
+    $this->actingAs($this->owner)->put(route('nudge.providers.update', $provider), [
         'name' => 'Renamed', 'max_per_second' => 5,
         'credentials' => ['server_token' => '', 'message_stream' => 'newsletters'],
     ])->assertSessionHasNoErrors();
@@ -62,19 +62,19 @@ test('leaving a secret blank on edit keeps the saved one', function () {
 });
 
 test('basic-auth providers get generated credentials in their webhook URL', function () {
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
         'name' => 'Brevo', 'type' => 'brevo', 'max_per_second' => 10, 'credentials' => ['api_key' => 'k'],
     ]);
     $provider = Provider::first();
 
     expect($provider->webhook_secret)->toStartWith('gmk:');
 
-    $this->actingAs($this->owner)->get(route('marketing.providers.show', $provider))
+    $this->actingAs($this->owner)->get(route('nudge.providers.show', $provider))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('provider.webhook_url', fn (string $url) => str_contains($url, 'gmk:') && str_contains($url, $provider->webhook_token)));
 });
 
 test('required credentials are validated per provider type', function () {
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
         'name' => 'SES', 'type' => 'ses', 'max_per_second' => 10, 'credentials' => ['access_key_id' => 'AKIA'],
     ])->assertSessionHasErrors(['credentials.secret_access_key', 'credentials.region']);
 });
@@ -84,7 +84,7 @@ test('a test message can be sent through a saved provider', function () {
     $this->app->instance(ProviderTransports::class, $capture);
     $provider = Provider::create(['name' => 'SMTP', 'type' => ProviderType::Smtp, 'max_per_second' => 1, 'credentials' => ['host' => 'h', 'port' => '25', 'encryption' => 'starttls']]);
 
-    $this->actingAs($this->owner)->post(route('marketing.providers.test', $provider), ['to' => 'me@example.com', 'from' => 'hi@acme.test'])
+    $this->actingAs($this->owner)->post(route('nudge.providers.test', $provider), ['to' => 'me@example.com', 'from' => 'hi@acme.test'])
         ->assertSessionHasNoErrors();
 
     expect($capture->recipients())->toBe(['me@example.com']);
@@ -93,7 +93,7 @@ test('a test message can be sent through a saved provider', function () {
 test('only people who can manage providers see them', function () {
     $editor = $this->addMember($this->workspace, 'Editor');
 
-    $this->actingAs($editor)->get(route('marketing.providers.index'))->assertForbidden();
+    $this->actingAs($editor)->get(route('nudge.providers.index'))->assertForbidden();
 });
 
 test('the provider list shows each provider\'s sends and bounces from the last week', function () {
@@ -114,7 +114,7 @@ test('the provider list shows each provider\'s sends and bounces from the last w
     $stale = CampaignRecipient::create(['campaign_id' => $old->id, 'contact_id' => Contact::first()->id, 'email' => 'x@example.com', 'status' => RecipientStatus::Delivered]);
     ActivityEvent::recordFor($stale, EventType::Sent, occurredAt: now()->subDays(8));
 
-    $this->actingAs($this->owner)->get(route('marketing.providers.index'))
+    $this->actingAs($this->owner)->get(route('nudge.providers.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('providers.0.id', $mailgun->id)
             ->where('providers.0.sent_7d', 3)
@@ -129,13 +129,13 @@ test('private smtp hosts can be refused by config', function () {
         'credentials' => ['host' => '127.0.0.1', 'port' => '25', 'encryption' => 'starttls'],
     ];
 
-    config(['marketing.sending.allow_private_smtp_hosts' => false]);
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload)
+    config(['nudge.sending.allow_private_smtp_hosts' => false]);
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload)
         ->assertSessionHasErrors('credentials.host');
     expect(Provider::count())->toBe(0);
 
-    config(['marketing.sending.allow_private_smtp_hosts' => true]);
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload)
+    config(['nudge.sending.allow_private_smtp_hosts' => true]);
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload)
         ->assertSessionHasNoErrors();
     expect(Provider::count())->toBe(1);
 });
@@ -146,19 +146,19 @@ test('ses regions must be real region codes', function () {
         'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => 's', 'region' => $region],
     ];
 
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload('x@evil.test#'))
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload('x@evil.test#'))
         ->assertSessionHasErrors('credentials.region');
     expect(Provider::count())->toBe(0);
 
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload('eu-west-1'))
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload('eu-west-1'))
         ->assertSessionHasNoErrors();
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), $payload('us-gov-west-1'))
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload('us-gov-west-1'))
         ->assertSessionHasNoErrors();
     expect(Provider::count())->toBe(2);
 });
 
 test('scaleway regions must be a known region', function () {
-    $this->actingAs($this->owner)->post(route('marketing.providers.store'), [
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
         'name' => 'Scaleway', 'type' => 'scaleway', 'max_per_second' => 10,
         'credentials' => ['project_id' => 'p', 'secret_key' => 's', 'region' => 'evil.test#'],
     ])->assertSessionHasErrors('credentials.region');

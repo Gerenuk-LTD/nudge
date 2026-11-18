@@ -1,10 +1,10 @@
 <?php
 
-namespace Gerenuk\Marketing\Sending\Webhooks;
+namespace Gerenuk\Nudge\Sending\Webhooks;
 
 use Carbon\CarbonImmutable;
-use Gerenuk\Marketing\Enums\EventType;
-use Gerenuk\Marketing\Models\Provider;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Models\Provider;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -146,7 +146,7 @@ class SnsParser
             throw new RejectWebhookException(406, 'The signing certificate is not hosted by Amazon SNS.');
         }
 
-        $certificate = Cache::remember('marketing:sns-cert:'.hash('sha256', $certificateUrl), now()->addDay(), function () use ($certificateUrl): string {
+        $certificate = Cache::remember('nudge:sns-cert:'.hash('sha256', $certificateUrl), now()->addDay(), function () use ($certificateUrl): string {
             return $this->http->timeout(10)->get($certificateUrl)->throw()->body();
         });
 

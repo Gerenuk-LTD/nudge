@@ -1,6 +1,6 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Database\Query\Builder as QueryBuilder;

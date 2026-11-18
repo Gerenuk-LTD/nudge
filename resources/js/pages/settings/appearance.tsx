@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import AppearanceTabs from '@/components/appearance-tabs';
-import { SettingsSection } from '@marketing/components/settings-section';
+import { SettingsSection } from '@nudge/components/settings-section';
 import { edit as editAppearance } from '@/routes/appearance';
 
 export default function Appearance() {

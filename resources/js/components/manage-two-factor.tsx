@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { SettingsSection } from '@marketing/components/settings-section';
+import { SettingsSection } from '@nudge/components/settings-section';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Badge } from '@/components/ui/badge';

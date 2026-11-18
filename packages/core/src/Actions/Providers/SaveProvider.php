@@ -1,12 +1,12 @@
 <?php
 
-namespace Gerenuk\Marketing\Actions\Providers;
+namespace Gerenuk\Nudge\Actions\Providers;
 
-use Gerenuk\Marketing\Models\Provider;
-use Gerenuk\Marketing\Sending\CredentialField;
-use Gerenuk\Marketing\Sending\ProviderType;
-use Gerenuk\Marketing\Sending\WebhookVerification;
-use Gerenuk\Marketing\Support\ProviderData;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Sending\CredentialField;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\WebhookVerification;
+use Gerenuk\Nudge\Support\ProviderData;
 use Illuminate\Support\Str;
 
 class SaveProvider

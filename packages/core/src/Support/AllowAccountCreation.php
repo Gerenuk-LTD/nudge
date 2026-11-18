@@ -1,16 +1,16 @@
 <?php
 
-namespace Gerenuk\Marketing\Support;
+namespace Gerenuk\Nudge\Support;
 
-use Gerenuk\Marketing\Contracts\AccountCreationPolicy;
-use Gerenuk\Marketing\Contracts\MarketingUser;
+use Gerenuk\Nudge\Contracts\AccountCreationPolicy;
+use Gerenuk\Nudge\Contracts\NudgeUser;
 
 /**
  * The default policy: anyone without a workspace may start an account.
  */
 class AllowAccountCreation implements AccountCreationPolicy
 {
-    public function allows(MarketingUser $user): bool
+    public function allows(NudgeUser $user): bool
     {
         return true;
     }
