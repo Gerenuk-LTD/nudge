@@ -386,7 +386,7 @@ class CampaignController extends Controller
             'opened' => 'opened_at',
             'clicked' => 'clicked_at',
         ], 'id')
-            ->paginate(TableQuery::perPage($request, 50), ['id', 'contact_id', 'email', 'status', 'error', 'sent_at', 'opened_at', 'clicked_at'])
+            ->paginate(TableQuery::perPage($request), ['id', 'contact_id', 'email', 'status', 'error', 'sent_at', 'opened_at', 'clicked_at'])
             ->withQueryString()
             ->through(fn (CampaignRecipient $recipient) => [
                 ...$recipient->only(['id', 'contact_id', 'email', 'error']),

@@ -68,11 +68,25 @@ class TableQuery
         });
     }
 
-    public static function perPage(Request $request, int $default = 25): int
+    /**
+     * The requested page size when it is one of the allowed ones, otherwise `nudge.tables.per_page`.
+     */
+    public static function perPage(Request $request): int
     {
+        $default = self::defaultPerPage();
         $perPage = $request->integer('per_page', $default);
 
         return in_array($perPage, self::PAGE_SIZES, true) ? $perPage : $default;
+    }
+
+    /**
+     * The configured page size, or the smallest allowed one when it is set to something the picker can't show.
+     */
+    public static function defaultPerPage(): int
+    {
+        $configured = (int) config('nudge.tables.per_page', self::PAGE_SIZES[0]);
+
+        return in_array($configured, self::PAGE_SIZES, true) ? $configured : self::PAGE_SIZES[0];
     }
 
     /**

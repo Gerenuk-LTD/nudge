@@ -83,6 +83,8 @@ stdout_logfile=/var/www/nudge/storage/logs/worker.log
 
 Sending, automations and imports use the `default` queue unless you set `NUDGE_SENDING_QUEUE` or `NUDGE_IMPORTS_QUEUE`. If you do set them, pass the queue names to `queue:work --queue=...`.
 
+Dashboard tables show 10 rows a page until someone picks another size. Set `NUDGE_TABLE_PER_PAGE` to 25, 50 or 100 to change the default; any other value falls back to 10.
+
 The scheduler starts scheduled campaigns and recovers stuck work. Add this cron line:
 
 ```cron

@@ -36,7 +36,7 @@ class SuppressionController extends Controller
             'reason' => 'reason',
             'since' => 'created_at',
         ])
-            ->paginate(TableQuery::perPage($request, 50))
+            ->paginate(TableQuery::perPage($request))
             ->withQueryString();
 
         $contacts = Contact::query()

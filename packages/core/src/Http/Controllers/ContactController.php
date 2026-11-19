@@ -40,7 +40,7 @@ class ContactController extends Controller
             'added' => 'created_at',
         ])
             ->with('tags:id,name')
-            ->paginate(TableQuery::perPage($request, 50))
+            ->paginate(TableQuery::perPage($request))
             ->withQueryString()
             ->through(fn (Contact $contact) => [
                 'id' => $contact->id,

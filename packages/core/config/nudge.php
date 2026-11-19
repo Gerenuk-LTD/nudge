@@ -62,4 +62,9 @@ return [
 
     'invitation_expiry_days' => 7,
 
+    // Rows a dashboard table shows before anyone picks another size: one of 10, 25, 50 or 100.
+    'tables' => [
+        'per_page' => (int) env('NUDGE_TABLE_PER_PAGE', 10),
+    ],
+
 ];
