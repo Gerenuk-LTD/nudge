@@ -1,11 +1,6 @@
 import InputError from '@/components/input-error';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { envelopeInput } from '@nudge/components/email-envelope';
+import { Input } from '@/components/ui/input';
+import { StatusBadge } from '@nudge/components/status-badge';
 
 /** Turns a variable's tag into a label people read: promo_code → Promo code. */
 function labelFor(tag: string): string {
@@ -14,7 +9,10 @@ function labelFor(tag: string): string {
     return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** The campaign's own tags and their values, laid out like the rest of the Content step. */
+/**
+ * The tags in this email that aren't contact details, such as `{{ promo_code }}`, each with the one value
+ * everyone gets. Laid out like the Options card below it: a row per variable, named on the left.
+ */
 export function CampaignVariables({
     variables,
     values,
@@ -26,9 +24,10 @@ export function CampaignVariables({
     onChange: (values: Record<string, string>) => void;
     errors: Record<string, string | undefined>;
 }) {
+    const isEmpty = (tag: string) => !(values[tag] ?? '').trim();
     const missing = variables.filter(
-        ({ tag, fallback }) => fallback === null && !(values[tag] ?? '').trim(),
-    );
+        ({ tag, fallback }) => fallback === null && isEmpty(tag),
+    ).length;
 
     return (
         <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
@@ -36,67 +35,82 @@ export function CampaignVariables({
                 <div className="space-y-1">
                     <h2 className="text-base font-semibold">Variables</h2>
                     <p className="text-sm text-muted-foreground">
-                        Filled in the same for everyone who gets this campaign.
+                        Tags in this email that aren't contact details. Each
+                        gets one value, the same for everyone.
                     </p>
                 </div>
-                {missing.length > 0 && (
-                    <span className="shrink-0 pt-0.5 text-13 font-medium text-amber-700 dark:text-amber-400">
-                        {missing.length} to fill in
-                    </span>
-                )}
+                <div className="shrink-0 pt-0.5">
+                    {missing > 0 ? (
+                        <StatusBadge tone="warning">
+                            {missing} to fill in
+                        </StatusBadge>
+                    ) : (
+                        <StatusBadge tone="success">All filled in</StatusBadge>
+                    )}
+                </div>
             </header>
-            <div className="max-h-[30rem] divide-y overflow-y-auto">
-                {variables.map(({ tag, fallback }) => (
-                    <div key={tag} className="px-4 py-1 sm:px-6">
-                        <div className="flex items-center gap-3">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
+
+            <div className="divide-y">
+                {variables.map(({ tag, fallback }) => {
+                    const id = `variable-${tag}`;
+                    const error = errors[`variables.${tag}`];
+                    const required = fallback === null;
+
+                    return (
+                        <div
+                            key={tag}
+                            className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:items-start sm:gap-6 sm:px-6"
+                        >
+                            <div className="flex min-w-0 items-start justify-between gap-3 sm:pt-1.5">
+                                <div className="grid min-w-0 gap-1">
                                     <label
-                                        htmlFor={`variable-${tag}`}
-                                        className="w-32 shrink-0 truncate text-13 text-muted-foreground sm:w-40"
+                                        htmlFor={id}
+                                        className="truncate text-sm font-medium"
                                     >
                                         {labelFor(tag)}
                                     </label>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                    side="top"
-                                    className="font-mono text-xs"
-                                >{`{{ ${tag} }}`}</TooltipContent>
-                            </Tooltip>
-                            <input
-                                id={`variable-${tag}`}
-                                value={values[tag] ?? ''}
-                                placeholder={
-                                    fallback !== null
-                                        ? `${fallback} if left empty`
-                                        : 'Needed before sending'
-                                }
-                                aria-invalid={
-                                    errors[`variables.${tag}`]
-                                        ? true
-                                        : undefined
-                                }
-                                onChange={(event) =>
-                                    onChange({
-                                        ...values,
-                                        [tag]: event.target.value,
-                                    })
-                                }
-                                className={cn(
-                                    envelopeInput,
-                                    'flex-1 font-medium placeholder:font-normal',
-                                    fallback === null &&
-                                        'placeholder:text-amber-700/70 dark:placeholder:text-amber-400/70',
+                                    <code className="w-fit max-w-full truncate rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                                        {`{{ ${tag} }}`}
+                                    </code>
+                                </div>
+                                {required && isEmpty(tag) && (
+                                    <StatusBadge tone="warning">
+                                        Required
+                                    </StatusBadge>
                                 )}
-                            />
+                            </div>
+
+                            <div className="grid min-w-0 gap-1.5">
+                                <Input
+                                    id={id}
+                                    value={values[tag] ?? ''}
+                                    placeholder={fallback ?? 'Value'}
+                                    aria-invalid={error ? true : undefined}
+                                    aria-describedby={
+                                        required ? undefined : `${id}-hint`
+                                    }
+                                    onChange={(event) =>
+                                        onChange({
+                                            ...values,
+                                            [tag]: event.target.value,
+                                        })
+                                    }
+                                />
+                                {!required && (
+                                    <p
+                                        id={`${id}-hint`}
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        {`Optional. Left empty, it shows "${fallback}".`}
+                                    </p>
+                                )}
+                                <InputError message={error} />
+                            </div>
                         </div>
-                        <InputError
-                            message={errors[`variables.${tag}`]}
-                            className="pb-2 pl-35 sm:pl-43"
-                        />
-                    </div>
-                ))}
+                    );
+                })}
             </div>
+
             {errors.variables && (
                 <InputError
                     message={errors.variables}
