@@ -282,9 +282,22 @@ export default function ShowCampaign({
                               ? `Sent ${formatDateTime(campaign.sent_at)}`
                               : undefined
                     }
+                    meta={<CampaignStatusBadge status={campaign.status} />}
                     actions={
                         <>
-                            <CampaignStatusBadge status={campaign.status} />
+                            {can('campaigns.manage') &&
+                                campaign.kind === 'broadcast' &&
+                                campaign.status === 'cancelled' && (
+                                    <Button
+                                        variant="destructive-ghost"
+                                        onClick={() =>
+                                            setConfirmingDelete(true)
+                                        }
+                                    >
+                                        <Trash2 />
+                                        Delete
+                                    </Button>
+                                )}
                             {can('campaigns.manage') &&
                                 campaign.kind === 'broadcast' && (
                                     <Button
@@ -302,20 +315,6 @@ export default function ShowCampaign({
                                 )}
                             {can('campaigns.manage') &&
                                 campaign.kind === 'broadcast' &&
-                                campaign.status === 'cancelled' && (
-                                    <Button
-                                        variant="ghost"
-                                        className="text-muted-foreground"
-                                        onClick={() =>
-                                            setConfirmingDelete(true)
-                                        }
-                                    >
-                                        <Trash2 />
-                                        Delete
-                                    </Button>
-                                )}
-                            {can('campaigns.manage') &&
-                                campaign.kind === 'broadcast' &&
                                 campaign.status === 'sent' && (
                                     <Button
                                         variant="outline"
@@ -329,6 +328,7 @@ export default function ShowCampaign({
                             {can('campaigns.manage') &&
                                 campaign.kind === 'broadcast' && (
                                     <SaveTemplateDialog
+                                        size="default"
                                         defaultName={campaign.name}
                                         campaignId={campaign.id}
                                     />
@@ -388,7 +388,11 @@ export default function ShowCampaign({
                                 ? percent(stats.clicked, stats.sent)
                                 : '—'
                         }
-                        hint={stats.clicked.toLocaleString()}
+                        hint={
+                            campaign.track_clicks
+                                ? stats.clicked.toLocaleString()
+                                : 'Not tracked'
+                        }
                     />
                     <StatTile
                         icon={MailOpen}
@@ -398,7 +402,11 @@ export default function ShowCampaign({
                                 ? percent(stats.opened, stats.sent)
                                 : '—'
                         }
-                        hint="approximate"
+                        hint={
+                            campaign.track_opens
+                                ? `${stats.opened.toLocaleString()} · approximate`
+                                : 'Not tracked'
+                        }
                     />
                     <StatTile
                         icon={UserMinus}
@@ -652,7 +660,10 @@ function LinkBars({ links }: { links: LinkRow[] }) {
 
     return (
         <div className="rounded-xl border bg-card p-2 shadow-xs">
-            <div className="flex justify-between px-3 py-2 text-xs text-muted-foreground">
+            <div
+                aria-hidden
+                className="flex justify-between px-3 py-2 text-xs text-muted-foreground"
+            >
                 <span>Link</span>
                 <span>Unique · total clicks</span>
             </div>
@@ -682,10 +693,12 @@ function LinkBars({ links }: { links: LinkRow[] }) {
                             <span className="font-medium">
                                 {link.unique_clicks_count.toLocaleString()}
                             </span>
+                            <span className="sr-only"> unique clicks, </span>
                             <span className="text-muted-foreground">
-                                {' · '}
+                                <span aria-hidden>{' · '}</span>
                                 {link.clicks_count.toLocaleString()}
                             </span>
+                            <span className="sr-only"> total</span>
                         </span>
                     </li>
                 ))}

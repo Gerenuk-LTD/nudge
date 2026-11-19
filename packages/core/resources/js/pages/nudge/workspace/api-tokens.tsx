@@ -339,8 +339,12 @@ function CreateForm({
                 </div>
             </div>
             <div className="grid content-start gap-2">
-                <Label>Access</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <Label id="token-access">Access</Label>
+                <div
+                    role="group"
+                    aria-labelledby="token-access"
+                    className="grid gap-2 sm:grid-cols-2"
+                >
                     {PRESETS.map((preset) => (
                         <button
                             key={preset.label}

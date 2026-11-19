@@ -64,7 +64,7 @@ export function ListPicker({
     onChange: (lists: number[]) => void;
 }) {
     return (
-        <div className="flex flex-wrap gap-1.5">
+        <div role="group" aria-label="Lists" className="flex flex-wrap gap-1.5">
             {lists.map((list) => {
                 const selected = value.includes(list.id);
 

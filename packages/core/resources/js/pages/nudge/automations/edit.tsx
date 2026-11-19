@@ -207,6 +207,7 @@ export default function EditAutomation(props: Props) {
                                             url={AutomationController.destroy.url(
                                                 automation.id,
                                             )}
+                                            size="default"
                                             title={`Delete ${automation.name}?`}
                                             description="The automation and everyone's progress through it are deleted. Emails already sent stay on contacts' timelines."
                                         />
@@ -525,8 +526,9 @@ function TriggerSettings({
         options: { id: number; name: string }[],
     ) => (
         <div className="grid content-start gap-2">
-            <Label>{label}</Label>
+            <Label htmlFor={`trigger-${key}`}>{label}</Label>
             <NativeSelect
+                id={`trigger-${key}`}
                 value={value(key)}
                 onChange={(event) =>
                     set(
@@ -576,8 +578,9 @@ function TriggerSettings({
             return (
                 <>
                     <div className="grid content-start gap-2">
-                        <Label>Date field</Label>
+                        <Label htmlFor="trigger-field-key">Date field</Label>
                         <NativeSelect
+                            id="trigger-field-key"
                             value={value('field_key')}
                             onChange={(event) =>
                                 set('field_key', event.target.value)
@@ -591,10 +594,15 @@ function TriggerSettings({
                             ))}
                         </NativeSelect>
                     </div>
-                    <div className="grid content-start gap-2">
-                        <Label>Start</Label>
+                    <div
+                        role="group"
+                        aria-labelledby="trigger-start"
+                        className="grid content-start gap-2"
+                    >
+                        <Label id="trigger-start">Start</Label>
                         <div className="flex items-center gap-2 text-sm">
                             <Input
+                                aria-label="Days before the date"
                                 type="number"
                                 className="w-24"
                                 value={value('offset_days') || '0'}
@@ -607,6 +615,7 @@ function TriggerSettings({
                             />
                             days before the date,
                             <NativeSelect
+                                aria-label="Repeat"
                                 value={value('repeat') || 'yearly'}
                                 onChange={(event) =>
                                     set('repeat', event.target.value)
@@ -626,8 +635,11 @@ function TriggerSettings({
         case 'inactivity':
             return (
                 <div className="grid content-start gap-2">
-                    <Label>Days without opening or clicking</Label>
+                    <Label htmlFor="trigger-days">
+                        Days without opening or clicking
+                    </Label>
                     <Input
+                        id="trigger-days"
                         type="number"
                         min={7}
                         value={value('days') || '90'}
@@ -644,8 +656,9 @@ function TriggerSettings({
         case 'api_event':
             return (
                 <div className="grid content-start gap-2">
-                    <Label>Event name</Label>
+                    <Label htmlFor="trigger-event">Event name</Label>
                     <Input
+                        id="trigger-event"
                         placeholder="signed_up"
                         value={value('event')}
                         onChange={(event) => set('event', event.target.value)}

@@ -742,6 +742,7 @@ function SortableBlock({
                     </BlockAction>
                     <BlockAction
                         label="Delete"
+                        destructive
                         onClick={() => canvas.remove(block.id)}
                     >
                         <Trash2 />
@@ -756,18 +757,20 @@ function SortableBlock({
 function BlockAction({
     label,
     disabled = false,
+    destructive = false,
     onClick,
     children,
 }: {
     label: string;
     disabled?: boolean;
+    destructive?: boolean;
     onClick: () => void;
     children: ReactNode;
 }) {
     return (
         <Button
             type="button"
-            variant="ghost"
+            variant={destructive ? 'destructive-ghost' : 'ghost'}
             size="icon"
             aria-label={label}
             title={label}

@@ -212,7 +212,7 @@ export default function ContactsIndex({
             <PageBody>
                 <PageHeader
                     title="Contacts"
-                    description={`${contacts.total.toLocaleString()} ${table.get('archived') ? 'archived ' : ''}contacts`}
+                    description={`${contacts.total.toLocaleString()} ${table.get('archived') ? 'archived ' : ''}${contacts.total === 1 ? 'contact' : 'contacts'}`}
                     actions={
                         <>
                             {can('contacts.import') && (

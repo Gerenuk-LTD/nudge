@@ -69,3 +69,7 @@ export function formatRelative(
         ? relativeFormat.format(-days, 'day')
         : formatDateTime(value);
 }
+
+/** A count with its noun, such as "1 contact" or "1,204 contacts". */
+export const plural = (count: number, one: string, many: string) =>
+    `${count.toLocaleString()} ${count === 1 ? one : many}`;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { text } from './steps';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -327,8 +327,13 @@ function UpdateStepEditor({
                 <div className="grid gap-4 sm:grid-cols-2">
                     {(['add_list_ids', 'remove_list_ids'] as const).map(
                         (key) => (
-                            <div key={key} className="space-y-2">
-                                <Label>
+                            <div
+                                key={key}
+                                role="group"
+                                aria-labelledby={`step-${key}`}
+                                className="space-y-2"
+                            >
+                                <Label id={`step-${key}`}>
                                     {key === 'add_list_ids'
                                         ? 'Add to lists'
                                         : 'Remove from lists'}
@@ -357,8 +362,12 @@ function UpdateStepEditor({
                 </div>
             )}
             {options.customFields.length > 0 && (
-                <div className="space-y-2">
-                    <Label>Set fields</Label>
+                <div
+                    role="group"
+                    aria-labelledby="step-set-fields"
+                    className="space-y-2"
+                >
+                    <Label id="step-set-fields">Set fields</Label>
                     {options.customFields.map((field) => (
                         <div
                             key={field.key}
@@ -366,6 +375,7 @@ function UpdateStepEditor({
                         >
                             <span className="text-sm">{field.label}</span>
                             <Input
+                                aria-label={field.label}
                                 placeholder="Leave unchanged"
                                 type={
                                     field.type === 'date'
@@ -412,6 +422,7 @@ function UpdateStepEditor({
     );
 }
 
+/** A labelled control. The label names the group, so it works for a single input or a few together. */
 function Field({
     label,
     children,
@@ -419,9 +430,15 @@ function Field({
     label: string;
     children: React.ReactNode;
 }) {
+    const id = useId();
+
     return (
-        <div className="grid content-start gap-2">
-            <Label>{label}</Label>
+        <div
+            role="group"
+            aria-labelledby={id}
+            className="grid content-start gap-2"
+        >
+            <Label id={id}>{label}</Label>
             {children}
         </div>
     );

@@ -116,7 +116,7 @@ function FileMissing({ item }: { item: ImportSummary }) {
             actions={
                 <>
                     <Button
-                        variant="ghost"
+                        variant="destructive-ghost"
                         size="sm"
                         onClick={() =>
                             router.delete(ImportController.destroy.url(item.id))

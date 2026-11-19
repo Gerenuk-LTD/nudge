@@ -327,9 +327,9 @@ export function SegmentGroupEditor({
                 {onRemove && (
                     <Button
                         type="button"
-                        variant="ghost"
+                        variant="destructive-ghost"
                         size="sm"
-                        className="ml-auto text-muted-foreground"
+                        className="ml-auto"
                         onClick={onRemove}
                     >
                         Remove group

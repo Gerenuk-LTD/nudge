@@ -1,3 +1,4 @@
+import { plural } from '@nudge/lib/format';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Check,
@@ -62,9 +63,6 @@ type Editing = {
     description: string;
     permissions: Permission[];
 };
-
-const plural = (count: number, one: string, many: string) =>
-    `${count} ${count === 1 ? one : many}`;
 
 export default function Roles({
     roles,

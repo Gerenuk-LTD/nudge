@@ -295,8 +295,11 @@ export function SaveTemplateDialog({
     defaultName,
     content,
     campaignId,
+    size = 'sm',
 }: {
     defaultName: string;
+    /** Full size in a page header beside other actions; small in an editor toolbar. */
+    size?: 'sm' | 'default';
     content?: {
         subject: string;
         preheader: string;
@@ -323,7 +326,7 @@ export function SaveTemplateDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button type="button" variant="outline" size="sm">
+                <Button type="button" variant="outline" size={size}>
                     <BookmarkPlus />
                     Save as template
                 </Button>

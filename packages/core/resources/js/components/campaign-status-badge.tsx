@@ -5,7 +5,7 @@ import type { CampaignStatus } from '@nudge/types';
 const statuses: Record<CampaignStatus, { label: string; tone: StatusTone }> = {
     draft: { label: 'Draft', tone: 'neutral' },
     scheduled: { label: 'Scheduled', tone: 'info' },
-    sending: { label: 'Sending', tone: 'warning' },
+    sending: { label: 'Sending', tone: 'info' },
     sent: { label: 'Sent', tone: 'success' },
     cancelled: { label: 'Cancelled', tone: 'danger' },
 };

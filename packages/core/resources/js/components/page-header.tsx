@@ -3,20 +3,24 @@ import type { ReactNode } from 'react';
 export function PageHeader({
     title,
     description,
+    meta,
     actions,
 }: {
     title: string;
     description?: string;
+    /** A status shown on the description line, such as a badge, so it stays out of the row of buttons. */
+    meta?: ReactNode;
     actions?: ReactNode;
 }) {
     return (
         <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-0 space-y-1">
                 <h1 className="text-2xl font-semibold break-words">{title}</h1>
-                {description && (
-                    <p className="text-sm text-muted-foreground">
-                        {description}
-                    </p>
+                {(meta || description) && (
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                        {meta}
+                        {description && <p>{description}</p>}
+                    </div>
                 )}
             </div>
             {actions && (

@@ -1,3 +1,4 @@
+import { plural } from '@nudge/lib/format';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
@@ -590,7 +591,7 @@ function DeleteConfirm({
             <DialogDescription>
                 It disappears from contact pages, segments and the API.
                 {field.filled_count > 0 &&
-                    ` The ${field.filled_count.toLocaleString()} values already stored stay on contacts, and come back if you add a field with the key ${field.key} again.`}
+                    ` The ${plural(field.filled_count, 'value', 'values')} already stored stay on contacts, and come back if you add a field with the key ${field.key} again.`}
             </DialogDescription>
             {field.used_by.length > 0 && (
                 <Shout type="warning" heading="Still in use">

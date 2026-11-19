@@ -56,7 +56,7 @@ import {
     providerHealth,
 } from '@nudge/components/provider-mark';
 import { StatusBadge } from '@nudge/components/status-badge';
-import { formatDateTime } from '@nudge/lib/format';
+import { formatDateTime, plural } from '@nudge/lib/format';
 import type { ProviderTypeDefinition } from '@nudge/types';
 import { Shout } from '@nudge/components/shout';
 
@@ -548,7 +548,7 @@ function RateStat({
             hint={
                 rate === null
                     ? hint
-                    : `${count.toLocaleString()} emails${hint ? ` · ${hint.toLowerCase()}` : ''}`
+                    : `${plural(count, 'email', 'emails')}${hint ? ` · ${hint.toLowerCase()}` : ''}`
             }
             valueClassName={cn(
                 rate !== null &&

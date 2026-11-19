@@ -119,7 +119,7 @@ export default function CampaignsIndex({
         },
         {
             id: 'actions',
-            header: '',
+            header: () => <span className="sr-only">Actions</span>,
             meta: { className: 'w-0 whitespace-nowrap text-right' },
             cell: ({ row: { original: campaign } }) => {
                 const editable = campaign.status === 'draft' && canCreate;
@@ -141,6 +141,10 @@ export default function CampaignsIndex({
                                 }
                             >
                                 {label}
+                                <span className="sr-only">
+                                    {' '}
+                                    {campaign.name}
+                                </span>
                             </Link>
                         </Button>
                         {canCreate && (
@@ -157,6 +161,10 @@ export default function CampaignsIndex({
                                 }
                             >
                                 Duplicate
+                                <span className="sr-only">
+                                    {' '}
+                                    {campaign.name}
+                                </span>
                             </Button>
                         )}
                     </div>
@@ -209,39 +217,47 @@ export default function CampaignsIndex({
                             </section>
                         )}
 
-                        <h2 className="text-base font-semibold">Sent</h2>
+                        <section className="space-y-3">
+                            <h2 className="text-base font-semibold">Sent</h2>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                            <TableSearch
-                                value={table.get('search')}
-                                onSearch={(search) => table.update({ search })}
-                                placeholder="Search name or subject"
-                            />
-                            <FacetedFilter
-                                title="Status"
-                                options={STATUSES}
-                                selected={table.values('status')}
-                                onChange={(status) => table.update({ status })}
-                            />
-                            <ResetFilters
-                                active={table.values('status').length > 0}
-                                onReset={() => table.update({ status: null })}
-                            />
-                        </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <TableSearch
+                                    value={table.get('search')}
+                                    onSearch={(search) =>
+                                        table.update({ search })
+                                    }
+                                    placeholder="Search name or subject"
+                                />
+                                <FacetedFilter
+                                    title="Status"
+                                    options={STATUSES}
+                                    selected={table.values('status')}
+                                    onChange={(status) =>
+                                        table.update({ status })
+                                    }
+                                />
+                                <ResetFilters
+                                    active={table.values('status').length > 0}
+                                    onReset={() =>
+                                        table.update({ status: null })
+                                    }
+                                />
+                            </div>
 
-                        <DataTable
-                            columns={columns}
-                            data={campaigns.data}
-                            getRowId={byId}
-                            emptyMessage={
-                                table.get('search') || table.get('status')
-                                    ? 'No campaigns match these filters.'
-                                    : 'Nothing sent yet. Campaigns appear here once they go out.'
-                            }
-                            sort={table.sort}
-                        />
+                            <DataTable
+                                columns={columns}
+                                data={campaigns.data}
+                                getRowId={byId}
+                                emptyMessage={
+                                    table.get('search') || table.get('status')
+                                        ? 'No campaigns match these filters.'
+                                        : 'Nothing sent yet. Campaigns appear here once they go out.'
+                                }
+                                sort={table.sort}
+                            />
 
-                        <Pagination page={campaigns} query={table} />
+                            <Pagination page={campaigns} query={table} />
+                        </section>
                     </>
                 )}
             </PageBody>
@@ -339,19 +355,26 @@ function NewCampaign({ variant = 'button' }: { variant?: 'button' | 'card' }) {
                                 <InputError message={errors.name} />
                             </div>
                             <div className="grid content-start gap-2">
-                                <Label>Start from</Label>
+                                <Label id="campaign-start-from">
+                                    Start from
+                                </Label>
                                 <input
                                     type="hidden"
                                     name="template"
                                     value={template}
                                 />
-                                <TemplatePicker
-                                    options={templateOptions}
-                                    value={template}
-                                    onChange={(choice) =>
-                                        setTemplate(choice.key)
-                                    }
-                                />
+                                <div
+                                    role="group"
+                                    aria-labelledby="campaign-start-from"
+                                >
+                                    <TemplatePicker
+                                        options={templateOptions}
+                                        value={template}
+                                        onChange={(choice) =>
+                                            setTemplate(choice.key)
+                                        }
+                                    />
+                                </div>
                                 <InputError message={errors.template} />
                             </div>
                             <DialogFooter>

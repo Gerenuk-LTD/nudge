@@ -307,8 +307,7 @@ export default function EditCampaign(props: Props) {
                         ) : (
                             <>
                                 <Button
-                                    variant="ghost"
-                                    className="text-muted-foreground"
+                                    variant="destructive-ghost"
                                     onClick={() => setDeleting(true)}
                                 >
                                     <Trash2 />
@@ -930,32 +929,20 @@ function AbTestPanel({
     return (
         <div className="space-y-5 rounded-lg border bg-muted/30 p-4">
             <div className="grid content-start gap-2">
-                <Label>What to test</Label>
-                <div className="inline-flex w-fit items-center gap-1 rounded-lg bg-muted p-0.5">
-                    {(
-                        [
-                            [false, 'Subject line'],
-                            [true, 'Content'],
-                        ] as const
-                    ).map(([content, label]) => (
-                        <button
-                            key={label}
-                            type="button"
-                            aria-pressed={testsContent === content}
-                            onClick={() => choose(content)}
-                            className={cn(
-                                'h-7 rounded-md px-3 text-13 font-medium text-muted-foreground',
-                                testsContent === content &&
-                                    'bg-background text-foreground shadow-xs',
-                            )}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
+                <Label id="ab-what">What to test</Label>
+                <Segmented
+                    labelledBy="ab-what"
+                    value={testsContent ? 'content' : 'subject'}
+                    onChange={(choice) => choose(choice === 'content')}
+                    options={[
+                        { value: 'subject', label: 'Subject line' },
+                        { value: 'content', label: 'Content' },
+                    ]}
+                />
             </div>
 
             <Field
+                id="ab-subject-b"
                 label="Subject B"
                 error={errors.ab_subject_b}
                 hint={
@@ -965,6 +952,7 @@ function AbTestPanel({
                 }
             >
                 <Input
+                    id="ab-subject-b"
                     value={form.data.ab_subject_b}
                     onChange={(event) =>
                         form.setData('ab_subject_b', event.target.value)
@@ -974,8 +962,12 @@ function AbTestPanel({
             </Field>
 
             {testsContent && (
-                <div className="grid content-start gap-2">
-                    <Label>Content B</Label>
+                <div
+                    role="group"
+                    aria-labelledby="ab-content-b"
+                    className="grid content-start gap-2"
+                >
+                    <Label id="ab-content-b">Content B</Label>
                     <EmailContentEditor
                         content={{
                             editor: form.data.ab_editor_state_b
@@ -1010,8 +1002,13 @@ function AbTestPanel({
             )}
 
             <div className="grid gap-4 md:grid-cols-3">
-                <Field label="Test on" error={errors.ab_sample_percent}>
+                <Field
+                    id="ab-sample"
+                    label="Test on"
+                    error={errors.ab_sample_percent}
+                >
                     <NativeSelect
+                        id="ab-sample"
                         value={form.data.ab_sample_percent}
                         onChange={(event) =>
                             form.setData(
@@ -1028,10 +1025,12 @@ function AbTestPanel({
                     </NativeSelect>
                 </Field>
                 <Field
+                    id="ab-wait"
                     label="Pick the winner after"
                     error={errors.ab_wait_minutes}
                 >
                     <NativeSelect
+                        id="ab-wait"
                         value={form.data.ab_wait_minutes}
                         onChange={(event) =>
                             form.setData(
@@ -1042,15 +1041,22 @@ function AbTestPanel({
                     >
                         {[60, 120, 240, 480, 1440].map((minutes) => (
                             <option key={minutes} value={minutes}>
-                                {minutes < 1440
-                                    ? `${minutes / 60} hours`
-                                    : '1 day'}
+                                {minutes === 60
+                                    ? '1 hour'
+                                    : minutes < 1440
+                                      ? `${minutes / 60} hours`
+                                      : '1 day'}
                             </option>
                         ))}
                     </NativeSelect>
                 </Field>
-                <Field label="Winner by" error={errors.ab_metric}>
+                <Field
+                    id="ab-metric"
+                    label="Winner by"
+                    error={errors.ab_metric}
+                >
                     <NativeSelect
+                        id="ab-metric"
                         value={form.data.ab_metric}
                         onChange={(event) =>
                             form.setData(
@@ -1507,6 +1513,7 @@ function ReviewStep({
                 <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
                     <SummaryRow
                         label="To"
+                        editLabel="Edit audience"
                         onEdit={() => goTo('Audience')}
                         value={
                             <>
@@ -1594,28 +1601,23 @@ function ReviewStep({
                         <h2 className="text-sm font-semibold">
                             What people will get
                         </h2>
-                        <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
-                            {(['desktop', 'mobile'] as const).map((option) => (
-                                <button
-                                    key={option}
-                                    type="button"
-                                    aria-pressed={device === option}
-                                    onClick={() => setDevice(option)}
-                                    className={cn(
-                                        'flex h-7 items-center gap-1.5 rounded-md px-2.5 text-13 font-medium text-muted-foreground capitalize',
-                                        device === option &&
-                                            'bg-background text-foreground shadow-xs',
-                                    )}
-                                >
-                                    {option === 'desktop' ? (
-                                        <Monitor className="size-3.5" />
-                                    ) : (
-                                        <Smartphone className="size-3.5" />
-                                    )}
-                                    {option}
-                                </button>
-                            ))}
-                        </div>
+                        <Segmented
+                            label="Preview size"
+                            value={device}
+                            onChange={setDevice}
+                            options={[
+                                {
+                                    value: 'desktop',
+                                    label: 'Desktop',
+                                    icon: Monitor,
+                                },
+                                {
+                                    value: 'mobile',
+                                    label: 'Mobile',
+                                    icon: Smartphone,
+                                },
+                            ]}
+                        />
                     </div>
                     <div className="flex justify-center bg-muted/40 p-4">
                         <iframe
@@ -1776,7 +1778,8 @@ function ReviewStep({
                     <SendPanel
                         campaignId={campaign.id}
                         audienceCount={props.audienceCount}
-                        disabled={blocked || saving}
+                        blocked={blocked}
+                        saving={saving}
                     />
                 )}
 
@@ -1790,23 +1793,31 @@ function SummaryRow({
     label,
     value,
     onEdit,
+    editLabel = `Edit ${label.toLowerCase()}`,
 }: {
     label: string;
     value: ReactNode;
     onEdit: () => void;
+    /** The edit button's name for screen readers, when "Edit" and the label don't read well together. */
+    editLabel?: string;
 }) {
     return (
         <div className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0 sm:px-5">
             <span className="w-28 shrink-0 text-13 text-muted-foreground">
                 {label}
             </span>
-            <span className="min-w-0 flex-1 truncate text-sm">{value}</span>
+            <span
+                className="min-w-0 flex-1 truncate text-sm"
+                title={typeof value === 'string' ? value : undefined}
+            >
+                {value}
+            </span>
             <Button
                 variant="ghost"
                 size="sm"
                 className="-my-1 h-7 shrink-0 text-muted-foreground"
                 onClick={onEdit}
-                aria-label={`Edit ${label.toLowerCase()}`}
+                aria-label={editLabel}
             >
                 <Pencil />
             </Button>
@@ -1824,12 +1835,15 @@ function Missing({ children }: { children: ReactNode }) {
 function SendPanel({
     campaignId,
     audienceCount,
-    disabled,
+    blocked,
+    saving,
 }: {
     campaignId: number;
     audienceCount: number | undefined;
-    disabled: boolean;
+    blocked: boolean;
+    saving: boolean;
 }) {
+    const disabled = blocked || saving;
     const [mode, setMode] = useState<'now' | 'later'>('now');
     const [sendAt, setSendAt] = useState('');
     const [confirming, setConfirming] = useState(false);
@@ -1864,28 +1878,16 @@ function SendPanel({
 
     return (
         <section className="space-y-4 rounded-xl border bg-card p-4 shadow-xs">
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-0.5">
-                {(['now', 'later'] as const).map((option) => (
-                    <button
-                        key={option}
-                        type="button"
-                        aria-pressed={mode === option}
-                        onClick={() => setMode(option)}
-                        className={cn(
-                            'flex h-8 items-center justify-center gap-1.5 rounded-md text-13 font-medium text-muted-foreground',
-                            mode === option &&
-                                'bg-background text-foreground shadow-xs',
-                        )}
-                    >
-                        {option === 'now' ? (
-                            <Send className="size-3.5" />
-                        ) : (
-                            <CalendarClock className="size-3.5" />
-                        )}
-                        {option === 'now' ? 'Send now' : 'Schedule'}
-                    </button>
-                ))}
-            </div>
+            <Segmented
+                label="When to send"
+                fill
+                value={mode}
+                onChange={setMode}
+                options={[
+                    { value: 'now', label: 'Send now', icon: Send },
+                    { value: 'later', label: 'Schedule', icon: CalendarClock },
+                ]}
+            />
 
             {mode === 'later' && (
                 <div className="grid content-start gap-2">
@@ -1921,8 +1923,13 @@ function SendPanel({
                       : 'Choose a time'}
             </Button>
             {disabled && (
-                <p className="text-center text-xs text-muted-foreground">
-                    Fix the checks above to send.
+                <p
+                    role="status"
+                    className="text-center text-xs text-muted-foreground"
+                >
+                    {blocked
+                        ? 'Fix the checks above to send.'
+                        : 'Saving your changes…'}
                 </p>
             )}
 
@@ -2014,12 +2021,64 @@ function TestPanel({
     );
 }
 
+/**
+ * A small switch between two or three choices, such as desktop and mobile previews.
+ * `fill` stretches it to its container with equal segments.
+ */
+function Segmented<T extends string>({
+    label,
+    labelledBy,
+    value,
+    onChange,
+    options,
+    fill = false,
+}: {
+    label?: string;
+    labelledBy?: string;
+    value: T;
+    onChange: (value: T) => void;
+    options: { value: T; label: string; icon?: LucideIcon }[];
+    fill?: boolean;
+}) {
+    return (
+        <div
+            role="group"
+            aria-label={label}
+            aria-labelledby={labelledBy}
+            className={cn(
+                'gap-1 rounded-lg bg-muted p-0.5',
+                fill ? 'grid auto-cols-fr grid-flow-col' : 'inline-flex w-fit',
+            )}
+        >
+            {options.map(({ value: option, label: text, icon: Icon }) => (
+                <button
+                    key={option}
+                    type="button"
+                    aria-pressed={value === option}
+                    onClick={() => onChange(option)}
+                    className={cn(
+                        'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-13 font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                        value === option &&
+                            'bg-background text-foreground shadow-xs',
+                    )}
+                >
+                    {Icon && <Icon aria-hidden className="size-3.5" />}
+                    {text}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 function Field({
+    id,
     label,
     error,
     hint,
     children,
 }: {
+    /** The control's own id, so the label names it. */
+    id: string;
     label: string;
     error?: string;
     hint?: string;
@@ -2027,7 +2086,7 @@ function Field({
 }) {
     return (
         <div className="grid content-start gap-2">
-            <Label>{label}</Label>
+            <Label htmlFor={id}>{label}</Label>
             {children}
             {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
             <InputError message={error} />
