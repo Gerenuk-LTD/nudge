@@ -11,7 +11,8 @@ function labelFor(tag: string): string {
 
 /**
  * The tags in this email that aren't contact details, such as `{{ promo_code }}`, each with the one value
- * everyone gets. Laid out like the Options card below it: a row per variable, named on the left.
+ * everyone gets, as a compact two-column form. Only optional ones are marked: the header counts what's left,
+ * and the send checklist blocks sending until the rest are filled.
  */
 export function CampaignVariables({
     variables,
@@ -24,9 +25,8 @@ export function CampaignVariables({
     onChange: (values: Record<string, string>) => void;
     errors: Record<string, string | undefined>;
 }) {
-    const isEmpty = (tag: string) => !(values[tag] ?? '').trim();
     const missing = variables.filter(
-        ({ tag, fallback }) => fallback === null && isEmpty(tag),
+        ({ tag, fallback }) => fallback === null && !(values[tag] ?? '').trim(),
     ).length;
 
     return (
@@ -50,62 +50,52 @@ export function CampaignVariables({
                 </div>
             </header>
 
-            <div className="divide-y">
+            <div className="grid gap-x-6 gap-y-5 px-5 py-5 sm:grid-cols-2 sm:px-6">
                 {variables.map(({ tag, fallback }) => {
                     const id = `variable-${tag}`;
                     const error = errors[`variables.${tag}`];
-                    const required = fallback === null;
 
                     return (
                         <div
                             key={tag}
-                            className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:items-start sm:gap-6 sm:px-6"
+                            className="grid min-w-0 content-start gap-2"
                         >
-                            <div className="flex min-w-0 items-start justify-between gap-3 sm:pt-1.5">
-                                <div className="grid min-w-0 gap-1">
-                                    <label
-                                        htmlFor={id}
-                                        className="truncate text-sm font-medium"
-                                    >
-                                        {labelFor(tag)}
-                                    </label>
-                                    <code className="w-fit max-w-full truncate rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                                        {`{{ ${tag} }}`}
-                                    </code>
-                                </div>
-                                {required && isEmpty(tag) && (
-                                    <StatusBadge tone="warning">
-                                        Required
-                                    </StatusBadge>
-                                )}
+                            <div className="flex min-w-0 items-baseline justify-between gap-3">
+                                <label
+                                    htmlFor={id}
+                                    className="truncate text-sm font-medium"
+                                >
+                                    {labelFor(tag)}
+                                    {fallback !== null && (
+                                        <span className="ml-1.5 font-normal text-muted-foreground">
+                                            Optional
+                                        </span>
+                                    )}
+                                </label>
+                                <code
+                                    className="max-w-1/2 truncate font-mono text-xs text-muted-foreground"
+                                    title="The tag this fills in the email"
+                                >
+                                    {`{{ ${tag} }}`}
+                                </code>
                             </div>
-
-                            <div className="grid min-w-0 gap-1.5">
-                                <Input
-                                    id={id}
-                                    value={values[tag] ?? ''}
-                                    placeholder={fallback ?? 'Value'}
-                                    aria-invalid={error ? true : undefined}
-                                    aria-describedby={
-                                        required ? undefined : `${id}-hint`
-                                    }
-                                    onChange={(event) =>
-                                        onChange({
-                                            ...values,
-                                            [tag]: event.target.value,
-                                        })
-                                    }
-                                />
-                                {!required && (
-                                    <p
-                                        id={`${id}-hint`}
-                                        className="text-xs text-muted-foreground"
-                                    >
-                                        {`Optional. Left empty, it shows "${fallback}".`}
-                                    </p>
-                                )}
-                                <InputError message={error} />
-                            </div>
+                            <Input
+                                id={id}
+                                value={values[tag] ?? ''}
+                                placeholder={
+                                    fallback !== null
+                                        ? `${fallback} if left empty`
+                                        : undefined
+                                }
+                                aria-invalid={error ? true : undefined}
+                                onChange={(event) =>
+                                    onChange({
+                                        ...values,
+                                        [tag]: event.target.value,
+                                    })
+                                }
+                            />
+                            <InputError message={error} />
                         </div>
                     );
                 })}
