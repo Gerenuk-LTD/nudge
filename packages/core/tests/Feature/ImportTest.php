@@ -3,7 +3,6 @@
 use Gerenuk\Nudge\Actions\Contacts\UpsertContact;
 use Gerenuk\Nudge\Enums\ContactSource;
 use Gerenuk\Nudge\Enums\ContactStatus;
-use Gerenuk\Nudge\Enums\EventType;
 use Gerenuk\Nudge\Enums\ImportStatus;
 use Gerenuk\Nudge\Jobs\ProcessImport;
 use Gerenuk\Nudge\Jobs\PruneStaleImports;
@@ -142,13 +141,16 @@ test('the upload page knows the list an import was started from', function () {
             ->where('columns', ['email', 'first_name', 'last_name', 'status', 'tags']));
 });
 
-test('an import can unsubscribe contacts but never re-subscribes them', function () {
+test('an import can unsubscribe contacts, recording it, but never re-subscribes them', function () {
     app(UpsertContact::class)->handle(ContactData::fromValidated(['email' => 'optedout@example.com', 'status' => 'unsubscribed']), ContactSource::Manual);
+    $leaving = Contact::factory()->create(['email' => 'leaving@example.com']);
 
-    uploadAndStart($this, "email,status\noptedout@example.com,subscribed\nleaving@example.com,Unsubscribed\n", ['email', 'status']);
+    uploadAndStart($this, "email,status\noptedout@example.com,subscribed\nleaving@example.com,Unsubscribed\nnew@example.com,unsubscribed\n", ['email', 'status']);
 
     expect(Contact::forEmail('optedout@example.com')->first()->status)->toBe(ContactStatus::Unsubscribed)
-        ->and(Contact::forEmail('leaving@example.com')->first()->status)->toBe(ContactStatus::Unsubscribed);
+        ->and($leaving->fresh()->status)->toBe(ContactStatus::Unsubscribed)
+        ->and($leaving->events()->sole()->data)->toBe(['via' => 'import'])
+        ->and(Contact::forEmail('new@example.com')->firstOrFail()->events()->count())->toBe(0);
 });
 
 test('the email column must be mapped exactly once', function () {
@@ -183,18 +185,6 @@ test('a windows-1252 file imports names with accents', function () {
     expect($import->status)->toBe(ImportStatus::Completed)
         ->and($import->failed_count)->toBe(0)
         ->and(Contact::forEmail('jose@example.com')->first()->first_name)->toBe('José');
-});
-
-test('an import that unsubscribes people records it', function () {
-    $contact = Contact::factory()->create(['email' => 'leaving@example.com']);
-
-    uploadAndStart($this, "email,status\nleaving@example.com,unsubscribed\nnew@example.com,unsubscribed\n", ['email', 'status']);
-
-    $event = $contact->events()->sole();
-
-    expect($event->type)->toBe(EventType::Unsubscribed)
-        ->and($event->data)->toBe(['via' => 'import'])
-        ->and(Contact::query()->forEmail('new@example.com')->firstOrFail()->events()->count())->toBe(0);
 });
 
 test('a failed import row does not put contact data in the log', function () {

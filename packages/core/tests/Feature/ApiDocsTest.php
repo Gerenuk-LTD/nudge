@@ -23,20 +23,13 @@ test('the spec is served as JSON without a token', function () {
         ->and($response->json('paths'))->not->toBeEmpty();
 });
 
-test('the spec names this install\'s own base URL, even when the prefix is changed', function () {
-    config(['nudge.api_prefix' => 'api/v2']);
+test('the spec names this install\'s own base URL, whatever the prefix or the request\'s host', function () {
+    config(['nudge.api_prefix' => 'api/v2', 'app.url' => 'https://mail.example.com']);
 
-    $this->getJson(route('nudge.api.docs.spec'))
+    // Routes are registered at boot, so ask for the spec at its real path, on a forged host.
+    $this->getJson('http://evil.example'.parse_url(route('nudge.api.docs.spec'), PHP_URL_PATH))
         ->assertOk()
-        ->assertJsonPath('servers.0.url', url('api/v2'));
-});
-
-test('the spec ignores the request\'s host', function () {
-    config(['app.url' => 'https://mail.example.com']);
-
-    $this->getJson('http://evil.example/'.config('nudge.api_prefix').'/openapi.json')
-        ->assertOk()
-        ->assertJsonPath('servers.0.url', 'https://mail.example.com/'.trim((string) config('nudge.api_prefix'), '/'));
+        ->assertJsonPath('servers.0.url', 'https://mail.example.com/api/v2');
 });
 
 test('the docs page is a standalone page that points at the spec', function () {

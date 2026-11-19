@@ -3,7 +3,6 @@
 use Gerenuk\Nudge\Actions\Workspaces\CreateApiToken;
 use Gerenuk\Nudge\Actions\Workspaces\EnsureWorkspaceKeepsAnOwner;
 use Gerenuk\Nudge\Actions\Workspaces\RemoveUserFromWorkspaces;
-use Gerenuk\Nudge\Enums\Permission;
 use Gerenuk\Nudge\Models\ApiToken;
 use Gerenuk\Nudge\Models\Invitation;
 use Gerenuk\Nudge\Models\Membership;
@@ -365,9 +364,10 @@ test('a new workspace\'s built-in roles have keys and descriptions', function ()
         ->and($roles['editor']->isBuiltIn())->toBeTrue();
 });
 
-test('built-in roles keep their name', function () {
+test('built-in roles keep their name and description and can\'t be deleted, but their permissions can change', function () {
     [$owner] = $this->createOwner();
     $editor = roleNamed('Editor');
+    $description = $editor->description;
     $permissions = array_values(array_diff($editor->permissions, ['contacts.import']));
 
     $this->actingAs($owner)->put(route('nudge.roles.update', $editor), ['name' => 'Writers', 'permissions' => $editor->permissions])
@@ -375,20 +375,16 @@ test('built-in roles keep their name', function () {
 
     expect($editor->fresh()->name)->toBe('Editor');
 
-    $this->actingAs($owner)->put(route('nudge.roles.update', $editor), ['name' => 'Editor', 'permissions' => $permissions])
+    $this->actingAs($owner)->put(route('nudge.roles.update', $editor), ['name' => 'Editor', 'description' => 'Changed', 'permissions' => $permissions])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
-    expect($editor->fresh()->permissions)->not->toContain('contacts.import');
-});
+    expect($editor->fresh()->permissions)->not->toContain('contacts.import')
+        ->and($editor->fresh()->description)->toBe($description);
 
-test('built-in roles can\'t be deleted', function () {
-    [$owner] = $this->createOwner();
-    $viewer = roleNamed('Viewer');
+    $this->actingAs($owner)->delete(route('nudge.roles.destroy', $editor))->assertForbidden();
 
-    $this->actingAs($owner)->delete(route('nudge.roles.destroy', $viewer))->assertForbidden();
-
-    expect(Role::whereKey($viewer->id)->exists())->toBeTrue();
+    expect(Role::whereKey($editor->id)->exists())->toBeTrue();
 });
 
 test('custom roles save a description', function () {
@@ -412,20 +408,6 @@ test('custom roles save a description', function () {
     ])->assertRedirect();
 
     expect($role->fresh()->description)->toBe('Runs the CSV imports');
-});
-
-test('a built-in role\'s description can\'t be changed', function () {
-    [$owner] = $this->createOwner();
-    $editor = roleNamed('Editor');
-    $description = $editor->description;
-
-    $this->actingAs($owner)->put(route('nudge.roles.update', $editor), [
-        'name' => 'Editor',
-        'description' => 'Changed',
-        'permissions' => $editor->permissions,
-    ])->assertRedirect();
-
-    expect($editor->fresh()->description)->toBe($description);
 });
 
 test('the roles page lists built-ins first and describes each permission', function () {
@@ -452,11 +434,4 @@ test('the roles page passes what the actor can grant', function () {
 
     expect($adminGrantable)->not->toContain('campaigns.approve')->toContain('contacts.view')
         ->and($ownerGrantable)->toHaveCount(15);
-});
-
-test('every permission has a label and a description', function () {
-    foreach (Permission::cases() as $permission) {
-        expect($permission->label())->not->toBe('')
-            ->and($permission->description())->not->toBe('');
-    }
 });

@@ -194,11 +194,11 @@ test('pruning clears old bodies and deletes old rows', function () {
         ->assertJson(['bodies_missing' => 'cleared']);
 });
 
-test('logging can be turned off', function () {
+test('logging can be turned off, and responses still carry a request ID', function () {
     config(['nudge.api_log.enabled' => false]);
     $token = logToken($this->workspace, $this->owner);
 
-    putContact($token)->assertSuccessful();
+    putContact($token)->assertSuccessful()->assertHeader('X-Request-Id');
 
     expect(ApiRequest::withoutGlobalScopes()->count())->toBe(0);
 });
@@ -216,27 +216,21 @@ test('a deleted token keeps its rows', function () {
     expect(ApiRequest::sole()->token_name)->toBe('Test');
 });
 
-test('successful reads keep no bodies', function () {
+test('reads keep their bodies only when they fail', function () {
     $token = logToken($this->workspace, $this->owner);
 
     $this->withToken($token)->getJson(route('nudge.api.contacts.index'))->assertOk();
-
-    $row = ApiRequest::sole();
-    expect($row->request_body)->toBeNull()
-        ->and($row->response_body)->toBeNull();
-
-    $this->actingAs($this->owner)->getJson(route('nudge.api-log.show', $row))
-        ->assertJson(['bodies_missing' => 'not_kept']);
-});
-
-test('failed reads keep their bodies', function () {
-    $token = logToken($this->workspace, $this->owner);
-
     $this->withToken($token)->getJson(route('nudge.api.contacts.show', 'nobody@example.com'))->assertNotFound();
 
-    $row = ApiRequest::sole();
-    expect($row->status)->toBe(404)
-        ->and($row->response_body)->toContain('Not found');
+    [$success, $failure] = ApiRequest::orderBy('id')->get();
+
+    expect($success->request_body)->toBeNull()
+        ->and($success->response_body)->toBeNull()
+        ->and($failure->status)->toBe(404)
+        ->and($failure->response_body)->toContain('Not found');
+
+    $this->actingAs($this->owner)->getJson(route('nudge.api-log.show', $success))
+        ->assertJson(['bodies_missing' => 'not_kept']);
 });
 
 test('a request can be found by its request ID', function () {
@@ -264,22 +258,13 @@ test('API responses carry the logged request ID', function () {
         ->and(ApiRequest::sole()->publicId())->toBe($header);
 });
 
-test('the header is sent even when logging is off', function () {
-    config(['nudge.api_log.enabled' => false]);
-    $token = logToken($this->workspace, $this->owner);
-
-    $this->withToken($token)->getJson(route('nudge.api.me'))->assertSuccessful()->assertHeader('X-Request-Id');
-
-    expect(ApiRequest::withoutGlobalScopes()->count())->toBe(0);
-});
-
-test('the log shows 25 rows a page', function () {
-    foreach (range(1, 30) as $ignored) {
+test('the log shows 10 rows a page by default', function () {
+    foreach (range(1, 12) as $ignored) {
         logRow($this->workspace);
     }
 
     $this->actingAs($this->owner)->get(route('nudge.api-log.index'))
         ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload
-            ->where('requests.per_page', 25)
-            ->has('requests.data', 25)));
+            ->where('requests.per_page', 10)
+            ->has('requests.data', 10)));
 });

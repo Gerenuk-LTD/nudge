@@ -281,15 +281,8 @@ test('webhook steps refuse private addresses', function () {
     Http::fake();
 
     expect(fn () => app(WebhookCaller::class)->post('https://127.0.0.1/hook', []))->toThrow(RuntimeException::class)
-        ->and(fn () => app(WebhookCaller::class)->post('http://example.com/hook', []))->toThrow(RuntimeException::class);
-
-    Http::assertNothingSent();
-});
-
-test('webhook steps refuse private IPv6 literals', function () {
-    Http::fake();
-
-    expect(fn () => app(WebhookCaller::class)->post('https://[::1]/hook', []))->toThrow(RuntimeException::class)
+        ->and(fn () => app(WebhookCaller::class)->post('http://example.com/hook', []))->toThrow(RuntimeException::class)
+        ->and(fn () => app(WebhookCaller::class)->post('https://[::1]/hook', []))->toThrow(RuntimeException::class)
         ->and(fn () => app(WebhookCaller::class)->post('https://[fd00::1]/hook', []))->toThrow(RuntimeException::class);
 
     Http::assertNothingSent();

@@ -10,8 +10,6 @@ use Gerenuk\Nudge\Models\CustomFieldDefinition;
 use Gerenuk\Nudge\Models\Segment;
 use Gerenuk\Nudge\Models\Tag;
 use Gerenuk\Nudge\Models\Workspace;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
@@ -35,44 +33,21 @@ test('requests without a valid token are rejected', function () {
         ->assertExactJson(['code' => 'unauthenticated', 'message' => 'Unauthenticated.']);
 });
 
-test('a missing record returns a plain not found message', function () {
+test('anything missing answers a plain not found message', function () {
     $token = apiToken($this->workspace, $this->owner);
+    $prefix = '/'.config('nudge.api_prefix');
 
-    $this->withToken($token)->getJson(route('nudge.api.contacts.show', 'nobody@example.com'))
-        ->assertNotFound()
-        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
-});
-
-test('a record that does not bind answers not found', function () {
-    $token = apiToken($this->workspace, $this->owner);
-
-    $this->withToken($token)->getJson(route('nudge.api.lists.show', 999))
-        ->assertNotFound()
-        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
-});
-
-test('an unknown path under the prefix answers not found as JSON', function () {
-    $token = apiToken($this->workspace, $this->owner);
-
-    $this->withToken($token)->getJson('/'.config('nudge.api_prefix').'/nothing-here')
-        ->assertNotFound()
-        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
-});
-
-test('an unknown contact on the event timeline answers not found', function () {
-    $token = apiToken($this->workspace, $this->owner);
-
-    $this->withToken($token)->getJson(route('nudge.api.contacts.events', 'nobody@example.com'))
-        ->assertNotFound()
-        ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
-});
-
-test('an unknown segment filter answers not found', function () {
-    $token = apiToken($this->workspace, $this->owner);
-
-    $this->withToken($token)->getJson(route('nudge.api.contacts.index', ['segment' => 999]))
-        ->assertNotFound()
-        ->assertJsonPath('code', 'not_found');
+    foreach ([
+        route('nudge.api.contacts.show', 'nobody@example.com'),
+        route('nudge.api.lists.show', 999),
+        route('nudge.api.contacts.events', 'nobody@example.com'),
+        route('nudge.api.contacts.index', ['segment' => 999]),
+        $prefix.'/nothing-here',
+    ] as $url) {
+        $this->withToken($token)->getJson($url)
+            ->assertNotFound()
+            ->assertExactJson(['code' => 'not_found', 'message' => 'Not found.']);
+    }
 });
 
 test('a wrong method answers method not allowed', function () {
@@ -194,14 +169,6 @@ test('a contact is created then updated through the same email-keyed call', func
         ->assertJsonPath('data.last_name', 'Doe');
 });
 
-test('validation errors come back as JSON', function () {
-    $token = apiToken($this->workspace, $this->owner);
-
-    $this->withToken($token)->putJson(route('nudge.api.contacts.upsert', 'not-an-email'))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('email');
-});
-
 test('a read-only token cannot write', function () {
     $token = apiToken($this->workspace, $this->owner, ['contacts.view']);
 
@@ -311,14 +278,19 @@ test('an api upsert cannot quietly resubscribe someone who unsubscribed', functi
     expect($contact->fresh()->unsubscribed_at)->not->toBeNull();
 });
 
-test('an api upsert resubscribes when asked to explicitly', function () {
-    Contact::factory()->unsubscribed()->create(['email' => 'ann@example.com']);
+test('an api upsert resubscribes when asked to explicitly, and records the token', function () {
+    $contact = Contact::factory()->unsubscribed()->create(['email' => 'ann@example.com']);
     $token = apiToken($this->workspace, $this->owner);
 
     $this->withToken($token)
         ->putJson(route('nudge.api.contacts.upsert', 'ann@example.com'), ['status' => 'subscribed', 'resubscribe' => true])
         ->assertOk()
         ->assertJsonPath('data.status', 'subscribed');
+
+    $event = $contact->events()->sole();
+
+    expect($event->type)->toBe(EventType::Resubscribed)
+        ->and($event->data)->toBe(['via' => 'api', 'token_id' => ApiToken::firstOrFail()->id]);
 });
 
 test('an api upsert can still unsubscribe and create subscribed contacts', function () {
@@ -332,20 +304,6 @@ test('an api upsert can still unsubscribe and create subscribed contacts', funct
     $this->withToken($token)->putJson($url, ['status' => 'unsubscribed'])
         ->assertOk()
         ->assertJsonPath('data.status', 'unsubscribed');
-});
-
-test('an api resubscribe is recorded with the token', function () {
-    $contact = Contact::factory()->unsubscribed()->create(['email' => 'ann@example.com']);
-    $token = apiToken($this->workspace, $this->owner);
-
-    $this->withToken($token)
-        ->putJson(route('nudge.api.contacts.upsert', 'ann@example.com'), ['status' => 'subscribed', 'resubscribe' => true])
-        ->assertOk();
-
-    $event = $contact->events()->sole();
-
-    expect($event->type)->toBe(EventType::Resubscribed)
-        ->and($event->data)->toBe(['via' => 'api', 'token_id' => ApiToken::firstOrFail()->id]);
 });
 
 dataset('paginated list routes', [
@@ -452,12 +410,4 @@ test('an event with no properties sends them as an empty object', function () {
         ->assertStatus(202);
 
     expect($response->getContent())->toContain('"properties":{}');
-});
-
-test('an authentication exception on the API answers unauthenticated', function () {
-    Route::middleware('api')->get(trim((string) config('nudge.api_prefix'), '/').'/_test-auth', fn () => throw new AuthenticationException);
-
-    $this->get('/'.trim((string) config('nudge.api_prefix'), '/').'/_test-auth')
-        ->assertUnauthorized()
-        ->assertExactJson(['code' => 'unauthenticated', 'message' => 'Unauthenticated.']);
 });

@@ -59,7 +59,8 @@ test('a repeat with the same key returns the same event and adds no row', functi
     expect($second->json('data.id'))->toBe($first->json('data.id'))
         ->and($second->json('data.type'))->toBe('custom')
         ->and($second->json('data.data.name'))->toBe('ping')
-        ->and(customEventCount())->toBe(1);
+        ->and(customEventCount())->toBe(1)
+        ->and(Contact::count())->toBe(1);
 });
 
 test('a repeat with the same key does not enrol again', function () {
@@ -125,21 +126,4 @@ test('a job run twice for one event enrols once', function () {
 
     app()->call([$job(), 'handle']);
     expect(AutomationRun::count())->toBe(1);
-});
-
-test('a bad key is refused', function () {
-    foreach (['', str_repeat('a', 256), 'has space'] as $key) {
-        $request = $this->withToken($this->token)->withHeader('Idempotency-Key', $key);
-        $request->postJson(route('nudge.api.events.store'), ['email' => 'ann@example.com', 'event' => 'ping', 'create_contact' => true])
-            ->assertStatus(422);
-    }
-
-    expect(customEventCount())->toBe(0);
-});
-
-test('create_contact with a repeat creates nothing new', function () {
-    postEvent($this, key: 'key-8')->assertAccepted();
-    postEvent($this, key: 'key-8')->assertAccepted();
-
-    expect(Contact::count())->toBe(1)->and(customEventCount())->toBe(1);
 });

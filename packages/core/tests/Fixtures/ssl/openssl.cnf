@@ -1,0 +1,6 @@
+# A minimal OpenSSL config for tests that make throwaway certificates, so they don't depend on the
+# machine's own openssl.cnf, which PHP on Windows often can't find.
+[ req ]
+distinguished_name = req_distinguished_name
+
+[ req_distinguished_name ]

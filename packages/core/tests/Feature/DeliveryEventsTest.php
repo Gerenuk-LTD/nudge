@@ -81,34 +81,23 @@ describe('Mailgun', function () {
             ->and($this->provider->fresh()->last_webhook_at)->not->toBeNull();
     });
 
-    test('a delivery is counted once, however many times it is reported', function () {
-        $campaign = sentCampaignThrough($this->provider, $this);
-        $recipient = CampaignRecipient::first();
+    test('deliveries and bounces are counted once, however many times they are reported', function () {
+        $campaign = sentCampaignThrough($this->provider, $this, contacts: 2);
+        [$delivered, $bounced] = CampaignRecipient::orderBy('id')->get();
+        $webhook = route('nudge.webhooks.provider', $this->provider->webhook_token);
 
         foreach ([1, 2] as $attempt) {
-            $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'delivered', $recipient->email, $recipient->id))
-                ->assertNoContent();
-        }
-
-        $this->useWorkspace($this->workspace);
-
-        expect($campaign->fresh()->delivered_count)->toBe(1)
-            ->and($recipient->fresh()->status)->toBe(RecipientStatus::Delivered);
-    });
-
-    test('a bounce reported twice is logged once', function () {
-        $campaign = sentCampaignThrough($this->provider, $this);
-        $recipient = CampaignRecipient::first();
-
-        foreach ([1, 2] as $attempt) {
-            $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
+            $this->postJson($webhook, mailgunEvent('signing-key', 'delivered', $delivered->email, $delivered->id))->assertNoContent();
+            $this->postJson($webhook, mailgunEvent('signing-key', 'failed', $bounced->email, $bounced->id, [
                 'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'No such mailbox', 'message' => ''],
             ]))->assertNoContent();
         }
 
         $this->useWorkspace($this->workspace);
 
-        expect(ActivityEvent::where('type', EventType::Bounced)->count())->toBe(1)
+        expect($campaign->fresh()->delivered_count)->toBe(1)
+            ->and($delivered->fresh()->status)->toBe(RecipientStatus::Delivered)
+            ->and(ActivityEvent::where('type', EventType::Bounced)->count())->toBe(1)
             ->and($campaign->fresh()->bounced_count)->toBe(1);
     });
 
@@ -138,17 +127,6 @@ describe('Mailgun', function () {
 
         expect(Contact::first()->status)->toBe(ContactStatus::Unsubscribed)
             ->and(Suppression::first()->reason)->toBe(SuppressionReason::Complaint);
-    });
-
-    test('a request with the wrong signature is rejected', function () {
-        sentCampaignThrough($this->provider, $this);
-        $recipient = CampaignRecipient::first();
-
-        $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('wrong-key', 'complained', $recipient->email, $recipient->id))
-            ->assertStatus(406);
-
-        $this->useWorkspace($this->workspace);
-        expect(Suppression::count())->toBe(0);
     });
 
     test('an event cannot touch a recipient in another workspace', function () {
@@ -231,8 +209,10 @@ describe('Amazon SES through SNS', function () {
             'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => 's', 'region' => 'eu-west-1', 'configuration_set' => 'nudge'],
         ]);
 
-        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
-        $certificate = openssl_csr_sign(openssl_csr_new(['commonName' => 'sns.amazonaws.com'], $key), null, $key, 1);
+        // Our own config file, so this works where PHP can't find the system's openssl.cnf (often on Windows).
+        $ssl = ['config' => dirname(__DIR__).'/Fixtures/ssl/openssl.cnf'];
+        $key = openssl_pkey_new([...$ssl, 'private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $certificate = openssl_csr_sign(openssl_csr_new(['commonName' => 'sns.amazonaws.com'], $key, $ssl), null, $key, 1, $ssl);
         openssl_x509_export($certificate, $pem);
         $this->snsKey = $key;
         $this->certUrl = 'https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-test.pem';

@@ -353,14 +353,10 @@ test('the checklist flags merge tags that nothing will fill', function () {
         ->and($item->message)->toContain('{{ custom.missing }}')
         ->and($item->message)->not->toContain('maybe')
         ->and($item->message)->not->toContain('custom.plan');
-});
 
-test('a campaign using only known merge tags passes the merge tag check', function () {
-    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
+    $known = Campaign::factory()->create(['provider_id' => $this->provider->id]);
 
-    $item = collect(app(CampaignChecklist::class)->for($campaign, $this->workspace))->firstWhere('key', 'merge_tags');
-
-    expect($item->passed)->toBeTrue();
+    expect(collect(app(CampaignChecklist::class)->for($known, $this->workspace))->firstWhere('key', 'merge_tags')->passed)->toBeTrue();
 });
 
 test('unfilled merge tags warn but do not block the send', function () {
@@ -452,16 +448,9 @@ test('variable names are validated', function () {
         ->assertSessionHasErrors('variables');
     $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['first_name' => 'x']])
         ->assertSessionHasErrors('variables');
-    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x']])
-        ->assertSessionHasNoErrors();
-});
-
-test('variable names are at most 50 characters', function () {
-    $campaign = Campaign::factory()->create(['provider_id' => $this->provider->id]);
-
     $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => [str_repeat('a', 51) => 'x']])
         ->assertSessionHasErrors('variables');
-    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => [str_repeat('a', 50) => 'x']])
+    $this->actingAs($this->owner)->put(route('nudge.campaigns.update', $campaign), ['variables' => ['promo_code' => 'x', str_repeat('a', 50) => 'x']])
         ->assertSessionHasNoErrors();
 });
 
@@ -495,16 +484,12 @@ test('re-saving unchanged JSON content keeps approval when the database reorders
     expect($campaign->fresh()->approved_at)->toBeNull();
 });
 
-test('a draft campaign can be deleted', function () {
+test('drafts can be deleted, and cancelled campaigns along with their recipients', function () {
     $draft = Campaign::factory()->create(['provider_id' => $this->provider->id]);
-
     $this->actingAs($this->owner)->delete(route('nudge.campaigns.destroy', $draft))
         ->assertRedirect(route('nudge.campaigns.index'));
-
     expect(Campaign::find($draft->id))->toBeNull();
-});
 
-test('a cancelled campaign is deleted along with its recipients', function () {
     Contact::factory()->create();
     $campaign = sendNow($this, Campaign::factory()->create(['provider_id' => $this->provider->id]));
     $campaign->update(['status' => CampaignStatus::Cancelled]);

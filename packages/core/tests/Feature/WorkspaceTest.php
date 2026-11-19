@@ -155,19 +155,13 @@ function refuseAccountCreation(): void
     });
 }
 
-test('a user the account policy refuses sees the page without the form', function () {
+test('a user the account policy refuses sees the page without the form and cannot create a workspace', function () {
     refuseAccountCreation();
     $user = User::factory()->create();
 
     $this->actingAs($user)->get(route('nudge.workspaces.create'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('allowed', false)->has('message'));
-});
-
-test('a user the account policy refuses cannot create a workspace', function () {
-    refuseAccountCreation();
-    $user = User::factory()->create();
-
     $this->actingAs($user)->post(route('nudge.workspaces.store'), ['name' => 'Acme'])->assertForbidden();
 
     expect(Workspace::withoutGlobalScopes()->count())->toBe(0);

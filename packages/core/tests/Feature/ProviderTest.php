@@ -140,7 +140,7 @@ test('private smtp hosts can be refused by config', function () {
     expect(Provider::count())->toBe(1);
 });
 
-test('ses regions must be real region codes', function () {
+test('provider regions must be known region codes', function () {
     $payload = fn (string $region) => [
         'name' => 'SES '.$region, 'type' => 'ses', 'max_per_second' => 10,
         'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => 's', 'region' => $region],
@@ -148,6 +148,10 @@ test('ses regions must be real region codes', function () {
 
     $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload('x@evil.test#'))
         ->assertSessionHasErrors('credentials.region');
+    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
+        'name' => 'Scaleway', 'type' => 'scaleway', 'max_per_second' => 10,
+        'credentials' => ['project_id' => 'p', 'secret_key' => 's', 'region' => 'evil.test#'],
+    ])->assertSessionHasErrors('credentials.region');
     expect(Provider::count())->toBe(0);
 
     $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload('eu-west-1'))
@@ -155,11 +159,4 @@ test('ses regions must be real region codes', function () {
     $this->actingAs($this->owner)->post(route('nudge.providers.store'), $payload('us-gov-west-1'))
         ->assertSessionHasNoErrors();
     expect(Provider::count())->toBe(2);
-});
-
-test('scaleway regions must be a known region', function () {
-    $this->actingAs($this->owner)->post(route('nudge.providers.store'), [
-        'name' => 'Scaleway', 'type' => 'scaleway', 'max_per_second' => 10,
-        'credentials' => ['project_id' => 'p', 'secret_key' => 's', 'region' => 'evil.test#'],
-    ])->assertSessionHasErrors('credentials.region');
 });

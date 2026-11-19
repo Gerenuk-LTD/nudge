@@ -3,7 +3,8 @@
 use Inertia\DevTools\DevTools;
 
 test('web responses carry the baseline security headers', function () {
-    $response = $this->get('/');
+    // An explicit http:// URL, so a local https APP_URL (as Herd sets up) doesn't make this request secure.
+    $response = $this->get('http://localhost/');
 
     $response->assertHeader('X-Frame-Options', 'SAMEORIGIN')
         ->assertHeader('X-Content-Type-Options', 'nosniff')

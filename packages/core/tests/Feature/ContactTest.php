@@ -97,14 +97,6 @@ test('unsubscribing a contact takes effect at once and notes who did it', functi
         ->and(app(ContactTimeline::class)->for($contact)[0])->toMatchArray(['title' => 'Unsubscribed', 'detail' => "By {$this->owner->name}"]);
 });
 
-test('an unsubscribed contact can be subscribed again', function () {
-    $contact = Contact::factory()->unsubscribed()->create();
-
-    $this->actingAs($this->owner)->post(route('nudge.contacts.resubscribe', $contact))->assertRedirect();
-
-    expect($contact->refresh())->status->toBe(ContactStatus::Subscribed)->unsubscribed_at->toBeNull();
-});
-
 test('viewers cannot change a contact subscription', function () {
     $contact = Contact::factory()->create();
     $viewer = $this->addMember($this->workspace, 'Viewer');
@@ -252,27 +244,37 @@ test('contacts can be sorted by an allowed column in either direction', function
         ->where('contacts.data.2.email', 'amy@example.com'));
 });
 
-test('an unknown sort or page size falls back to the newest contacts, 50 a page', function () {
+test('an unknown sort or page size falls back to the newest contacts, 10 a page', function () {
     $first = Contact::factory()->create();
     $latest = Contact::factory()->create();
 
     $response = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['sort' => 'password', 'per_page' => 7]));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('contacts.per_page', 50)
+        ->where('contacts.per_page', 10)
         ->where('contacts.data.0.id', $latest->id)
         ->where('contacts.data.1.id', $first->id));
 });
 
 test('contacts can be paged by an allowed page size', function () {
-    Contact::factory()->count(11)->create();
+    Contact::factory()->count(26)->create();
 
-    $response = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['per_page' => 10]));
+    $response = $this->actingAs($this->owner)->get(route('nudge.contacts.index', ['per_page' => 25]));
 
     $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('contacts.per_page', 10)
-        ->has('contacts.data', 10)
+        ->where('contacts.per_page', 25)
+        ->has('contacts.data', 25)
         ->where('contacts.last_page', 2));
+});
+
+test('tables default to the configured page size', function () {
+    config(['nudge.tables.per_page' => 25]);
+    Contact::factory()->count(26)->create();
+
+    $this->actingAs($this->owner)->get(route('nudge.contacts.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('contacts.per_page', 25)
+            ->has('contacts.data', 25));
 });
 
 test('comma-separated filters keep contacts matching any of the values', function () {
@@ -353,7 +355,8 @@ test('subscribing someone again from the dashboard is recorded with who did it',
 
     $event = $contact->events()->where('type', EventType::Resubscribed)->sole();
 
-    expect($event->data)->toBe(['by' => $this->owner->name, 'via' => 'dashboard'])
+    expect($contact->refresh())->status->toBe(ContactStatus::Subscribed)->unsubscribed_at->toBeNull()
+        ->and($event->data)->toBe(['by' => $this->owner->name, 'via' => 'dashboard'])
         ->and(app(ContactTimeline::class)->for($contact)[0])
         ->toMatchArray(['title' => 'Subscribed again', 'detail' => "By {$this->owner->name} via dashboard"]);
 });

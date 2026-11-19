@@ -107,27 +107,19 @@ test('a tracking link signed for one recipient does not work for another', funct
     $this->post("/u/{$other}/{$signature}")->assertNotFound();
 });
 
-test('links signed with a previous app key still work after rotation', function () {
+test('links signed with an old key still work after rotation, while it is kept', function () {
     $url = pathOf($this->urls->unsubscribe($this->recipient));
     $oldKey = config('app.key');
+    $newKey = 'base64:'.base64_encode(random_bytes(32));
 
-    config(['app.previous_keys' => [$oldKey], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
-
+    config(['app.previous_keys' => [$oldKey], 'app.key' => $newKey]);
     $this->get($url)->assertOk();
-    $this->post($url, ['List-Unsubscribe' => 'One-Click'])->assertOk();
-});
 
-test('links signed with a key kept only for links still work', function () {
-    $url = pathOf($this->urls->unsubscribe($this->recipient));
-    $oldKey = config('app.key');
-
-    config(['app.previous_keys' => [], 'nudge.previous_link_keys' => [$oldKey], 'app.key' => 'base64:'.base64_encode(random_bytes(32))]);
-
+    config(['app.previous_keys' => [], 'nudge.previous_link_keys' => [$oldKey]]);
     $this->get($url)->assertOk();
     $this->post($url, ['List-Unsubscribe' => 'One-Click'])->assertOk();
 
     config(['nudge.previous_link_keys' => []]);
-
     $this->get($url)->assertNotFound();
 });
 
