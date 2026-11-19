@@ -1,0 +1,392 @@
+<?php
+
+use Gerenuk\Nudge\Actions\Campaigns\ScheduleCampaign;
+use Gerenuk\Nudge\Enums\ContactStatus;
+use Gerenuk\Nudge\Enums\EventType;
+use Gerenuk\Nudge\Enums\RecipientStatus;
+use Gerenuk\Nudge\Enums\SuppressionReason;
+use Gerenuk\Nudge\Jobs\ProcessDeliveryEvents;
+use Gerenuk\Nudge\Models\ActivityEvent;
+use Gerenuk\Nudge\Models\Campaign;
+use Gerenuk\Nudge\Models\CampaignRecipient;
+use Gerenuk\Nudge\Models\Contact;
+use Gerenuk\Nudge\Models\Provider;
+use Gerenuk\Nudge\Models\Suppression;
+use Gerenuk\Nudge\Sending\MessageHeaders;
+use Gerenuk\Nudge\Sending\ProviderTransports;
+use Gerenuk\Nudge\Sending\ProviderType;
+use Gerenuk\Nudge\Sending\Webhooks\BounceClassifier;
+use Gerenuk\Nudge\Sending\WebhookVerification;
+use Gerenuk\Nudge\Tests\Fixtures\CapturingTransports;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(function () {
+    [$this->owner, $this->workspace] = $this->createOwner();
+    $this->workspace->update(['postal_address' => '1 High Street']);
+    $this->app->instance(ProviderTransports::class, new CapturingTransports);
+});
+
+function sentCampaignThrough(Provider $provider, $test, int $contacts = 1): Campaign
+{
+    Contact::factory()->count($contacts)->create();
+    $campaign = Campaign::factory()->create(['provider_id' => $provider->id]);
+    app(ScheduleCampaign::class)->handle($campaign, $test->workspace->fresh());
+    $test->useWorkspace($test->workspace);
+
+    return $campaign->fresh();
+}
+
+function mailgunEvent(string $secret, string $event, string $email, int $recipientId, array $extra = []): array
+{
+    $timestamp = (string) time();
+    $token = bin2hex(random_bytes(16));
+
+    return [
+        'signature' => ['timestamp' => $timestamp, 'token' => $token, 'signature' => hash_hmac('sha256', $timestamp.$token, $secret)],
+        'event-data' => [
+            'id' => 'evt-'.uniqid(),
+            'event' => $event,
+            'timestamp' => time(),
+            'recipient' => $email,
+            'user-variables' => [MessageHeaders::RECIPIENT_KEY => (string) $recipientId],
+            ...$extra,
+        ],
+    ];
+}
+
+describe('Mailgun', function () {
+    beforeEach(function () {
+        $this->provider = Provider::create([
+            'name' => 'Mailgun', 'type' => ProviderType::Mailgun, 'max_per_second' => 100,
+            'credentials' => ['api_key' => 'key', 'domain' => 'mg.test', 'region' => 'us'],
+            'webhook_secret' => 'signing-key',
+        ]);
+    });
+
+    test('a permanent failure suppresses the address and counts as a bounce', function () {
+        $campaign = sentCampaignThrough($this->provider, $this);
+        $recipient = CampaignRecipient::first();
+
+        $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'failed', $recipient->email, $recipient->id, [
+            'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'No such mailbox', 'message' => ''],
+        ]))->assertNoContent();
+
+        $this->useWorkspace($this->workspace);
+
+        expect(Suppression::first()->reason)->toBe(SuppressionReason::Bounce)
+            ->and($recipient->fresh()->status)->toBe(RecipientStatus::Bounced)
+            ->and($campaign->fresh()->bounced_count)->toBe(1)
+            ->and($this->provider->fresh()->last_webhook_at)->not->toBeNull();
+    });
+
+    test('deliveries and bounces are counted once, however many times they are reported', function () {
+        $campaign = sentCampaignThrough($this->provider, $this, contacts: 2);
+        [$delivered, $bounced] = CampaignRecipient::orderBy('id')->get();
+        $webhook = route('nudge.webhooks.provider', $this->provider->webhook_token);
+
+        foreach ([1, 2] as $attempt) {
+            $this->postJson($webhook, mailgunEvent('signing-key', 'delivered', $delivered->email, $delivered->id))->assertNoContent();
+            $this->postJson($webhook, mailgunEvent('signing-key', 'failed', $bounced->email, $bounced->id, [
+                'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'No such mailbox', 'message' => ''],
+            ]))->assertNoContent();
+        }
+
+        $this->useWorkspace($this->workspace);
+
+        expect($campaign->fresh()->delivered_count)->toBe(1)
+            ->and($delivered->fresh()->status)->toBe(RecipientStatus::Delivered)
+            ->and(ActivityEvent::where('type', EventType::Bounced)->count())->toBe(1)
+            ->and($campaign->fresh()->bounced_count)->toBe(1);
+    });
+
+    test('repeated complaints cannot pause a workspace on their own', function () {
+        config(['nudge.sending.auto_pause.minimum_sends' => 2]);
+        sentCampaignThrough($this->provider, $this, contacts: 4);
+        $recipient = CampaignRecipient::first();
+
+        foreach ([1, 2, 3] as $attempt) {
+            $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
+                ->assertNoContent();
+        }
+
+        $this->useWorkspace($this->workspace);
+
+        expect(ActivityEvent::where('type', EventType::Complained)->count())->toBe(1);
+    });
+
+    test('a complaint unsubscribes and suppresses the contact', function () {
+        sentCampaignThrough($this->provider, $this);
+        $recipient = CampaignRecipient::first();
+
+        $this->postJson(route('nudge.webhooks.provider', $this->provider->webhook_token), mailgunEvent('signing-key', 'complained', $recipient->email, $recipient->id))
+            ->assertNoContent();
+
+        $this->useWorkspace($this->workspace);
+
+        expect(Contact::first()->status)->toBe(ContactStatus::Unsubscribed)
+            ->and(Suppression::first()->reason)->toBe(SuppressionReason::Complaint);
+    });
+
+    test('an event cannot touch a recipient in another workspace', function () {
+        sentCampaignThrough($this->provider, $this);
+        $victim = CampaignRecipient::first();
+
+        [, $other] = $this->createOwner('Attacker');
+        $attackerProvider = Provider::create([
+            'name' => 'Mailgun', 'type' => ProviderType::Mailgun, 'max_per_second' => 1,
+            'credentials' => ['api_key' => 'k', 'domain' => 'd', 'region' => 'us'], 'webhook_secret' => 'attacker-key',
+        ]);
+
+        $this->postJson(route('nudge.webhooks.provider', $attackerProvider->webhook_token), mailgunEvent('attacker-key', 'complained', $victim->email, $victim->id))
+            ->assertNoContent();
+
+        $this->useWorkspace($this->workspace);
+        expect($victim->fresh()->complained_at)->toBeNull()
+            ->and(Contact::first()->status)->toBe(ContactStatus::Subscribed);
+    });
+});
+
+test('temporary bounces are told apart from permanent ones', function (ProviderType $type, array $payload, bool $temporary) {
+    expect(BounceClassifier::isTemporary($type, $payload))->toBe($temporary);
+})->with([
+    'brevo soft' => [ProviderType::Brevo, ['event' => 'soft_bounce'], true],
+    'brevo hard' => [ProviderType::Brevo, ['event' => 'hard_bounce'], false],
+    'mandrill soft' => [ProviderType::Mandrill, ['event' => 'soft_bounce'], true],
+    'mandrill hard' => [ProviderType::Mandrill, ['event' => 'hard_bounce'], false],
+    'mailersend soft' => [ProviderType::MailerSend, ['type' => 'activity.soft_bounced'], true],
+    'mailersend hard' => [ProviderType::MailerSend, ['type' => 'activity.hard_bounced'], false],
+    'postmark soft' => [ProviderType::Postmark, ['Type' => 'SoftBounce'], true],
+    'postmark transient' => [ProviderType::Postmark, ['Type' => 'Transient'], true],
+    'postmark hard' => [ProviderType::Postmark, ['Type' => 'HardBounce'], false],
+    'sendgrid blocked' => [ProviderType::SendGrid, ['type' => 'blocked'], true],
+    'sendgrid bounce' => [ProviderType::SendGrid, ['type' => 'bounce'], false],
+    'mailjet soft' => [ProviderType::Mailjet, ['hard_bounce' => false], true],
+    'mailjet hard' => [ProviderType::Mailjet, ['hard_bounce' => true], false],
+    'resend transient' => [ProviderType::Resend, ['data' => ['bounce' => ['type' => 'Transient']]], true],
+    'resend permanent' => [ProviderType::Resend, ['data' => ['bounce' => ['type' => 'Permanent']]], false],
+    'resend untyped' => [ProviderType::Resend, ['data' => []], false],
+    'mailgun default' => [ProviderType::Mailgun, ['event' => 'failed'], false],
+]);
+
+test('a soft bounce is recorded as a deferral and does not suppress', function () {
+    $provider = Provider::create([
+        'name' => 'Mailjet', 'type' => ProviderType::Mailjet, 'max_per_second' => 100,
+        'credentials' => ['api_key' => 'key', 'secret_key' => 'secret'],
+        'webhook_secret' => 'gmk:test',
+    ]);
+    $campaign = sentCampaignThrough($provider, $this);
+    $recipient = CampaignRecipient::first();
+
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), [
+        'event' => 'bounce',
+        'time' => time(),
+        'email' => $recipient->email,
+        'MessageID' => 12345,
+        'hard_bounce' => false,
+        'smtp_reply' => 'mailbox full',
+        MessageHeaders::RECIPIENT_KEY => (string) $recipient->id,
+    ], ['Authorization' => 'Basic '.base64_encode('gmk:test')])->assertNoContent();
+
+    $this->useWorkspace($this->workspace);
+
+    expect(Suppression::count())->toBe(0)
+        ->and($recipient->fresh()->status)->not->toBe(RecipientStatus::Bounced)
+        ->and($campaign->fresh()->bounced_count)->toBe(0)
+        ->and(ActivityEvent::where('type', EventType::Deferred)->count())->toBe(1)
+        ->and(ActivityEvent::where('type', EventType::Bounced)->count())->toBe(0);
+});
+
+test('unknown webhook tokens are not found', function () {
+    $this->postJson(route('nudge.webhooks.provider', 'nope'), [])->assertNotFound();
+});
+
+describe('Amazon SES through SNS', function () {
+    beforeEach(function () {
+        $this->provider = Provider::create([
+            'name' => 'SES', 'type' => ProviderType::AmazonSes, 'max_per_second' => 14,
+            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => 's', 'region' => 'eu-west-1', 'configuration_set' => 'nudge'],
+        ]);
+
+        // Our own config file, so this works where PHP can't find the system's openssl.cnf (often on Windows).
+        $ssl = ['config' => dirname(__DIR__).'/Fixtures/ssl/openssl.cnf'];
+        $key = openssl_pkey_new([...$ssl, 'private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $certificate = openssl_csr_sign(openssl_csr_new(['commonName' => 'sns.amazonaws.com'], $key, $ssl), null, $key, 1, $ssl);
+        openssl_x509_export($certificate, $pem);
+        $this->snsKey = $key;
+        $this->certUrl = 'https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-test.pem';
+
+        Cache::flush();
+        Http::fake([
+            $this->certUrl => Http::response($pem),
+            'https://sns.eu-west-1.amazonaws.com/?Action=ConfirmSubscription*' => Http::response('<ok/>'),
+        ]);
+    });
+
+    function snsMessage(array $fields, $key, string $certUrl): array
+    {
+        $message = ['TopicArn' => 'arn:aws:sns:eu-west-1:1:ses', ...$fields, 'SignatureVersion' => '2', 'SigningCertURL' => $certUrl, 'Timestamp' => now()->toIso8601String(), 'MessageId' => uniqid()];
+        $keys = $message['Type'] === 'Notification'
+            ? ['Message', 'MessageId', 'Subject', 'Timestamp', 'TopicArn', 'Type']
+            : ['Message', 'MessageId', 'SubscribeURL', 'Timestamp', 'Token', 'TopicArn', 'Type'];
+        $signed = '';
+
+        foreach ($keys as $name) {
+            if (array_key_exists($name, $message)) {
+                $signed .= $name."\n".$message[$name]."\n";
+            }
+        }
+
+        openssl_sign($signed, $signature, $key, OPENSSL_ALGO_SHA256);
+
+        return [...$message, 'Signature' => base64_encode($signature)];
+    }
+
+    test('a signed bounce notification is applied', function () {
+        sentCampaignThrough($this->provider, $this);
+        $recipient = CampaignRecipient::first();
+
+        $notification = json_encode([
+            'eventType' => 'Bounce',
+            'mail' => ['messageId' => 'ses-1', 'tags' => [MessageHeaders::RECIPIENT_KEY => [(string) $recipient->id]]],
+            'bounce' => ['bounceType' => 'Permanent', 'bounceSubType' => 'General', 'timestamp' => now()->toIso8601String(), 'bouncedRecipients' => [['emailAddress' => $recipient->email]]],
+        ]);
+
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], ['CONTENT_TYPE' => 'text/plain'],
+            json_encode(snsMessage(['Type' => 'Notification', 'Message' => $notification], $this->snsKey, $this->certUrl)))
+            ->assertNoContent();
+
+        $this->useWorkspace($this->workspace);
+        expect($recipient->fresh()->status)->toBe(RecipientStatus::Bounced)
+            ->and(Suppression::first()->detail)->toBe('Permanent General');
+    });
+
+    test('a tampered message is rejected', function () {
+        $message = snsMessage(['Type' => 'Notification', 'Message' => '{"eventType":"Complaint"}'], $this->snsKey, $this->certUrl);
+        $message['Message'] = '{"eventType":"Bounce"}';
+
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [], json_encode($message))
+            ->assertStatus(406);
+    });
+
+    test('certificates from outside Amazon are refused', function () {
+        $message = snsMessage(['Type' => 'Notification', 'Message' => '{}'], $this->snsKey, 'https://evil.example.com/cert.pem');
+
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [], json_encode($message))
+            ->assertStatus(406);
+
+        Http::assertNothingSent();
+    });
+
+    test('subscription confirmations are accepted automatically', function () {
+        $subscribeUrl = 'https://sns.eu-west-1.amazonaws.com/?Action=ConfirmSubscription&Token=abc';
+
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+            json_encode(snsMessage(['Type' => 'SubscriptionConfirmation', 'Message' => 'Confirm', 'SubscribeURL' => $subscribeUrl, 'Token' => 'abc'], $this->snsKey, $this->certUrl)))
+            ->assertNoContent();
+
+        Http::assertSent(fn ($request) => $request->url() === $subscribeUrl);
+    });
+
+    test('the first signed message pins the SNS topic', function () {
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+            json_encode(snsMessage(['Type' => 'Notification', 'Message' => '{}'], $this->snsKey, $this->certUrl)))
+            ->assertNoContent();
+
+        expect($this->provider->fresh()->webhook_topic_arn)->toBe('arn:aws:sns:eu-west-1:1:ses');
+    });
+
+    test('messages from another SNS topic are refused', function () {
+        sentCampaignThrough($this->provider, $this);
+        $recipient = CampaignRecipient::first();
+        $this->provider->forceFill(['webhook_topic_arn' => 'arn:aws:sns:eu-west-1:1:ses'])->save();
+
+        $notification = json_encode([
+            'eventType' => 'Bounce',
+            'mail' => ['messageId' => 'ses-1', 'tags' => [MessageHeaders::RECIPIENT_KEY => [(string) $recipient->id]]],
+            'bounce' => ['bounceType' => 'Permanent', 'bounceSubType' => 'General', 'timestamp' => now()->toIso8601String(), 'bouncedRecipients' => [['emailAddress' => $recipient->email]]],
+        ]);
+
+        $this->call('POST', route('nudge.webhooks.provider', $this->provider->webhook_token), [], [], [], [],
+            json_encode(snsMessage(['Type' => 'Notification', 'Message' => $notification, 'TopicArn' => 'arn:aws:sns:eu-west-1:999:attacker'], $this->snsKey, $this->certUrl)))
+            ->assertStatus(403);
+
+        $this->useWorkspace($this->workspace);
+        expect(Suppression::count())->toBe(0)
+            ->and($recipient->fresh()->status)->not->toBe(RecipientStatus::Bounced);
+    });
+
+    test('saving an SES provider clears the pinned topic', function () {
+        $this->provider->forceFill(['webhook_topic_arn' => 'arn:aws:sns:eu-west-1:1:ses'])->save();
+
+        $this->actingAs($this->owner)->put(route('nudge.providers.update', $this->provider), [
+            'name' => 'SES', 'max_per_second' => 14,
+            'credentials' => ['access_key_id' => 'AKIA', 'secret_access_key' => '', 'region' => 'eu-west-1', 'configuration_set' => 'nudge'],
+        ])->assertSessionHasNoErrors();
+
+        expect($this->provider->fresh()->webhook_topic_arn)->toBeNull();
+    });
+});
+
+test('too many bounces pause the workspace', function () {
+    config(['nudge.sending.auto_pause.minimum_sends' => 2]);
+    $provider = Provider::create([
+        'name' => 'Mailgun', 'type' => ProviderType::Mailgun, 'max_per_second' => 100,
+        'credentials' => ['api_key' => 'key', 'domain' => 'mg.test', 'region' => 'us'], 'webhook_secret' => 'k',
+    ]);
+    sentCampaignThrough($provider, $this, contacts: 4);
+    $recipient = CampaignRecipient::first();
+
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), mailgunEvent('k', 'failed', $recipient->email, $recipient->id, [
+        'severity' => 'permanent', 'reason' => 'bounce', 'delivery-status' => ['code' => 550, 'description' => 'gone', 'message' => ''],
+    ]))->assertNoContent();
+
+    expect($this->workspace->fresh()->isSendingPaused())->toBeTrue()
+        ->and($this->workspace->fresh()->sending_paused_reason)->toContain('Bounce rate');
+});
+
+test('a payload the parser cannot read is rejected rather than erroring', function () {
+    $provider = Provider::create([
+        'name' => 'Mailgun', 'type' => ProviderType::Mailgun, 'max_per_second' => 1,
+        'credentials' => ['api_key' => 'k', 'domain' => 'd', 'region' => 'us'], 'webhook_secret' => 'k',
+    ]);
+    $payload = mailgunEvent('k', 'failed', 'a@example.com', 1, ['severity' => 'permanent', 'reason' => 'bounce']);
+
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), $payload)->assertStatus(400);
+});
+
+test('a signing-secret provider without a key refuses webhooks', function (ProviderType $type) {
+    Queue::fake([ProcessDeliveryEvents::class]);
+    $credentials = [];
+
+    foreach ($type->fields() as $field) {
+        $credentials[$field->key] = 'x';
+    }
+
+    $provider = Provider::create(['name' => 'No key', 'type' => $type, 'max_per_second' => 1, 'credentials' => $credentials, 'webhook_secret' => null]);
+
+    $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), ['any' => 'payload'])->assertStatus(403);
+
+    Queue::assertNotPushed(ProcessDeliveryEvents::class);
+})->with([ProviderType::Mailgun, ProviderType::SendGrid, ProviderType::Resend, ProviderType::MailerSend, ProviderType::Mandrill]);
+
+test('every webhook provider rejects requests with the wrong credentials', function (ProviderType $type) {
+    Queue::fake([ProcessDeliveryEvents::class]);
+    $credentials = [];
+
+    foreach ($type->fields() as $field) {
+        $credentials[$field->key] = 'x';
+    }
+
+    $basic = $type->webhookVerification() === WebhookVerification::BasicAuth;
+    $provider = Provider::create(['name' => 'Wrong', 'type' => $type, 'max_per_second' => 1, 'credentials' => $credentials, 'webhook_secret' => $basic ? 'gmk:wrong' : 'wrong']);
+
+    $response = $this->postJson(route('nudge.webhooks.provider', $provider->webhook_token), ['any' => 'payload'], ['Authorization' => 'Basic '.base64_encode('gmk:other')]);
+
+    expect($response->status())->toBeGreaterThanOrEqual(400)->toBeLessThan(500);
+    Queue::assertNotPushed(ProcessDeliveryEvents::class);
+})->with(fn () => array_values(array_filter(
+    ProviderType::cases(),
+    fn (ProviderType $type) => in_array($type->webhookVerification(), [WebhookVerification::SigningSecret, WebhookVerification::BasicAuth], true),
+)));

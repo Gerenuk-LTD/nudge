@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "settings": {
+    "backdrop": "#f4f4f5",
+    "canvas": "#ffffff",
+    "width": 600,
+    "font": "Arial, Helvetica, sans-serif",
+    "text": "#18181b",
+    "link": "#2563eb"
+  },
+  "blocks": [
+    {
+      "id": "space",
+      "type": "spacer",
+      "height": 24
+    },
+    {
+      "id": "kicker",
+      "type": "heading",
+      "html": "New",
+      "level": 3,
+      "align": "center"
+    },
+    {
+      "id": "title",
+      "type": "heading",
+      "html": "Say what you're announcing",
+      "level": 1,
+      "align": "center"
+    },
+    {
+      "id": "intro",
+      "type": "text",
+      "html": "<p>Hi {{ first_name | there }}, one or two sentences on what changed and what it means for them.</p>",
+      "align": "center"
+    },
+    {
+      "id": "cta",
+      "type": "button",
+      "label": "Take a look",
+      "url": "https://example.com",
+      "align": "center",
+      "background": "#18181b",
+      "color": "#ffffff"
+    },
+    {
+      "id": "space2",
+      "type": "spacer",
+      "height": 16
+    },
+    {
+      "id": "rule",
+      "type": "divider"
+    },
+    {
+      "id": "footer",
+      "type": "footer",
+      "html": "<p>You are receiving this because you signed up.</p>",
+      "align": "center"
+    }
+  ]
+}

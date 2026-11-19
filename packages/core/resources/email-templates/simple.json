@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "settings": {
+    "backdrop": "#f4f4f5",
+    "canvas": "#ffffff",
+    "width": 600,
+    "font": "Arial, Helvetica, sans-serif",
+    "text": "#18181b",
+    "link": "#2563eb"
+  },
+  "blocks": [
+    {
+      "id": "intro",
+      "type": "text",
+      "html": "<p>Hi {{ first_name | there }},</p><p>Write your message here.</p>",
+      "align": "left"
+    },
+    {
+      "id": "footer",
+      "type": "footer",
+      "html": "<p>You are receiving this because you signed up.</p>",
+      "align": "center"
+    }
+  ]
+}

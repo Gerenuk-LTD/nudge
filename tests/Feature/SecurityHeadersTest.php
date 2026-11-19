@@ -1,0 +1,38 @@
+<?php
+
+use Inertia\DevTools\DevTools;
+
+test('web responses carry the baseline security headers', function () {
+    // An explicit http:// URL, so a local https APP_URL (as Herd sets up) doesn't make this request secure.
+    $response = $this->get('http://localhost/');
+
+    $response->assertHeader('X-Frame-Options', 'SAMEORIGIN')
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+        ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        ->assertHeaderMissing('Strict-Transport-Security');
+
+    $this->get('https://localhost/')
+        ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+});
+
+test('API and API docs responses carry the security headers too', function () {
+    $this->getJson(route('nudge.api.me'))->assertUnauthorized()
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+
+    $this->get(route('nudge.api.docs.spec'))->assertOk()
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+});
+
+test('inertia devtools is off unless explicitly enabled', function () {
+    app()->detectEnvironment(fn () => 'local');
+
+    expect(app()->environment('local'))->toBeTrue()
+        ->and(DevTools::enabled())->toBeFalse();
+
+    config(['inertia.devtools.enabled' => true]);
+
+    expect(DevTools::enabled())->toBeTrue();
+});
